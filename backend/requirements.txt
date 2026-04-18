@@ -21,16 +21,12 @@ groq>=0.11.0
 langchain>=0.3.7,<0.4.0
 langchain-groq==0.2.3
 langchain-community>=0.3.7,<0.4.0
-langchain-huggingface==0.1.2
 langchain-text-splitters==0.3.2
 
-# ── RAG ───────────────────────────────────────────────────────
-chromadb==0.5.23
-sentence-transformers==3.3.1
+# ── RAG (lightweight — no torch/chromadb) ─────────────────────
 pypdf==4.3.1
 
-# ── Emotion detection ─────────────────────────────────────────
-fer==22.4.0
+# ── Emotion detection (lightweight OpenCV only) ───────────────
 opencv-python-headless==4.10.0.84
 
 # ── NLP / Sentiment ───────────────────────────────────────────

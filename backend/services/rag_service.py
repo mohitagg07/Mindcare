@@ -1,24 +1,20 @@
 """
-RAG service — PyPDFLoader + local embeddings, Keras-conflict-free.
+RAG service — lightweight version for Render free tier.
+No chromadb, no sentence-transformers, no torch.
+Loads PDFs with pypdf, does simple keyword search, sends context to Groq.
 """
-
 import os
 import logging
 
-# ── Block transformers from importing TensorFlow/Keras before anything else ──
-os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
-
 logger        = logging.getLogger("mindcare.rag")
-rag_chain     = None
+_pdf_chunks   = []
 RAG_AVAILABLE = False
 
 
 def initialize_rag():
-    global rag_chain, RAG_AVAILABLE
+    global _pdf_chunks, RAG_AVAILABLE
 
     docs_path = os.path.join(os.path.dirname(__file__), "../documents")
-    db_path   = os.path.join(os.path.dirname(__file__), "../chroma_db")
 
     if not os.path.exists(docs_path):
         logger.warning("⚠️ documents/ folder not found — RAG disabled")
@@ -30,101 +26,68 @@ def initialize_rag():
         return
 
     try:
-        # Must set before sentence_transformers import
-        os.environ["TRANSFORMERS_NO_TF"] = "1"
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+        from pypdf import PdfReader
 
-        from langchain_community.document_loaders import PyPDFLoader
-        from langchain.text_splitter              import RecursiveCharacterTextSplitter
-        from langchain_community.vectorstores     import Chroma
-        from langchain_core.embeddings            import Embeddings
-        from langchain.chains                     import RetrievalQA
-        from langchain_groq                       import ChatGroq
-
-        # Import sentence_transformers AFTER env vars are set
-        from sentence_transformers import SentenceTransformer
-
-        class LocalEmbedding(Embeddings):
-            def __init__(self):
-                # paraphrase-MiniLM is pure PyTorch — zero TF/Keras dependency
-                self.model = SentenceTransformer(
-                    "paraphrase-MiniLM-L3-v2",
-                    device="cpu",
+        all_chunks = []
+        for pdf_file in pdf_files:
+            path = os.path.join(docs_path, pdf_file)
+            try:
+                reader = PdfReader(path)
+                text   = " ".join(
+                    page.extract_text() or "" for page in reader.pages
                 )
+                # Split into ~500 char chunks
+                words  = text.split()
+                chunk  = []
+                for word in words:
+                    chunk.append(word)
+                    if len(" ".join(chunk)) >= 500:
+                        all_chunks.append(" ".join(chunk))
+                        chunk = []
+                if chunk:
+                    all_chunks.append(" ".join(chunk))
+                logger.info(f"  Loaded: {pdf_file} ({len(reader.pages)} pages)")
+            except Exception as e:
+                logger.warning(f"  Could not load {pdf_file}: {e}")
 
-            def embed_documents(self, texts):
-                return self.model.encode(
-                    texts, show_progress_bar=False, convert_to_numpy=True
-                ).tolist()
+        if not all_chunks:
+            logger.warning("⚠️ No text extracted — RAG disabled")
+            return
 
-            def embed_query(self, text):
-                return self.model.encode(
-                    [text], show_progress_bar=False, convert_to_numpy=True
-                )[0].tolist()
-
-        embeddings = LocalEmbedding()
-
-        # Load or reuse existing Chroma DB
-        if os.path.exists(db_path) and os.listdir(db_path):
-            vector_db = Chroma(
-                persist_directory=db_path,
-                embedding_function=embeddings,
-            )
-            logger.info("✅ Loaded existing Chroma vector DB")
-
-        else:
-            all_docs = []
-            for pdf_file in pdf_files:
-                pdf_path = os.path.join(docs_path, pdf_file)
-                try:
-                    loader = PyPDFLoader(pdf_path)
-                    all_docs.extend(loader.load())
-                    logger.info(f"  Loaded: {pdf_file}")
-                except Exception as e:
-                    logger.warning(f"  Could not load {pdf_file}: {e}")
-
-            if not all_docs:
-                logger.warning("⚠️ No documents loaded — RAG disabled")
-                return
-
-            splitter  = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-            texts     = splitter.split_documents(all_docs)
-            vector_db = Chroma.from_documents(
-                texts, embeddings, persist_directory=db_path
-            )
-            logger.info(
-                f"✅ Created Chroma DB — {len(pdf_files)} PDFs, {len(texts)} chunks"
-            )
-
-        llm = ChatGroq(
-            model_name="llama-3.3-70b-versatile",
-            api_key=os.getenv("GROQ_API_KEY"),
-        )
-
-        rag_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=vector_db.as_retriever(search_kwargs={"k": 3}),
-        )
-
+        _pdf_chunks   = all_chunks
         RAG_AVAILABLE = True
-        logger.info("🚀 RAG fully initialized")
+        logger.info(f"✅ RAG ready — {len(_pdf_chunks)} chunks from {len(pdf_files)} PDFs")
 
     except Exception as e:
         logger.warning(f"⚠️ RAG disabled: {e}")
         RAG_AVAILABLE = False
 
 
-def query_rag(question: str):
-    if not RAG_AVAILABLE or rag_chain is None:
+def query_rag(question: str) -> Optional[str]:
+    if not RAG_AVAILABLE or not _pdf_chunks:
         return None
     try:
-        result = rag_chain.invoke({"query": question})
-        return result.get("result", "")
+        # Simple keyword search — find top 3 most relevant chunks
+        q_words = set(question.lower().split())
+        scored  = []
+        for chunk in _pdf_chunks:
+            c_words = set(chunk.lower().split())
+            score   = len(q_words & c_words)
+            if score > 0:
+                scored.append((score, chunk))
+
+        scored.sort(reverse=True)
+        top = [c for _, c in scored[:3]]
+
+        if not top:
+            return None
+
+        return " ... ".join(top)[:1500]
+
     except Exception as e:
         logger.error(f"RAG query error: {e}")
         return None
 
 
-def is_rag_available():
+def is_rag_available() -> bool:
     return RAG_AVAILABLE
