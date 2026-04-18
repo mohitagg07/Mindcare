@@ -10,60 +10,78 @@ const OPTIONS = [
   { value:3, label:'Nearly every day' },
 ]
 
+/* ── Score Result — shows CATEGORY only, no numeric score ── */
 function ScoreResult({ result, title, onReset }) {
   const pct = Math.round((result.score / result.max_score) * 100)
-  const r = 54, circ = 2 * Math.PI * r, dash = circ * (1 - pct / 100)
+
+  const categoryMeta = {
+    'Minimal':           { emoji:'🌿', msg:'You appear to be doing well. Keep taking care of yourself.' },
+    'Mild':              { emoji:'🌤️', msg:'Some symptoms detected. Small daily habits can make a big difference.' },
+    'Moderate':          { emoji:'⛅', msg:'Moderate symptoms. Consider talking to a counsellor or trusted person.' },
+    'Moderately Severe': { emoji:'🌧️', msg:'Significant symptoms. We recommend seeking professional support soon.' },
+    'Severe':            { emoji:'⚡', msg:'Severe symptoms. Please reach out to a mental health professional now.' },
+  }
+  const meta = categoryMeta[result.category] ?? { emoji:'💙', msg:result.description }
 
   const levels = result.max_score === 27
-    ? [{ label:'Minimal', range:'0–4', color:'#2A7D6F' }, { label:'Mild', range:'5–9', color:'#3B6EA8' }, { label:'Moderate', range:'10–14', color:'#C07436' }, { label:'Mod. Severe', range:'15–19', color:'#C05A2A' }, { label:'Severe', range:'20–27', color:'#C0424A' }]
-    : [{ label:'Minimal', range:'0–4', color:'#2A7D6F' }, { label:'Mild', range:'5–9', color:'#3B6EA8' }, { label:'Moderate', range:'10–14', color:'#C07436' }, { label:'Severe', range:'15–21', color:'#C0424A' }]
+    ? [{ label:'Minimal', color:'#2A7D6F' }, { label:'Mild', color:'#3B6EA8' }, { label:'Moderate', color:'#C07436' }, { label:'Mod. Severe', color:'#C05A2A' }, { label:'Severe', color:'#C0424A' }]
+    : [{ label:'Minimal', color:'#2A7D6F' }, { label:'Mild', color:'#3B6EA8' }, { label:'Moderate', color:'#C07436' }, { label:'Severe', color:'#C0424A' }]
 
   return (
     <div className="animate-scale-in" style={{ display:'flex', flexDirection:'column', gap:20 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:22, flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flexShrink:0, margin:'0 auto' }}>
-          <svg width={130} height={130} viewBox="0 0 130 130">
-            <circle cx={65} cy={65} r={r} fill="none" stroke="var(--border)" strokeWidth={9}/>
-            <circle cx={65} cy={65} r={r} fill="none" stroke={result.color} strokeWidth={9}
-              strokeDasharray={circ} strokeDashoffset={dash} strokeLinecap="round"
-              style={{ transform:'rotate(-90deg)', transformOrigin:'65px 65px', transition:'stroke-dashoffset 1s ease' }}/>
-          </svg>
-          <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-            <span style={{ fontSize:32, fontWeight:700, color:'var(--text-1)', lineHeight:1, fontFamily:'Lora,serif' }}>{result.score}</span>
-            <span style={{ fontSize:12, color:'var(--text-4)', fontWeight:500 }}>/ {result.max_score}</span>
-          </div>
-        </div>
+
+      {/* Result card — emoji + category + friendly message, NO score number */}
+      <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap', background:`${result.color}08`, border:`1.5px solid ${result.color}25`, borderRadius:16, padding:'22px 20px' }}>
+        <div style={{ fontSize:52, flexShrink:0, textAlign:'center' }}>{meta.emoji}</div>
         <div style={{ flex:1, minWidth:180 }}>
           <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>{title} Result</p>
-          <div style={{ display:'inline-flex', alignItems:'center', padding:'6px 14px', borderRadius:99, marginBottom:10, background:result.color+'14', border:`1.5px solid ${result.color}30`, color:result.color, fontSize:14, fontWeight:700 }}>
+          <div style={{ display:'inline-flex', alignItems:'center', padding:'7px 18px', borderRadius:99, marginBottom:10, background:`${result.color}14`, border:`1.5px solid ${result.color}30`, color:result.color, fontSize:16, fontWeight:800, fontFamily:'Lora,serif' }}>
             {result.category}
           </div>
-          <p style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.6 }}>{result.description}</p>
+          <p style={{ fontSize:14, color:'var(--text-2)', lineHeight:1.6, margin:0, fontWeight:500 }}>{meta.msg}</p>
         </div>
       </div>
 
+      {/* Severity scale — visual only, NO score ranges */}
       <div>
-        <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:10 }}>Severity Scale</p>
+        <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:10 }}>Severity Level</p>
         <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
           {levels.map(lvl => {
             const isActive = result.category?.toLowerCase().includes(lvl.label.toLowerCase().split(' ')[0])
             return (
-              <div key={lvl.label} style={{ flex:1, minWidth:56, display:'flex', flexDirection:'column', alignItems:'center', gap:4, padding:'9px 5px', borderRadius:10, background:isActive ? lvl.color+'10' : 'var(--bg-elevated)', border:`1px solid ${isActive ? lvl.color+'35' : 'var(--border)'}`, opacity:isActive?1:0.5, transition:'all 0.2s' }}>
-                <div style={{ width:7, height:7, borderRadius:'50%', background:lvl.color }}/>
+              <div key={lvl.label} style={{ flex:'1 1 60px', display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px', borderRadius:10, transition:'all 0.2s', background:isActive ? lvl.color+'12' : 'var(--bg-elevated)', border:`1px solid ${isActive ? lvl.color+'40' : 'var(--border)'}`, opacity:isActive?1:0.45 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:lvl.color }}/>
                 <span style={{ fontSize:10, fontWeight:700, color:isActive?lvl.color:'var(--text-3)', textAlign:'center' }}>{lvl.label}</span>
-                <span style={{ fontSize:9, color:'var(--text-4)' }}>{lvl.range}</span>
+                {isActive && <span style={{ fontSize:9, color:lvl.color, fontWeight:700 }}>← You</span>}
               </div>
             )
           })}
         </div>
       </div>
 
+      {/* What to do */}
+      <div style={{ background:'var(--teal-dim)', border:'1px solid var(--teal-border)', borderRadius:14, padding:'14px 16px' }}>
+        <p style={{ fontSize:12, fontWeight:700, color:'var(--teal)', marginBottom:6 }}>💡 What you can do</p>
+        <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.65, margin:0 }}>
+          {pct < 25
+            ? 'Great work! Keep your healthy habits — sleep well, move your body, and talk to people you trust.'
+            : pct < 50
+            ? 'Try journaling, breathing exercises, or a short walk daily. If you feel stuck, consider talking to someone.'
+            : pct < 75
+            ? 'Your responses suggest you may benefit from speaking with a counsellor or therapist.'
+            : "Please reach out to a mental health professional as soon as possible. You don't have to face this alone."}
+        </p>
+      </div>
+
       {result.crisis_flag && (
-        <div style={{ display:'flex', gap:12, padding:'13px 15px', borderRadius:12, background:'var(--rose-dim)', border:'1px solid rgba(192,66,74,0.20)' }}>
-          <AlertTriangle size={15} color="var(--rose)" style={{ flexShrink:0, marginTop:1 }}/>
+        <div style={{ display:'flex', gap:12, padding:'13px 15px', borderRadius:12, background:'var(--rose-dim)', border:'1px solid rgba(192,66,74,0.22)' }}>
+          <AlertTriangle size={16} color="var(--rose)" style={{ flexShrink:0, marginTop:1 }}/>
           <div>
-            <p style={{ fontSize:13, fontWeight:700, color:'var(--rose)', marginBottom:4 }}>Immediate Support Available</p>
-            <p style={{ fontSize:12, color:'#7A2832', lineHeight:1.6 }}>You are not alone. <strong>iCall: 9152987821</strong> · <strong>Vandrevala: 1860-2662-345</strong></p>
+            <p style={{ fontSize:13, fontWeight:700, color:'var(--rose)', marginBottom:5 }}>Immediate Support Available</p>
+            <p style={{ fontSize:12, color:'#7A2832', lineHeight:1.65 }}>
+              You are not alone.<br/>
+              <strong>iCall: 9152987821</strong> · <strong>Vandrevala Foundation: 1860-2662-345</strong>
+            </p>
           </div>
         </div>
       )}
@@ -75,6 +93,7 @@ function ScoreResult({ result, title, onReset }) {
   )
 }
 
+/* ── Question Form ── */
 function AssessmentForm({ title, questions, onSubmit, result, color, onReset }) {
   const [answers, setAnswers] = useState(Array(questions.length).fill(null))
   const [step,    setStep]    = useState(0)
@@ -116,7 +135,7 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset }) 
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, flexWrap:'wrap', gap:8 }}>
           <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
             {questions.map((_, i) => (
-              <button key={i} onClick={() => setStep(i)} style={{ width:26, height:26, borderRadius:7, fontSize:10, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit', transition:'all 0.15s', border:`1.5px solid ${i === step ? color : answers[i] !== null ? color+'50' : 'var(--border)'}`, background:answers[i] !== null ? color+'14' : i === step ? 'var(--bg-elevated)' : 'transparent', color:answers[i] !== null ? color : i === step ? 'var(--text-2)' : 'var(--text-4)' }}>
+              <button key={i} onClick={() => setStep(i)} style={{ width:26, height:26, borderRadius:7, fontSize:10, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit', transition:'all 0.15s', border:`1.5px solid ${i===step?color:answers[i]!==null?color+'50':'var(--border)'}`, background:answers[i]!==null?color+'14':i===step?'var(--bg-elevated)':'transparent', color:answers[i]!==null?color:i===step?'var(--text-2)':'var(--text-4)' }}>
                 {answers[i] !== null ? '✓' : i + 1}
               </button>
             ))}
@@ -132,16 +151,15 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset }) 
         <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:7 }}>Question {step + 1} of {questions.length}</p>
         <p style={{ fontSize:12, color:'var(--text-4)', marginBottom:9, lineHeight:1.5 }}>Over the past 2 weeks, how often have you been bothered by…</p>
         <p style={{ fontSize:16, fontWeight:600, color:'var(--text-1)', lineHeight:1.55, marginBottom:18, fontFamily:'Lora,serif' }}>{questions[step]}</p>
-
         <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
           {OPTIONS.map(opt => {
             const sel = answers[step] === opt.value
             return (
-              <button key={opt.value} onClick={() => handleSelect(opt.value)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'all 0.14s', border:`1.5px solid ${sel ? color : 'var(--border)'}`, background:sel ? color+'10' : '#fff', boxShadow:sel ? `0 0 0 1px ${color}22` : 'none' }}>
-                <div style={{ width:17, height:17, borderRadius:'50%', flexShrink:0, transition:'all 0.14s', border:`2px solid ${sel ? color : 'var(--border-md)'}`, background:sel ? color : 'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <button key={opt.value} onClick={() => handleSelect(opt.value)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'all 0.14s', border:`1.5px solid ${sel?color:'var(--border)'}`, background:sel?color+'10':'#fff', boxShadow:sel?`0 0 0 1px ${color}22`:'none' }}>
+                <div style={{ width:17, height:17, borderRadius:'50%', flexShrink:0, transition:'all 0.14s', border:`2px solid ${sel?color:'var(--border-md)'}`, background:sel?color:'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {sel && <div style={{ width:5, height:5, borderRadius:'50%', background:'#fff' }}/>}
                 </div>
-                <span style={{ fontSize:13, fontWeight:500, color:sel ? 'var(--text-1)' : 'var(--text-3)' }}>{opt.label}</span>
+                <span style={{ fontSize:13, fontWeight:500, color:sel?'var(--text-1)':'var(--text-3)' }}>{opt.label}</span>
               </button>
             )
           })}
@@ -149,16 +167,16 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset }) 
       </div>
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} className="btn-ghost" style={{ fontSize:13 }}>
+        <button onClick={() => setStep(s => Math.max(0, s-1))} disabled={step===0} className="btn-ghost" style={{ fontSize:13 }}>
           <ChevronLeft size={14}/> Previous
         </button>
-        {step < questions.length - 1 ? (
-          <button onClick={() => setStep(s => Math.min(questions.length - 1, s + 1))} className="btn-ghost" style={{ fontSize:13 }}>
+        {step < questions.length-1 ? (
+          <button onClick={() => setStep(s => Math.min(questions.length-1, s+1))} className="btn-ghost" style={{ fontSize:13 }}>
             Next <ChevronRight size={14}/>
           </button>
         ) : (
-          <button onClick={handleSubmit} disabled={!allDone || loading} style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10, border:'none', fontFamily:'inherit', transition:'all 0.18s', background:allDone ? color : 'var(--bg-elevated)', color:allDone ? '#fff' : 'var(--text-4)', fontSize:13, fontWeight:600, cursor:allDone&&!loading?'pointer':'not-allowed', opacity:allDone&&!loading?1:0.55, boxShadow:allDone?`0 2px 12px ${color}35`:'none' }}>
-            {loading ? <><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Scoring…</> : <><CheckCircle size={14}/> View Results</>}
+          <button onClick={handleSubmit} disabled={!allDone||loading} style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10, border:'none', fontFamily:'inherit', transition:'all 0.18s', background:allDone?color:'var(--bg-elevated)', color:allDone?'#fff':'var(--text-4)', fontSize:13, fontWeight:600, cursor:allDone&&!loading?'pointer':'not-allowed', opacity:allDone&&!loading?1:0.55, boxShadow:allDone?`0 2px 12px ${color}35`:'none' }}>
+            {loading?<><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Scoring…</>:<><CheckCircle size={14}/> View Results</>}
           </button>
         )}
       </div>
@@ -166,10 +184,11 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset }) 
   )
 }
 
+/* ── Main ── */
 export default function Assessment() {
   const { setPhq9Result, setGad7Result, phq9Result, gad7Result } = useApp()
-  const [tab, setTab]    = useState('phq9')
-  const [qs,  setQs]     = useState({ phq9:[], gad7:[] })
+  const [tab, setTab] = useState('phq9')
+  const [qs,  setQs]  = useState({ phq9:[], gad7:[] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -177,8 +196,8 @@ export default function Assessment() {
   }, [])
 
   const TABS = [
-    { id:'phq9', label:'PHQ-9', sub:'Depression', color:'#2A7D6F', qs:9, max:27, questions:qs.phq9, result:phq9Result, submit:async a => { const { data } = await submitPHQ9(a); setPhq9Result(data) }, reset:() => setPhq9Result(null), desc:'9 questions · Score 0–27 · Screens for Major Depressive Disorder' },
-    { id:'gad7', label:'GAD-7', sub:'Anxiety',    color:'#3B6EA8', qs:7, max:21, questions:qs.gad7, result:gad7Result, submit:async a => { const { data } = await submitGAD7(a); setGad7Result(data) }, reset:() => setGad7Result(null), desc:'7 questions · Score 0–21 · Screens for Generalized Anxiety Disorder' },
+    { id:'phq9', label:'PHQ-9', sub:'Depression', color:'#2A7D6F', questions:qs.phq9, result:phq9Result, submit:async a => { const {data}=await submitPHQ9(a); setPhq9Result(data) }, reset:()=>setPhq9Result(null) },
+    { id:'gad7', label:'GAD-7', sub:'Anxiety',    color:'#3B6EA8', questions:qs.gad7, result:gad7Result, submit:async a => { const {data}=await submitGAD7(a); setGad7Result(data) }, reset:()=>setGad7Result(null) },
   ]
   const active = TABS.find(t => t.id === tab)
 
@@ -193,27 +212,30 @@ export default function Assessment() {
           </div>
           <div>
             <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Clinical Assessment</h2>
-            <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>Validated global screening tools · Results inform your AI session</p>
+            {/* ✅ Clean subtitle — no technical jargon for client */}
+            <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>Answer honestly — there are no right or wrong answers</p>
           </div>
         </div>
 
+        {/* Tab — no desc, no score */}
         <div style={{ display:'flex', gap:6, padding:4, borderRadius:13, marginBottom:16, background:'var(--bg-card)', border:'1px solid var(--border)', boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
           {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, padding:'11px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', transition:'all 0.18s', border:`1px solid ${tab === t.id ? t.color+'30' : 'transparent'}`, background:tab === t.id ? t.color+'10' : 'transparent', color:tab === t.id ? t.color : 'var(--text-4)', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}>
-              <span style={{ fontSize:14, fontWeight:700 }}>{t.label}</span>
-              <span style={{ fontSize:11, opacity:0.7 }}>{t.sub} · {t.qs}q</span>
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, padding:'11px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', transition:'all 0.18s', border:`1px solid ${tab===t.id?t.color+'30':'transparent'}`, background:tab===t.id?t.color+'10':'transparent', color:tab===t.id?t.color:'var(--text-4)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              <span style={{ fontSize:15, fontWeight:700 }}>{t.label}</span>
+              <span style={{ fontSize:12, opacity:0.65 }}>{t.sub}</span>
               {t.result && <CheckCircle size={11}/>}
             </button>
           ))}
         </div>
 
+        {/* Card — just the heading, no subtitle/score */}
         <div style={{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:16, padding:'20px 18px', boxShadow:'0 2px 12px rgba(26,35,50,0.06)' }}>
-          <div style={{ marginBottom:18, display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
-            <div>
-              <h3 style={{ fontSize:15, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>{tab === 'phq9' ? 'Patient Health Questionnaire-9' : 'Generalized Anxiety Disorder-7'}</h3>
-              <p style={{ fontSize:12, color:'var(--text-4)', marginTop:4 }}>{active.desc}</p>
-            </div>
-            {active.result && <span style={{ fontSize:12, fontWeight:700, padding:'4px 11px', borderRadius:99, flexShrink:0, background:active.color+'10', color:active.color, border:`1px solid ${active.color}30` }}>Score: {active.result.score}</span>}
+          <div style={{ marginBottom:18 }}>
+            <h3 style={{ fontSize:15, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>
+              {tab === 'phq9' ? 'Patient Health Questionnaire' : 'Generalized Anxiety Disorder'}
+            </h3>
+            {/* ✅ No "9 questions · Score 0-27..." — removed entirely */}
+            {/* ✅ No "Score: X" badge — hidden from client */}
           </div>
 
           {loading ? (
