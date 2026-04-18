@@ -26,9 +26,8 @@ langchain-text-splitters==0.3.2
 # ── RAG (lightweight — no torch/chromadb) ─────────────────────
 pypdf==4.3.1
 
-# ── Emotion detection ─────────────────────────────────────────
+# ── Emotion detection (lightweight OpenCV only) ───────────────
 opencv-python-headless==4.10.0.84
-httpx>=0.27.0           # Claude Vision API calls
 
 # ── NLP / Sentiment ───────────────────────────────────────────
 textblob==0.18.0
