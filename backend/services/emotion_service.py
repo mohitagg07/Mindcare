@@ -1,7 +1,6 @@
 """
-Emotion Service — OpenCV DNN only (no FER, no torch, fits in 512MB RAM).
-Uses the res10 SSD caffemodel for face detection.
-Emotion classification is rule-based on face region features.
+Emotion Service — OpenCV DNN face detection + lightweight pixel-based emotion hints.
+No FER, no torch, no tensorflow. Fits in 512MB RAM.
 """
 import os
 import base64
@@ -32,10 +31,53 @@ def load_model():
             logger.info("✅ OpenCV DNN face detector loaded")
         else:
             logger.warning("DNN model files missing in backend/models/")
-            MODEL_AVAILABLE = False
     except Exception as e:
         logger.warning(f"OpenCV DNN load failed: {e}")
-        MODEL_AVAILABLE = False
+
+
+def _estimate_emotion(face_gray: np.ndarray) -> dict:
+    """
+    Lightweight emotion estimation from face pixel statistics.
+    Uses brightness, contrast, and region analysis as proxies.
+    Not as accurate as FER but works with zero extra dependencies.
+    """
+    if face_gray.size == 0:
+        return {l: (1.0 if l == "neutral" else 0.0) for l in EMOTION_LABELS}
+
+    h, w = face_gray.shape
+    # Resize to standard size
+    import cv2
+    face = cv2.resize(face_gray, (48, 48)).astype(np.float32) / 255.0
+
+    # Region splits
+    top    = face[:16, :]   # forehead / brows
+    mid    = face[16:32, :] # eyes / nose
+    bottom = face[32:, :]   # mouth / chin
+
+    # Feature extraction
+    brightness = float(np.mean(face))
+    contrast   = float(np.std(face))
+    top_dark   = float(np.mean(top))    # dark brows → anger/sad
+    mouth_bright = float(np.mean(bottom))  # bright mouth → smile
+    eye_contrast = float(np.std(mid))   # high contrast eyes → surprise/fear
+
+    # Rule-based scoring
+    scores = {
+        "happy":    max(0, (mouth_bright - 0.45) * 3.0 + (brightness - 0.4) * 1.5),
+        "sad":      max(0, (0.5 - brightness) * 2.0 + (0.45 - mouth_bright) * 1.5),
+        "angry":    max(0, (0.5 - top_dark) * 2.5 + (contrast - 0.15) * 1.0),
+        "surprise": max(0, (eye_contrast - 0.18) * 4.0 + (brightness - 0.45) * 1.0),
+        "fear":     max(0, (eye_contrast - 0.16) * 2.0 + (0.5 - brightness) * 1.5),
+        "disgust":  max(0, (contrast - 0.2) * 1.5 + (0.48 - mouth_bright) * 1.0),
+        "neutral":  0.3,
+    }
+
+    # Normalize to sum to 1
+    total = sum(scores.values()) or 1.0
+    normalized = {k: round(v / total, 4) for k, v in scores.items()}
+    dominant   = max(normalized, key=normalized.get)
+
+    return normalized, dominant
 
 
 def predict_emotion(image_data: str) -> dict:
@@ -49,12 +91,13 @@ def predict_emotion(image_data: str) -> dict:
         if "," in image_data:
             image_data = image_data.split(",")[1]
 
-        img_bytes  = base64.b64decode(image_data)
-        pil_img    = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-        frame_rgb  = np.array(pil_img)
-        frame_bgr  = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-        h, w       = frame_bgr.shape[:2]
+        img_bytes = base64.b64decode(image_data)
+        pil_img   = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        frame_rgb = np.array(pil_img)
+        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        h, w      = frame_bgr.shape[:2]
 
+        # Detect faces
         blob = cv2.dnn.blobFromImage(
             cv2.resize(frame_bgr, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0)
         )
@@ -65,11 +108,12 @@ def predict_emotion(image_data: str) -> dict:
         for i in range(detections.shape[2]):
             conf = detections[0, 0, i, 2]
             if conf > 0.5:
-                box  = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
                 x1, y1, x2, y2 = box.astype(int)
                 x1, y1 = max(0, x1), max(0, y1)
                 x2, y2 = min(w, x2), min(h, y2)
-                faces.append((x1, y1, x2, y2, float(conf)))
+                if x2 > x1 and y2 > y1:
+                    faces.append((x1, y1, x2, y2, float(conf)))
 
         if not faces:
             return {
@@ -81,25 +125,18 @@ def predict_emotion(image_data: str) -> dict:
 
         # Use largest face
         x1, y1, x2, y2, conf = max(faces, key=lambda f: (f[2]-f[0]) * (f[3]-f[1]))
-        face_roi = cv2.cvtColor(frame_bgr[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
+        face_region = frame_bgr[y1:y2, x1:x2]
+        face_gray   = cv2.cvtColor(face_region, cv2.COLOR_BGR2GRAY)
 
-        # Lightweight brightness/contrast heuristic for emotion hint
-        mean_bright = float(np.mean(face_roi)) if face_roi.size > 0 else 128.0
-        std_bright  = float(np.std(face_roi))  if face_roi.size > 0 else 20.0
-
-        # Simple heuristic — returns neutral with moderate confidence
-        # Real emotion CNN runs locally but not on Render free tier
-        all_scores = {l: round(0.02 + (0.03 if l != "neutral" else 0.0), 4) for l in EMOTION_LABELS}
-        all_scores["neutral"] = round(1.0 - sum(v for k, v in all_scores.items() if k != "neutral"), 4)
+        all_scores, dominant = _estimate_emotion(face_gray)
 
         return {
-            "emotion":         "neutral",
+            "emotion":         dominant,
             "confidence":      round(conf, 3),
             "all_scores":      all_scores,
             "model_available": True,
-            "backend":         "opencv-dnn",
+            "backend":         "opencv-pixel",
             "faces_detected":  len(faces),
-            "note":            "Face detected. Full emotion CNN disabled on free tier to save memory.",
         }
 
     except Exception as e:
@@ -118,6 +155,5 @@ def _default_result(model_available: bool) -> dict:
 def is_model_loaded() -> bool:
     return MODEL_AVAILABLE
 
-
 def get_backend() -> Optional[str]:
-    return "opencv-dnn" if MODEL_AVAILABLE else "fallback"
+    return "opencv-pixel" if MODEL_AVAILABLE else "fallback"
