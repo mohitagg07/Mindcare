@@ -85,7 +85,13 @@ export default function Dashboard() {
     </div>
   )
 
-  const radarData = [
+  // Compute a local risk score from assessments when riskData isn't populated yet
+  const localRiskScore = (() => {
+    if (riskData) return riskData.risk_score
+    const p = phq9Result ? (phq9Result.score / 27) * 0.40 : 0
+    const g = gad7Result ? (gad7Result.score / 21) * 0.25 : 0
+    return p + g > 0 ? Math.min(p + g + 0.05, 1) : 0
+  })()
     { subject:'Depression', value: phq9Result ? Math.round((phq9Result.score / 27) * 100) : 0 },
     { subject:'Anxiety',    value: gad7Result  ? Math.round((gad7Result.score  / 21) * 100) : 0 },
     { subject:'Facial',     value: riskData    ? Math.round((riskData.components?.facial_contribution ?? 0) * 100) : 0 },
@@ -144,7 +150,7 @@ export default function Dashboard() {
             <p style={{ fontSize:10, color:'#4A4870', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', alignSelf:'flex-start' }}>
               Overall Risk
             </p>
-            <Gauge score={riskData?.risk_score ?? 0}/>
+            <Gauge score={localRiskScore}/>
           </div>
           <div className="card" style={{ display:'flex', flexDirection:'column', gap:14 }}>
             <p style={{ fontSize:10, color:'#4A4870', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px' }}>
@@ -152,10 +158,25 @@ export default function Dashboard() {
             </p>
             {riskData?.components ? (
               <>
-                <Bar label="PHQ-9 — Depression (40%)"  value={riskData.components.phq9_contribution}   color="#7B5EF8"/>
-                <Bar label="GAD-7 — Anxiety (25%)"     value={riskData.components.gad7_contribution}   color="#10D9A8"/>
-                <Bar label="Facial Emotion (20%)"       value={riskData.components.facial_contribution} color="#60A5FA"/>
-                <Bar label="Chat Mood (15%)"            value={riskData.components.text_contribution}   color="#FBBF24"/>
+                <Bar label="PHQ-9 — Depression (40%)"
+                  value={riskData.components.phq9_contribution > 0
+                    ? riskData.components.phq9_contribution
+                    : phq9Result ? phq9Result.score / 27 : 0}
+                  color="#7B5EF8"/>
+                <Bar label="GAD-7 — Anxiety (25%)"
+                  value={riskData.components.gad7_contribution > 0
+                    ? riskData.components.gad7_contribution
+                    : gad7Result ? gad7Result.score / 21 : 0}
+                  color="#10D9A8"/>
+                <Bar label="Facial Emotion (20%)"  value={riskData.components.facial_contribution} color="#60A5FA"/>
+                <Bar label="Chat Mood (15%)"       value={riskData.components.text_contribution}   color="#FBBF24"/>
+              </>
+            ) : phq9Result || gad7Result ? (
+              <>
+                <Bar label="PHQ-9 — Depression (40%)" value={phq9Result ? phq9Result.score / 27 : 0} color="#7B5EF8"/>
+                <Bar label="GAD-7 — Anxiety (25%)"    value={gad7Result ? gad7Result.score / 21 : 0} color="#10D9A8"/>
+                <Bar label="Facial Emotion (20%)"      value={0} color="#60A5FA"/>
+                <Bar label="Chat Mood (15%)"           value={0} color="#FBBF24"/>
               </>
             ) : (
               <p style={{ fontSize:13, color:'#4A4870' }}>Send a chat message to generate breakdown.</p>

@@ -10,7 +10,7 @@ function TypingIndicator() {
       <div style={{ width:34, height:34, borderRadius:11, background:'linear-gradient(135deg,#5B5BD6,#4747B8)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 3px 10px rgba(91,91,214,0.25)' }}>
         <Heart size={14} color="#fff" fill="#fff" />
       </div>
-      <div style={{ padding:'12px 16px', borderRadius:'18px 18px 18px 4px', background:'#fff', border:'1px solid #E2E8F8', boxShadow:'0 2px 8px rgba(91,91,214,0.06)' }}>
+      <div style={{ padding:'12px 16px', borderRadius:'18px 18px 18px 4px', background:'#252238', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 2px 12px rgba(0,0,0,0.25)' }}>
         <div style={{ display:'flex', gap:5, alignItems:'center', height:16 }}>
           <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
         </div>
@@ -26,28 +26,28 @@ function Message({ msg }) {
   if (isUser) return (
     <div className="msg-enter" style={{ display:'flex', gap:10, alignItems:'flex-end', justifyContent:'flex-end' }}>
       <div style={{ maxWidth:'72%' }}>
-        <p style={{ textAlign:'right', fontSize:10, color:'#C5CCE0', marginBottom:5 }}>{time}</p>
-        <div style={{ padding:'12px 17px', borderRadius:'18px 18px 4px 18px', background:'linear-gradient(135deg,#5B5BD6,#4747B8)', color:'#fff', fontSize:14, lineHeight:1.6, boxShadow:'0 4px 16px rgba(91,91,214,0.25)' }}>
+        <p style={{ textAlign:'right', fontSize:10, color:'#4A4870', marginBottom:5 }}>{time}</p>
+        <div style={{ padding:'12px 17px', borderRadius:'18px 18px 4px 18px', background:'linear-gradient(135deg,#7B5EF8,#5B48D6)', color:'#fff', fontSize:14, lineHeight:1.6, boxShadow:'0 4px 16px rgba(123,94,248,0.35)' }}>
           {msg.content}
         </div>
       </div>
-      <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:'rgba(91,91,214,0.1)', border:'1px solid rgba(91,91,214,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <User size={14} color="#5B5BD6" />
+      <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:'rgba(123,94,248,0.12)', border:'1px solid rgba(123,94,248,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <User size={14} color="#B4A0FF" />
       </div>
     </div>
   )
 
   return (
     <div className="msg-enter" style={{ display:'flex', gap:12, alignItems:'flex-end' }}>
-      <div style={{ width:34, height:34, borderRadius:11, flexShrink:0, background:'linear-gradient(135deg,#5B5BD6,#4747B8)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 3px 10px rgba(91,91,214,0.25)' }}>
+      <div style={{ width:34, height:34, borderRadius:11, flexShrink:0, background:'linear-gradient(135deg,#7B5EF8,#5B48D6)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 3px 10px rgba(123,94,248,0.35)' }}>
         <Heart size={14} color="#fff" fill="#fff" />
       </div>
       <div style={{ maxWidth:'76%' }}>
-        <p style={{ fontSize:10, color:'#C5CCE0', marginBottom:5 }}>MindCare · {time}</p>
-        <div style={{ padding:'13px 17px', borderRadius:'18px 18px 18px 4px', background:'#fff', border:'1px solid #E2E8F8', color:'#1A1A3E', fontSize:14, lineHeight:1.65, boxShadow:'0 2px 8px rgba(91,91,214,0.06)' }}>
+        <p style={{ fontSize:10, color:'#4A4870', marginBottom:5 }}>MindCare · {time}</p>
+        <div style={{ padding:'13px 17px', borderRadius:'18px 18px 18px 4px', background:'#252238', border:'1px solid rgba(255,255,255,0.07)', color:'#C4C0E8', fontSize:14, lineHeight:1.65, boxShadow:'0 2px 12px rgba(0,0,0,0.25)' }}>
           <ReactMarkdown components={{
             p:      ({ children }) => <p style={{ marginBottom:8 }}>{children}</p>,
-            strong: ({ children }) => <strong style={{ color:'#1A1A3E', fontWeight:600 }}>{children}</strong>,
+            strong: ({ children }) => <strong style={{ color:'#F0ECFF', fontWeight:600 }}>{children}</strong>,
             ul:     ({ children }) => <ul style={{ paddingLeft:18, marginTop:6, marginBottom:6, display:'flex', flexDirection:'column', gap:4 }}>{children}</ul>,
             li:     ({ children }) => <li>{children}</li>,
           }}>
@@ -123,23 +123,23 @@ export default function Chat() {
   }
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#F7F9FF' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#13111C' }}>
       {/* Header */}
-      <div style={{ padding:'14px 20px', flexShrink:0, borderBottom:'1px solid #E2E8F8', background:'#fff', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 1px 6px rgba(91,91,214,0.06)' }}>
+      <div style={{ padding:'14px 20px', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.07)', background:'#1D1A2C', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 1px 8px rgba(0,0,0,0.3)' }}>
         <div>
-          <h2 style={{ fontSize:16, fontWeight:700, color:'#1A1A3E', margin:0, fontFamily:'Poppins,system-ui' }}>Chat with MindCare</h2>
-          <p style={{ fontSize:12, color:'#8892B0', marginTop:2 }}>Compassionate · Confidential · 24/7</p>
+          <h2 style={{ fontSize:16, fontWeight:700, color:'#F0ECFF', margin:0, fontFamily:'Poppins,system-ui' }}>Chat with MindCare</h2>
+          <p style={{ fontSize:12, color:'#4A4870', marginTop:2 }}>Compassionate · Confidential · 24/7</p>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           {phq9Result && (
-            <span style={{ fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:99, background:'rgba(91,91,214,0.1)', color:'#5B5BD6', border:'1px solid rgba(91,91,214,0.2)' }}>PHQ-9: {phq9Result.score}</span>
+            <span style={{ fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:99, background:'rgba(123,94,248,0.12)', color:'#B4A0FF', border:'1px solid rgba(123,94,248,0.25)' }}>PHQ-9: {phq9Result.score}</span>
           )}
           {currentEmotion?.confidence > 0 && (
-            <span style={{ fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:99, background:'rgba(16,185,129,0.1)', color:'#10B981', border:'1px solid rgba(16,185,129,0.2)', textTransform:'capitalize' }}>{currentEmotion.emotion}</span>
+            <span style={{ fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:99, background:'rgba(16,217,168,0.10)', color:'#10D9A8', border:'1px solid rgba(16,217,168,0.25)', textTransform:'capitalize' }}>{currentEmotion.emotion}</span>
           )}
-          <button onClick={handleClear} style={{ width:32, height:32, borderRadius:9, border:'none', background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#C5CCE0', transition:'all 0.18s' }}
-            onMouseEnter={e=>{ e.currentTarget.style.color='#EF4444'; e.currentTarget.style.background='rgba(239,68,68,0.08)' }}
-            onMouseLeave={e=>{ e.currentTarget.style.color='#C5CCE0'; e.currentTarget.style.background='transparent' }}>
+          <button onClick={handleClear} style={{ width:32, height:32, borderRadius:9, border:'none', background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#4A4870', transition:'all 0.18s' }}
+            onMouseEnter={e=>{ e.currentTarget.style.color='#FF6B6B'; e.currentTarget.style.background='rgba(255,107,107,0.10)' }}
+            onMouseLeave={e=>{ e.currentTarget.style.color='#4A4870'; e.currentTarget.style.background='transparent' }}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -157,9 +157,9 @@ export default function Chat() {
         <div style={{ padding:'0 20px 12px', display:'flex', flexWrap:'wrap', gap:8 }}>
           {QUICK.map(q => (
             <button key={q} onClick={() => { setInput(q); inputRef.current?.focus() }}
-              style={{ fontSize:12, padding:'7px 14px', borderRadius:99, cursor:'pointer', background:'rgba(91,91,214,0.07)', border:'1px solid rgba(91,91,214,0.18)', color:'#5B5BD6', fontFamily:'inherit', transition:'all 0.18s' }}
-              onMouseEnter={e=>{ e.currentTarget.style.background='rgba(91,91,214,0.12)'; e.currentTarget.style.borderColor='rgba(91,91,214,0.35)' }}
-              onMouseLeave={e=>{ e.currentTarget.style.background='rgba(91,91,214,0.07)'; e.currentTarget.style.borderColor='rgba(91,91,214,0.18)' }}>
+              style={{ fontSize:12, padding:'7px 14px', borderRadius:99, cursor:'pointer', background:'rgba(123,94,248,0.08)', border:'1px solid rgba(123,94,248,0.22)', color:'#B4A0FF', fontFamily:'inherit', transition:'all 0.18s' }}
+              onMouseEnter={e=>{ e.currentTarget.style.background='rgba(123,94,248,0.18)'; e.currentTarget.style.borderColor='rgba(123,94,248,0.45)' }}
+              onMouseLeave={e=>{ e.currentTarget.style.background='rgba(123,94,248,0.08)'; e.currentTarget.style.borderColor='rgba(123,94,248,0.22)' }}>
               {q}
             </button>
           ))}
@@ -167,7 +167,7 @@ export default function Chat() {
       )}
 
       {/* Input */}
-      <div style={{ padding:'14px 20px', flexShrink:0, borderTop:'1px solid #E2E8F8', background:'#fff', boxShadow:'0 -1px 6px rgba(91,91,214,0.05)' }}>
+      <div style={{ padding:'14px 20px', flexShrink:0, borderTop:'1px solid rgba(255,255,255,0.07)', background:'#1D1A2C', boxShadow:'0 -2px 12px rgba(0,0,0,0.3)' }}>
         <div style={{ display:'flex', gap:10, alignItems:'flex-end' }}>
           <textarea ref={inputRef} value={input} rows={1}
             onChange={e => setInput(e.target.value)}
@@ -178,11 +178,11 @@ export default function Chat() {
             style={{ resize:'none', minHeight:46, maxHeight:120, lineHeight:1.55, paddingTop:13 }}
           />
           <button onClick={handleSend} disabled={!input.trim()||loading}
-            style={{ width:46, height:46, borderRadius:13, border:'none', flexShrink:0, background:input.trim()&&!loading?'linear-gradient(135deg,#5B5BD6,#4747B8)':'rgba(91,91,214,0.15)', cursor:input.trim()&&!loading?'pointer':'not-allowed', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:input.trim()&&!loading?'0 4px 14px rgba(91,91,214,0.3)':'none', transition:'all 0.2s' }}>
-            {loading ? <RefreshCw size={16} color="rgba(91,91,214,0.7)" style={{ animation:'spin 1s linear infinite' }} /> : <Send size={16} color={input.trim()?'#fff':'rgba(91,91,214,0.4)'} />}
+            style={{ width:46, height:46, borderRadius:13, border:'none', flexShrink:0, background:input.trim()&&!loading?'linear-gradient(135deg,#7B5EF8,#5B48D6)':'rgba(123,94,248,0.15)', cursor:input.trim()&&!loading?'pointer':'not-allowed', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:input.trim()&&!loading?'0 4px 14px rgba(123,94,248,0.4)':'none', transition:'all 0.2s' }}>
+            {loading ? <RefreshCw size={16} color="rgba(180,160,255,0.7)" style={{ animation:'spin 1s linear infinite' }} /> : <Send size={16} color={input.trim()?'#fff':'rgba(123,94,248,0.4)'} />}
           </button>
         </div>
-        <p style={{ fontSize:10, color:'#C5CCE0', marginTop:8, textAlign:'center' }}>
+        <p style={{ fontSize:10, color:'#4A4870', marginTop:8, textAlign:'center' }}>
           Not a substitute for professional care · Crisis: iCall 9152987821
           {phq9Result && ` · PHQ-9: ${phq9Result.score}`}
           {gad7Result && ` · GAD-7: ${gad7Result.score}`}
