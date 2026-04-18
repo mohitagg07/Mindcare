@@ -32,4 +32,9 @@ async def analyze_emotion_upload(request: Request, file: UploadFile = File(...))
 @router.get("/emotion/status")
 async def emotion_status():
     from services.emotion_service import is_model_loaded, get_backend
-    return {"model_loaded": is_model_loaded(), "backend": get_backend()}
+    backend = get_backend()
+    return {
+        "model_loaded": is_model_loaded(),
+        "backend": backend,
+        "powered_by": "Claude Vision API" if backend == "claude-vision" else backend,
+    }

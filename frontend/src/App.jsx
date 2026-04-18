@@ -16,35 +16,16 @@ function AppInner() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (loading) return (
-    <div style={{
-      minHeight:'100vh', display:'flex', flexDirection:'column',
-      alignItems:'center', justifyContent:'center',
-      background:'#13111C', gap:16
-    }}>
-      <style>{`
-        @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 20px rgba(123,94,248,0.4);}50%{opacity:0.8;box-shadow:0 0 40px rgba(123,94,248,0.7);}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-      `}</style>
-      <div style={{
-        width:64, height:64, borderRadius:20,
-        background:'linear-gradient(135deg,#7B5EF8,#5B44D6)',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        boxShadow:'0 8px 32px rgba(123,94,248,0.4)',
-        animation:'pulse 2s ease-in-out infinite'
-      }}>
-        <Heart size={28} color="#fff" fill="#fff"/>
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'var(--bg-page)', gap:16 }}>
+      <style>{`@keyframes pulse2{0%,100%{opacity:1;box-shadow:0 0 20px rgba(42,125,111,0.3);}50%{opacity:0.85;box-shadow:0 0 40px rgba(42,125,111,0.5);}} @keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}`}</style>
+      <div style={{ width:60, height:60, borderRadius:18, background:'linear-gradient(135deg,#2A7D6F,#38A594)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 28px rgba(42,125,111,0.3)', animation:'pulse2 2s ease-in-out infinite' }}>
+        <Heart size={26} color="#fff" fill="#fff"/>
       </div>
       <div style={{ animation:'fadeUp 0.5s ease 0.2s both', textAlign:'center' }}>
-        <p style={{ color:'#C4C0E8', fontSize:16, fontWeight:600, fontFamily:'Poppins,system-ui' }}>MindCare</p>
-        <p style={{ color:'#4A4870', fontSize:13, marginTop:4 }}>Loading your space…</p>
+        <p style={{ color:'var(--text-1)', fontSize:16, fontWeight:600, fontFamily:'Lora,serif' }}>MindCare</p>
+        <p style={{ color:'var(--text-4)', fontSize:13, marginTop:4 }}>Loading your space…</p>
       </div>
-      <div style={{
-        marginTop:8, width:28, height:28,
-        border:'2.5px solid rgba(123,94,248,0.2)',
-        borderTopColor:'#7B5EF8', borderRadius:'50%',
-        animation:'spin 0.9s linear infinite'
-      }}/>
+      <div style={{ marginTop:8, width:24, height:24, border:'2.5px solid var(--border-md)', borderTopColor:'var(--teal)', borderRadius:'50%', animation:'spin 0.9s linear infinite' }}/>
     </div>
   )
 
@@ -57,78 +38,28 @@ function AppInner() {
   return (
     <AppProvider>
       <style>{`
-        @media(min-width:768px){
-          .mob-sb{position:relative!important;transform:none!important;z-index:auto!important;flex-shrink:0!important;}
-          .mob-bar{display:none!important;}
-        }
-        @media(max-width:767px){
-          .mob-sb{position:fixed!important;top:0;left:0;bottom:0;z-index:50;width:260px!important;}
-        }
+        @media(min-width:768px){.mob-sb{position:relative!important;transform:none!important;z-index:auto!important;flex-shrink:0!important;} .mob-bar{display:none!important;}}
+        @media(max-width:767px){.mob-sb{position:fixed!important;top:0;left:0;bottom:0;z-index:50;width:250px!important;}}
       `}</style>
-      <div style={{ display:'flex', height:'100dvh', background:'#13111C', overflow:'hidden', position:'relative' }}>
+      <div style={{ display:'flex', height:'100dvh', background:'var(--bg-page)', overflow:'hidden', position:'relative' }}>
+        {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(26,35,50,0.4)', zIndex:40, backdropFilter:'blur(3px)' }}/>}
 
-        {/* Overlay */}
-        {sidebarOpen && (
-          <div
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              position:'fixed', inset:0,
-              background:'rgba(0,0,0,0.55)',
-              zIndex:40, backdropFilter:'blur(4px)'
-            }}
-          />
-        )}
-
-        {/* Sidebar */}
-        <div
-          className="mob-sb"
-          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform 0.25s cubic-bezier(0.4,0,0.2,1)', flexShrink:0 }}
-        >
+        <div className="mob-sb" style={{ transform:sidebarOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform 0.25s cubic-bezier(0.4,0,0.2,1)', flexShrink:0 }}>
           <Sidebar currentPage={page} onNavigate={navigate} onClose={() => setSidebarOpen(false)}/>
         </div>
 
-        {/* Main */}
         <main style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
-
-          {/* ── Mobile Top Bar ── */}
-          <div
-            className="mob-bar"
-            style={{
-              display:'flex', alignItems:'center', justifyContent:'space-between',
-              padding:'12px 16px',
-              background:'#1D1A2C',
-              borderBottom:'1px solid rgba(255,255,255,0.07)',
-              flexShrink:0,
-              boxShadow:'0 2px 12px rgba(0,0,0,0.3)'
-            }}
-          >
-            <button
-              onClick={() => setSidebarOpen(true)}
-              style={{
-                width:40, height:40, borderRadius:12, border:'none',
-                background:'rgba(123,94,248,0.12)',
-                border:'1px solid rgba(123,94,248,0.22)',
-                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center'
-              }}
-            >
-              <Menu size={18} color="#B4A0FF"/>
+          <div className="mob-bar" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'var(--bg-card)', borderBottom:'1px solid var(--border)', flexShrink:0, boxShadow:'0 1px 4px rgba(26,35,50,0.06)' }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ width:38, height:38, borderRadius:10, border:'1px solid var(--border)', background:'var(--bg-elevated)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-3)' }}>
+              <Menu size={17}/>
             </button>
-
-            <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-              <div style={{
-                width:32, height:32, borderRadius:10,
-                background:'linear-gradient(135deg,#7B5EF8,#5B44D6)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                boxShadow:'0 3px 10px rgba(123,94,248,0.35)'
-              }}>
-                <Heart size={14} color="#fff" fill="#fff"/>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ width:30, height:30, borderRadius:9, background:'linear-gradient(135deg,#2A7D6F,#38A594)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Heart size={13} color="#fff" fill="#fff"/>
               </div>
-              <span style={{ fontFamily:'Poppins,system-ui', fontWeight:700, fontSize:17, color:'#F0ECFF' }}>
-                MindCare
-              </span>
+              <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:16, color:'var(--text-1)' }}>MindCare</span>
             </div>
-
-            <div style={{ width:40 }}/>
+            <div style={{ width:38 }}/>
           </div>
 
           <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
