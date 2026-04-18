@@ -18,7 +18,7 @@ _PROTO_PATH = os.path.join(_MODELS_DIR, "deploy.prototxt")
 _CAFFE_PATH = os.path.join(_MODELS_DIR, "res10_300x300_ssd_iter_140000.caffemodel")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+GROQ_VISION_MODEL = "llama-4-scout-17b-16e-instruct"
 
 VISION_PROMPT = """Analyze the facial expression in this image and determine the person's emotion.
 
