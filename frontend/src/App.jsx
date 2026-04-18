@@ -1,51 +1,56 @@
-import { useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { AppProvider } from './context/AppContext'
-import AuthGate from './components/AuthGate'
-import Sidebar from './components/Sidebar'
-import Chat from './components/Chat'
-import Assessment from './components/Assessment'
+import { AppProvider, useApp }   from './context/AppContext'
+import AuthGate      from './components/AuthGate'
+import Sidebar       from './components/Sidebar'
+import Chat          from './components/Chat'
+import Assessment    from './components/Assessment'
 import EmotionDetector from './components/EmotionDetector'
-import Dashboard from './components/Dashboard'
-import Metrics from './components/Metrics'
+import Dashboard     from './components/Dashboard'
+import Metrics       from './components/Metrics'
+
+const PAGES = {
+  chat:       Chat,
+  assessment: Assessment,
+  emotion:    EmotionDetector,
+  dashboard:  Dashboard,
+  metrics:    Metrics,
+}
 
 function AppInner() {
   const { isAuthed, loading } = useAuth()
-  const [page, setPage] = useState('chat')
+  const { activePage, setActivePage } = useApp()
 
   if (loading) return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column',
-      alignItems:'center', justifyContent:'center', background:'#13111C', gap:16 }}>
-      <div style={{ width:52, height:52, borderRadius:16,
-        background:'linear-gradient(135deg,#9B6DFF,#7C52D9)',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        boxShadow:'0 8px 32px rgba(155,109,255,0.4)', animation:'pulse 2s ease-in-out infinite' }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="white"/>
-        </svg>
-      </div>
-      <p style={{ color:'#4A4870', fontSize:13, fontFamily:'DM Sans, system-ui' }}>Loading MindCare…</p>
+    <div style={{
+      minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+      background:'#070c18', flexDirection:'column', gap:16,
+    }}>
+      <div style={{ fontSize:48, animation:'pulse 1.5s ease-in-out infinite' }}>🧠</div>
+      <p style={{ color:'rgba(255,255,255,0.3)', fontSize:14, fontFamily:'system-ui' }}>Loading MindCare…</p>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
     </div>
   )
 
   if (!isAuthed) return <AuthGate />
 
-  const PAGES = { chat:Chat, assessment:Assessment, emotion:EmotionDetector, dashboard:Dashboard, metrics:Metrics }
-  const Page  = PAGES[page] || Chat
+  const PageComponent = PAGES[activePage] || Chat
 
   return (
-    <AppProvider>
-      <div style={{ display:'flex', height:'100vh', background:'#13111C', overflow:'hidden' }}>
-        <Sidebar currentPage={page} onNavigate={setPage} />
-        <main style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          <Page />
-        </main>
-      </div>
-    </AppProvider>
+    <div className="flex h-screen bg-slate-900 text-white overflow-hidden">
+      <Sidebar currentPage={activePage} onNavigate={setActivePage} />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <PageComponent />
+      </main>
+    </div>
   )
 }
 
 export default function App() {
-  return <AuthProvider><AppInner /></AuthProvider>
+  return (
+    <AuthProvider>
+      <AppProvider>
+        <AppInner />
+      </AppProvider>
+    </AuthProvider>
+  )
 }
