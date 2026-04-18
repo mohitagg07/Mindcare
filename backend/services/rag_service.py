@@ -5,6 +5,7 @@ Loads PDFs with pypdf, does simple keyword search, sends context to Groq.
 """
 import os
 import logging
+from typing import Optional
 
 logger        = logging.getLogger("mindcare.rag")
 _pdf_chunks   = []
