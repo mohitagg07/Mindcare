@@ -1,257 +1,181 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Heart, MessageCircle, Scan, ClipboardList, ArrowRight,
+  Heart, MessageCircle, ArrowRight,
   TrendingUp, Shield, Brain, Activity, CheckCircle,
-  BarChart2, Smile, Zap, Star, ChevronDown
+  BarChart2, Zap, ChevronDown,
+  Youtube, Linkedin, Instagram, Phone, ExternalLink,
+  Smile, ClipboardList
 } from 'lucide-react'
 
-/* ── Animated SVG nature particles ── */
-function NatureBg() {
-  return (
-    <div aria-hidden style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
-      {/* Warm sunrise gradient mesh */}
-      <div style={{ position:'absolute', inset:0, background:'linear-gradient(160deg, #FFF8F0 0%, #F0FAF5 35%, #EDF5FF 65%, #FFF4F8 100%)' }}/>
-
-      {/* Floating orbs */}
-      <div style={{ position:'absolute', top:'-8%', left:'5%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(ellipse, rgba(255,183,77,0.18) 0%, transparent 65%)', animation:'orbFloat1 20s ease-in-out infinite' }}/>
-      <div style={{ position:'absolute', top:'15%', right:'-5%', width:440, height:440, borderRadius:'50%', background:'radial-gradient(ellipse, rgba(42,125,111,0.13) 0%, transparent 65%)', animation:'orbFloat2 26s ease-in-out infinite' }}/>
-      <div style={{ position:'absolute', bottom:'5%', left:'20%', width:380, height:380, borderRadius:'50%', background:'radial-gradient(ellipse, rgba(180,130,255,0.10) 0%, transparent 65%)', animation:'orbFloat3 22s ease-in-out infinite' }}/>
-      <div style={{ position:'absolute', top:'40%', left:'40%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(ellipse, rgba(255,150,100,0.09) 0%, transparent 65%)', animation:'orbFloat1 18s ease-in-out 5s infinite' }}/>
-
-      {/* Petals / leaves floating */}
-      {[
-        { left:'8%',  top:'20%', size:18, delay:0,    dur:12, color:'rgba(255,120,80,0.25)',  rot:15 },
-        { left:'85%', top:'15%', size:22, delay:2,    dur:15, color:'rgba(42,125,111,0.20)', rot:-20 },
-        { left:'15%', top:'60%', size:14, delay:4,    dur:10, color:'rgba(255,183,77,0.25)',  rot:30 },
-        { left:'75%', top:'55%', size:20, delay:1,    dur:13, color:'rgba(180,130,255,0.18)', rot:-10 },
-        { left:'50%', top:'10%', size:12, delay:6,    dur:11, color:'rgba(255,100,150,0.20)', rot:45 },
-        { left:'92%', top:'70%', size:16, delay:3,    dur:14, color:'rgba(42,125,111,0.18)', rot:25 },
-        { left:'30%', top:'80%', size:10, delay:7,    dur:9,  color:'rgba(255,183,77,0.22)',  rot:-35 },
-      ].map((p, i) => (
-        <div key={i} style={{
-          position:'absolute', left:p.left, top:p.top,
-          width:p.size, height:p.size,
-          borderRadius:'60% 40% 60% 40%',
-          background:p.color,
-          transform:`rotate(${p.rot}deg)`,
-          animation:`petalFloat ${p.dur}s ease-in-out ${p.delay}s infinite`,
-          filter:'blur(0.5px)',
-        }}/>
-      ))}
-
-      {/* Soft grid lines */}
-      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:0.04 }} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#2A7D6F" strokeWidth="1"/>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)"/>
-      </svg>
-    </div>
-  )
-}
-
-/* ── Animated word cycle ── */
-function WordCycle({ words }) {
-  const [idx, setIdx] = useState(0)
-  const [visible, setVisible] = useState(true)
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => { setIdx(i => (i+1) % words.length); setVisible(true) }, 400)
-    }, 2800)
-    return () => clearInterval(iv)
-  }, [words.length])
-  return (
-    <span style={{
-      display:'inline-block', color:'var(--teal)',
-      borderBottom:'3px solid var(--teal)',
-      paddingBottom:2,
-      opacity:visible ? 1 : 0,
-      transform:visible ? 'translateY(0)' : 'translateY(8px)',
-      transition:'opacity 0.35s ease, transform 0.35s ease',
-      minWidth:180, textAlign:'left',
-    }}>
-      {words[idx]}
-    </span>
-  )
-}
-
-/* ── Animated counter on scroll ── */
-function Counter({ target, suffix = '' }) {
-  const [val, setVal] = useState(0)
-  const ref = useRef(null)
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return
-      obs.disconnect()
-      const start = Date.now(), dur = 1600
-      const tick = () => {
-        const p = Math.min(1, (Date.now()-start)/dur)
-        const ease = 1 - Math.pow(1-p, 3)
-        setVal(Math.round(ease * target))
-        if (p < 1) requestAnimationFrame(tick)
-      }
-      requestAnimationFrame(tick)
-    }, { threshold:0.5 })
-    if (ref.current) obs.observe(ref.current)
-    return () => obs.disconnect()
-  }, [target])
-  return <span ref={ref}>{val}{suffix}</span>
-}
-
-/* ── Scroll reveal wrapper ── */
-function Reveal({ children, delay = 0 }) {
+/* ── Scroll reveal ── */
+function useReveal(threshold = 0.12) {
   const ref = useRef(null)
   const [vis, setVis] = useState(false)
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) { setVis(true); obs.disconnect() }
-    }, { threshold:0.12 })
+    }, { threshold })
     if (ref.current) obs.observe(ref.current)
     return () => obs.disconnect()
   }, [])
+  return [ref, vis]
+}
+
+function Reveal({ children, delay = 0, from = 'bottom', className = '' }) {
+  const [ref, vis] = useReveal()
+  const transforms = {
+    bottom: 'translateY(32px)', left: 'translateX(-40px)',
+    right:  'translateX(40px)', top:  'translateY(-20px)',
+  }
   return (
-    <div ref={ref} style={{
-      opacity: vis ? 1 : 0,
-      transform: vis ? 'translateY(0)' : 'translateY(28px)',
-      transition: `opacity 0.65s ease ${delay}ms, transform 0.65s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
+    <div ref={ref} className={className} style={{
+      opacity:   vis ? 1 : 0,
+      transform: vis ? 'none' : (transforms[from] || transforms.bottom),
+      transition:`opacity 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
     }}>
       {children}
     </div>
   )
 }
 
-/* ── App chat preview ── */
+/* ── Minimal page background ── */
+function PageBg() {
+  return (
+    <div aria-hidden style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
+      <div style={{ position:'absolute', inset:0, background:'#F5F3EF' }}/>
+      <div style={{ position:'absolute', top:'-8%', right:'-4%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(ellipse,rgba(42,125,111,0.08) 0%,transparent 68%)' }}/>
+      <div style={{ position:'absolute', bottom:'-6%', left:'-3%', width:440, height:440, borderRadius:'50%', background:'radial-gradient(ellipse,rgba(59,110,168,0.06) 0%,transparent 68%)' }}/>
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:0.03 }}>
+        <defs>
+          <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.4" fill="#2A7D6F"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#dots)"/>
+      </svg>
+    </div>
+  )
+}
+
+/* ── App chat preview — zero emojis ── */
 function AppPreview() {
   const msgs = [
-    { role:'ai',   text:"Hello! I can see you're feeling a bit tired today. Want to talk about it?" },
-    { role:'user', text:"Yes, work has been overwhelming lately." },
-    { role:'ai',   text:"I understand. Let's try a quick grounding exercise together — it only takes 2 minutes." },
+    { role:'ai',   text:"I notice things feel heavier today. That's okay — you don't have to have it all figured out." },
+    { role:'user', text:"Work has been really draining. I can't seem to switch off." },
+    { role:'ai',   text:"That makes a lot of sense. Let's try a 4-7-8 breath — it genuinely takes the edge off." },
   ]
   const [shown, setShown] = useState(0)
   useEffect(() => {
     if (shown >= msgs.length) return
-    const t = setTimeout(() => setShown(s => s+1), shown === 0 ? 800 : 1400)
+    const t = setTimeout(() => setShown(s => s + 1), shown === 0 ? 800 : 1600)
     return () => clearTimeout(t)
   }, [shown])
 
+  const moodItems = [
+    { label:'Risk',  value:'Low',    color:'#2A7D6F', Icon: Shield      },
+    { label:'Mood',  value:'Calm',   color:'#3B6EA8', Icon: Smile       },
+    { label:'Trend', value:'Rising', color:'#C07436', Icon: TrendingUp  },
+  ]
+
   return (
-    <div style={{
-      background:'#fff', borderRadius:24, overflow:'hidden',
-      boxShadow:'0 24px 64px rgba(26,35,50,0.13), 0 4px 16px rgba(26,35,50,0.06)',
-      border:'1px solid rgba(232,228,220,0.8)',
-      animation:'floatCard 7s ease-in-out infinite',
-    }}>
+    <div style={{ background:'#fff', borderRadius:22, overflow:'hidden', boxShadow:'0 24px 64px rgba(26,35,50,0.11),0 4px 16px rgba(26,35,50,0.05)', border:'1px solid rgba(232,228,220,0.8)', animation:'floatCard 8s ease-in-out infinite' }}>
       {/* Header */}
-      <div style={{ background:'linear-gradient(135deg,#1C3D35 0%,#2A7D6F 100%)', padding:'14px 18px', display:'flex', alignItems:'center', gap:10 }}>
-        <div style={{ width:32, height:32, borderRadius:10, background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', padding:'14px 18px', display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{ width:32, height:32, borderRadius:10, background:'rgba(255,255,255,0.16)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <Heart size={14} color="#fff" fill="#fff"/>
         </div>
         <div>
-          <div style={{ color:'#fff', fontWeight:700, fontSize:14, fontFamily:'Lora,serif', lineHeight:1 }}>MindCare</div>
-          <div style={{ color:'rgba(255,255,255,0.65)', fontSize:10, marginTop:2 }}>AI • Facial Emotion Detected: 😊 Happy</div>
+          <div style={{ color:'#fff', fontWeight:700, fontSize:14, fontFamily:'Lora,serif' }}>MindCare</div>
+          <div style={{ color:'rgba(255,255,255,0.55)', fontSize:10, marginTop:1 }}>Session active</div>
         </div>
-        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:99, background:'rgba(255,255,255,0.15)' }}>
+        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:99, background:'rgba(255,255,255,0.12)' }}>
           <div style={{ width:6, height:6, borderRadius:'50%', background:'#6EE7B7', animation:'pulse 2s infinite' }}/>
           <span style={{ color:'rgba(255,255,255,0.9)', fontSize:10, fontWeight:600 }}>Live</span>
         </div>
       </div>
 
-      {/* Emotion bar */}
-      <div style={{ display:'flex', gap:8, padding:'10px 16px', background:'#F9F8F6', borderBottom:'1px solid #EEE' }}>
-        {[{ l:'Risk', v:'Low', c:'#2A7D6F' },{ l:'Mood', v:'Happy 😊', c:'#C07436' },{ l:'Trend', v:'↑ Better', c:'#3B6EA8' }].map(x => (
-          <div key={x.l} style={{ flex:1, textAlign:'center', padding:'7px 4px', borderRadius:9, background:`${x.c}10`, border:`1px solid ${x.c}20` }}>
-            <div style={{ fontSize:11, fontWeight:700, color:x.c }}>{x.v}</div>
-            <div style={{ fontSize:9, color:'#9CA3AF', marginTop:1 }}>{x.l}</div>
+      {/* Mood strip — icons, no emojis */}
+      <div style={{ display:'flex', gap:6, padding:'10px 16px', background:'#F9F8F6', borderBottom:'1px solid #EDEBE8' }}>
+        {moodItems.map(({ label, value, color, Icon }) => (
+          <div key={label} style={{ flex:1, display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderRadius:9, background:`${color}08`, border:`1px solid ${color}18` }}>
+            <Icon size={11} color={color}/>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color }}>{value}</div>
+              <div style={{ fontSize:9, color:'#9CA3AF' }}>{label}</div>
+            </div>
           </div>
         ))}
       </div>
 
       {/* Messages */}
-      <div style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:10, minHeight:140 }}>
+      <div style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:10, minHeight:152 }}>
         {msgs.slice(0, shown).map((m, i) => (
-          <div key={i} style={{ display:'flex', justifyContent:m.role==='user'?'flex-end':'flex-start', animation:'msgPop 0.35s cubic-bezier(0.34,1.4,0.64,1) both' }}>
+          <div key={i} style={{ display:'flex', justifyContent:m.role==='user'?'flex-end':'flex-start', animation:'msgPop 0.36s cubic-bezier(0.34,1.4,0.64,1) both' }}>
             {m.role==='ai' && (
               <div style={{ width:24, height:24, borderRadius:7, background:'linear-gradient(135deg,#2A7D6F,#38A594)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginRight:7, marginTop:2 }}>
                 <Heart size={10} color="#fff" fill="#fff"/>
               </div>
             )}
-            <div style={{ maxWidth:'80%', padding:'9px 12px', borderRadius:m.role==='user'?'12px 12px 3px 12px':'12px 12px 12px 3px', background:m.role==='user'?'linear-gradient(135deg,#2A7D6F,#38A594)':'#F0EDE8', fontSize:12, color:m.role==='user'?'#fff':'#374151', lineHeight:1.5 }}>
+            <div style={{ maxWidth:'78%', padding:'9px 13px', borderRadius:m.role==='user'?'12px 12px 3px 12px':'12px 12px 12px 3px', background:m.role==='user'?'linear-gradient(135deg,#2A7D6F,#38A594)':'#F0EDE8', fontSize:12, color:m.role==='user'?'#fff':'#374151', lineHeight:1.58 }}>
               {m.text}
             </div>
           </div>
         ))}
         {shown < msgs.length && (
-          <div style={{ display:'flex', gap:5, paddingLeft:31 }}>
-            {[0,1,2].map(i => <div key={i} className="typing-dot" style={{ animationDelay:`${i*0.18}s` }}/>)}
+          <div style={{ display:'flex', gap:4, paddingLeft:31 }}>
+            {[0,1,2].map(i => <div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#2A7D6F', animation:`typingBounce 1.4s ease-in-out ${i*0.18}s infinite` }}/>)}
           </div>
         )}
       </div>
 
-      {/* Mini EMA chart */}
-      <div style={{ margin:'0 16px 14px', padding:'10px 12px', background:'#F9F8F6', borderRadius:10 }}>
+      {/* Sparkline */}
+      <div style={{ margin:'0 16px 16px', padding:'10px 12px', background:'#F9F8F6', borderRadius:10 }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-          <span style={{ fontSize:9, fontWeight:700, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.07em' }}>72h EMA Trajectory</span>
+          <span style={{ fontSize:9, fontWeight:700, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.07em' }}>72h Trend</span>
           <span style={{ fontSize:10, fontWeight:700, color:'#2A7D6F' }}>Improving ↑</span>
         </div>
-        <svg width="100%" height="32" viewBox="0 0 220 32">
+        <svg width="100%" height="28" viewBox="0 0 220 28">
           <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2A7D6F" stopOpacity="0.25"/>
+            <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#2A7D6F" stopOpacity="0.20"/>
               <stop offset="100%" stopColor="#2A7D6F" stopOpacity="0"/>
             </linearGradient>
           </defs>
-          <path d="M0,28 C40,26 60,24 90,19 C120,14 150,11 180,8 C200,6 215,5 220,4" fill="none" stroke="#2A7D6F" strokeWidth="2.5" strokeLinecap="round"/>
-          <path d="M0,28 C40,26 60,24 90,19 C120,14 150,11 180,8 C200,6 215,5 220,4 L220,32 L0,32Z" fill="url(#g1)"/>
-          <circle cx="220" cy="4" r="4" fill="#2A7D6F"/>
-          <circle cx="220" cy="4" r="7" fill="rgba(42,125,111,0.2)"/>
+          <path d="M0,25 C40,23 65,21 90,16 C115,11 148,8 175,5 C195,3 210,2 220,1" fill="none" stroke="#2A7D6F" strokeWidth="2.2" strokeLinecap="round"/>
+          <path d="M0,25 C40,23 65,21 90,16 C115,11 148,8 175,5 C195,3 210,2 220,1 L220,28 L0,28Z" fill="url(#cg)"/>
+          <circle cx="220" cy="1" r="3.5" fill="#2A7D6F"/>
+          <circle cx="220" cy="1" r="6.5" fill="rgba(42,125,111,0.18)"/>
         </svg>
       </div>
     </div>
   )
 }
 
-/* ── Feature card with illustration ── */
-function FeatureCard({ icon:Icon, color, accent, title, tagline, points, illustration }) {
+/* ── Feature card ── */
+function FeatureCard({ color, accent, title, tagline, points, imgSrc, imgAlt, from }) {
+  const [ref, vis] = useReveal(0.08)
   const [hov, setHov] = useState(false)
   return (
-    <div
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        background:'#fff', borderRadius:22, overflow:'hidden',
-        border:`1px solid ${hov ? color+'30' : 'var(--border)'}`,
-        boxShadow:hov ? `0 16px 48px ${color}18` : '0 2px 12px rgba(26,35,50,0.05)',
-        transition:'all 0.3s cubic-bezier(0.22,1,0.36,1)',
-        transform:hov ? 'translateY(-6px)' : 'none',
-        cursor:'default',
-      }}
-    >
-      {/* Illustration band */}
-      <div style={{ height:140, background:`linear-gradient(135deg, ${color}15, ${color}06)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
-        {illustration}
-        <div style={{ position:'absolute', bottom:-1, left:0, right:0, height:32, background:'linear-gradient(to top, #fff, transparent)' }}/>
+    <div ref={ref} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{
+      background:'#fff', borderRadius:20, overflow:'hidden',
+      border:`1px solid ${hov ? color+'30' : '#E8E4DC'}`,
+      boxShadow: hov ? `0 16px 48px ${color}15,0 4px 14px rgba(26,35,50,0.05)` : '0 2px 12px rgba(26,35,50,0.05)',
+      transition:'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+      transform: vis ? (hov ? 'translateY(-6px)' : 'translateY(0)') : (from==='left' ? 'translateX(-40px)' : 'translateX(40px)'),
+      opacity: vis ? 1 : 0,
+    }}>
+      <div style={{ height:176, overflow:'hidden', position:'relative' }}>
+        <img src={imgSrc} alt={imgAlt} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.5s ease', transform:hov?'scale(1.05)':'scale(1)' }}/>
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.08) 100%)' }}/>
+        <div style={{ position:'absolute', top:12, left:12, padding:'4px 10px', borderRadius:99, background:'rgba(255,255,255,0.90)', backdropFilter:'blur(8px)', fontSize:10, fontWeight:700, color, border:`1px solid ${color}20` }}>{tagline}</div>
       </div>
-
-      <div style={{ padding:'22px 24px 26px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-          <div style={{ width:38, height:38, borderRadius:11, background:accent, border:`1px solid ${color}22`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <Icon size={18} color={color}/>
-          </div>
-          <div>
-            <h3 style={{ fontFamily:'Lora,serif', fontSize:16, fontWeight:700, color:'var(--text-1)', margin:0 }}>{title}</h3>
-            <p style={{ fontSize:11, color, margin:0, marginTop:2, fontWeight:600 }}>{tagline}</p>
-          </div>
-        </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+      <div style={{ padding:'20px 22px 24px' }}>
+        <h3 style={{ fontFamily:'Lora,serif', fontSize:17, fontWeight:700, color:'#1A2332', margin:'0 0 14px', letterSpacing:'-0.2px' }}>{title}</h3>
+        <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
           {points.map((pt, i) => (
             <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:9 }}>
-              <div style={{ width:15, height:15, borderRadius:'50%', background:accent, border:`1px solid ${color}25`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
-                <CheckCircle size={8} color={color}/>
-              </div>
-              <span style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.6 }}>{pt}</span>
+              <CheckCircle size={13} color={color} style={{ flexShrink:0, marginTop:2 }}/>
+              <span style={{ fontSize:13, color:'#6B7280', lineHeight:1.62 }}>{pt}</span>
             </div>
           ))}
         </div>
@@ -260,231 +184,192 @@ function FeatureCard({ icon:Icon, color, accent, title, tagline, points, illustr
   )
 }
 
-/* ── SVG Illustrations for feature cards ── */
-function ChatIllustration({ color }) {
+/* ── Step card ── */
+function StepCard({ icon:Icon, color, step, title, desc, delay, isLast }) {
+  const [ref, vis] = useReveal(0.1)
+  const [hov, setHov] = useState(false)
   return (
-    <svg width="200" height="100" viewBox="0 0 200 100" style={{ position:'absolute' }}>
-      <rect x="20" y="15" width="100" height="28" rx="14" fill={color} fillOpacity="0.12"/>
-      <rect x="25" y="22" width="70" height="7" rx="3.5" fill={color} fillOpacity="0.35"/>
-      <rect x="25" y="32" width="50" height="5" rx="2.5" fill={color} fillOpacity="0.2"/>
-      <rect x="80" y="52" width="90" height="24" rx="12" fill={color} fillOpacity="0.18"/>
-      <rect x="88" y="59" width="65" height="6" rx="3" fill={color} fillOpacity="0.35"/>
-      <circle cx="16" cy="29" r="10" fill={color} fillOpacity="0.15"/>
-      <circle cx="16" cy="29" r="6" fill={color} fillOpacity="0.25"/>
-      {/* Heart */}
-      <path d="M16,30 C16,28 14,26 12,28 C10,30 16,34 16,34 C16,34 22,30 20,28 C18,26 16,28 16,30Z" fill={color} fillOpacity="0.6"/>
-    </svg>
-  )
-}
-function ScanIllustration({ color }) {
-  return (
-    <svg width="200" height="110" viewBox="0 0 200 110" style={{ position:'absolute' }}>
-      {/* Face outline */}
-      <ellipse cx="100" cy="55" rx="38" ry="44" fill={color} fillOpacity="0.07" stroke={color} strokeOpacity="0.18" strokeWidth="1.5"/>
-      {/* Eyes */}
-      <ellipse cx="86" cy="44" rx="5" ry="6" fill={color} fillOpacity="0.30"/>
-      <ellipse cx="114" cy="44" rx="5" ry="6" fill={color} fillOpacity="0.30"/>
-      {/* Smile */}
-      <path d="M84,65 Q100,76 116,65" stroke={color} strokeOpacity="0.4" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-      {/* Corner scan frames */}
-      {[[28,8],[148,8],[28,80],[148,80]].map(([x,y], i) => (
-        <g key={i} transform={`translate(${x},${y}) rotate(${[0,90,270,180][i]})`}>
-          <path d="M0,0 L12,0" stroke={color} strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M0,0 L0,12" stroke={color} strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round"/>
-        </g>
-      ))}
-      {/* Scan line */}
-      <line x1="50" y1="55" x2="150" y2="55" stroke={color} strokeOpacity="0.3" strokeWidth="1.5" strokeDasharray="4,4"/>
-    </svg>
-  )
-}
-function AssessIllustration({ color }) {
-  return (
-    <svg width="200" height="110" viewBox="0 0 200 110" style={{ position:'absolute' }}>
-      {/* Clipboard */}
-      <rect x="60" y="12" width="80" height="88" rx="10" fill={color} fillOpacity="0.08" stroke={color} strokeOpacity="0.15" strokeWidth="1.5"/>
-      <rect x="78" y="6" width="44" height="16" rx="8" fill={color} fillOpacity="0.2"/>
-      {/* Lines with check marks */}
-      {[30,46,62,78].map((y, i) => (
-        <g key={i}>
-          <circle cx="76" cy={y} r="5" fill={color} fillOpacity={i<2?0.4:0.15}/>
-          {i<2 && <path d={`M73,${y} L75,${y+2} L79,${y-2}`} stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>}
-          <rect x="86" y={y-3} width={[44,36,44,28][i]} height="6" rx="3" fill={color} fillOpacity={0.18-i*0.03}/>
-        </g>
-      ))}
-    </svg>
+    <div ref={ref} style={{ position:'relative', opacity:vis?1:0, transform:vis?'none':'translateX(40px)', transition:`opacity 0.65s ease ${delay}ms, transform 0.65s cubic-bezier(0.22,1,0.36,1) ${delay}ms` }}>
+      <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+        style={{ background:'#fff', border:`1.5px solid ${hov?color+'35':'#E8E4DC'}`, borderRadius:14, padding:'18px 20px', boxShadow:hov?`0 10px 32px ${color}12`:'0 2px 10px rgba(26,35,50,0.04)', display:'flex', gap:14, alignItems:'flex-start', transition:'all 0.26s cubic-bezier(0.22,1,0.36,1)', transform:hov?'translateX(3px)':'none' }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0 }}>
+          <div style={{ width:38, height:38, borderRadius:11, background:`${color}10`, border:`1.5px solid ${color}22`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+            <Icon size={16} color={color}/>
+            <div style={{ position:'absolute', top:-7, right:-7, width:18, height:18, borderRadius:'50%', background:`linear-gradient(135deg,${color},${color}cc)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#fff', border:'2px solid #F5F3EF' }}>{step}</div>
+          </div>
+          {!isLast && <div style={{ width:1.5, height:22, marginTop:4, background:`linear-gradient(to bottom,${color}30,transparent)` }}/>}
+        </div>
+        <div style={{ paddingTop:2 }}>
+          <h4 style={{ fontSize:13.5, fontWeight:700, color:'#1A2332', margin:'0 0 5px', fontFamily:'Lora,serif' }}>{title}</h4>
+          <p style={{ fontSize:12.5, color:'#6B7280', lineHeight:1.66, margin:0 }}>{desc}</p>
+        </div>
+      </div>
+    </div>
   )
 }
 
+/* ── Static data ── */
 const FEATURES = [
-  { icon:MessageCircle, color:'#2A7D6F', accent:'rgba(42,125,111,0.09)', title:'AI Therapy Chat', tagline:'Always there for you', points:['Listens without judgment, 24/7','Adapts its tone to your mood in real time','Suggests grounding exercises when needed'], illustration:<ChatIllustration color="#2A7D6F"/> },
-  { icon:Scan, color:'#C07436', accent:'rgba(192,116,54,0.09)', title:'Facial Emotion Detection', tagline:'Reads what words cannot say', points:['Instant analysis from your webcam or photo','Detects 7 distinct emotions accurately','No biometric data stored — fully private'], illustration:<ScanIllustration color="#C07436"/> },
-  { icon:ClipboardList, color:'#3B6EA8', accent:'rgba(59,110,168,0.09)', title:'Clinical Screening', tagline:'Doctor-grade tools, simplified', points:['PHQ-9 depression & GAD-7 anxiety screeners','Results in plain language, not clinical jargon','Scores feed directly into your AI session'], illustration:<AssessIllustration color="#3B6EA8"/> },
+  {
+    color:'#2A7D6F', accent:'rgba(42,125,111,0.08)',
+    title:'AI Therapy Chat', tagline:'Always listening',
+    imgSrc:'https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=600&q=80&auto=format&fit=crop',
+    imgAlt:'Person in a calm, supported conversation',
+    points:['Responds to how you actually feel, not just what you type','Adapts its tone — gentle when you struggle, uplifting when you thrive','Grounding exercises available any time, day or night'],
+    from:'left',
+  },
+  {
+    color:'#C07436', accent:'rgba(192,116,54,0.08)',
+    title:'Facial Emotion Detection', tagline:'Reads what words miss',
+    imgSrc:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80&auto=format&fit=crop',
+    imgAlt:'Person with a natural, calm expression',
+    points:['Instant read from your webcam or a photo','Recognises 7 distinct emotional states','No biometric data stored — ever'],
+    from:'right',
+  },
+  {
+    color:'#3B6EA8', accent:'rgba(59,110,168,0.08)',
+    title:'Clinical Screening', tagline:'Doctor-grade, simplified',
+    imgSrc:'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80&auto=format&fit=crop',
+    imgAlt:'Calm wellness and mental health setting',
+    points:['PHQ-9 and GAD-7 validated screeners','Results in plain language, not clinical jargon','Scores feed directly into your AI session context'],
+    from:'left',
+  },
 ]
 
-export default function Landing({ onGetStarted }) {
+const STEPS = [
+  { icon:MessageCircle, color:'#2A7D6F', step:'01', title:'You express yourself',    desc:'Send a message. The AI reads your tone — joyful, drained, or somewhere in between.' },
+  { icon:Activity,      color:'#C07436', step:'02', title:'We calculate your trend', desc:'Each session is weighted by recency. How you feel today matters more than last week.' },
+  { icon:TrendingUp,    color:'#3B6EA8', step:'03', title:'A direction emerges',     desc:'Over days, a clear pattern forms: improving, holding steady, or needing more support.' },
+  { icon:Brain,         color:'#7B5EA8', step:'04', title:'The AI responds accordingly', desc:'MindCare adjusts its voice — quieter when you struggle, warmer when you rise.' },
+]
+
+/* ── Main export ── */
+export default function Landing({ onGetStarted, onSignIn }) {
+  const handleSignIn = onSignIn || onGetStarted
   const [scrolled, setScrolled] = useState(false)
+
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 30)
+    const fn = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', fn, { passive:true })
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
   return (
-    <div style={{ minHeight:'100vh', fontFamily:"'DM Sans',system-ui,sans-serif", overflowX:'hidden', background:'var(--bg-page)' }}>
+    <div style={{ minHeight:'100vh', fontFamily:"'DM Sans',system-ui,sans-serif", overflowX:'hidden', background:'#F5F3EF' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
-        @keyframes orbFloat1  { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(3%,4%) scale(1.05)} 70%{transform:translate(-2%,2%) scale(0.96)} }
-        @keyframes orbFloat2  { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-4%,-3%)} }
-        @keyframes orbFloat3  { 0%,100%{transform:translate(0,0) scale(1)} 60%{transform:translate(2%,-4%) scale(1.04)} }
-        @keyframes petalFloat { 0%,100%{transform:translateY(0) rotate(var(--r,15deg)) scale(1)} 50%{transform:translateY(-18px) rotate(calc(var(--r,15deg) + 15deg)) scale(1.1)} }
-        @keyframes floatCard  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes heroTitle  { from{opacity:0;transform:translateY(30px) scale(0.97)} to{opacity:1;transform:none} }
-        @keyframes heroBadge  { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:none} }
-        @keyframes heroSub    { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
-        @keyframes heroBtns   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-        @keyframes heroCard   { from{opacity:0;transform:translateY(24px) scale(0.97)} to{opacity:1;transform:none} }
-        @keyframes msgPop     { from{opacity:0;transform:translateY(8px) scale(0.96)} to{opacity:1;transform:none} }
-        @keyframes pulse      { 0%,100%{opacity:1} 50%{opacity:0.45} }
-        @keyframes scrollBob  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
-        @keyframes shimmer    { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+        @keyframes floatCard   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes msgPop      { from{opacity:0;transform:translateY(6px) scale(0.97)} to{opacity:1;transform:none} }
+        @keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes typingBounce{ 0%,80%,100%{transform:translateY(0);opacity:0.35} 40%{transform:translateY(-5px);opacity:1} }
+        @keyframes heroIn      { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:none} }
+        @keyframes cardIn      { from{opacity:0;transform:translateX(32px)} to{opacity:1;transform:none} }
+        @keyframes scrollBob   { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(5px)} }
 
-        .cta-main {
-          display:inline-flex; align-items:center; gap:9px;
-          padding:14px 30px; border-radius:13px; border:none;
-          background:linear-gradient(135deg,#1C3D35,#2A7D6F);
-          color:#fff; font-size:15px; font-weight:700;
-          cursor:pointer; font-family:inherit;
-          box-shadow:0 6px 24px rgba(42,125,111,0.32);
-          transition:all 0.22s;
-        }
-        .cta-main:hover { transform:translateY(-3px); box-shadow:0 12px 36px rgba(42,125,111,0.40); }
+        .cta-main  { display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#1C3D35,#2A7D6F);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(42,125,111,0.28);transition:all 0.2s; }
+        .cta-main:hover  { transform:translateY(-2px);box-shadow:0 10px 32px rgba(42,125,111,0.36); }
+        .cta-ghost { display:inline-flex;align-items:center;gap:7px;padding:12px 22px;border-radius:12px;border:1.5px solid #DDD8CE;background:rgba(255,255,255,0.82);color:#374151;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.18s;backdrop-filter:blur(8px); }
+        .cta-ghost:hover { border-color:#2A7D6F;color:#2A7D6F;background:#fff; }
+        .nav-link  { color:#6B7280;font-size:14px;font-weight:500;cursor:pointer;background:none;border:none;font-family:inherit;transition:color 0.15s;padding:4px 0; }
+        .nav-link:hover { color:#2A7D6F; }
+        .social-btn{ width:36px;height:36px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;text-decoration:none; }
+        .social-btn:hover{ background:rgba(42,125,111,0.3);border-color:rgba(42,125,111,0.5);transform:translateY(-2px); }
+        .footer-link{ color:rgba(255,255,255,0.5);font-size:13px;font-weight:400;cursor:pointer;background:none;border:none;font-family:inherit;transition:color 0.15s;text-decoration:none;padding:0;text-align:left; }
+        .footer-link:hover{ color:#fff; }
 
-        .cta-ghost {
-          display:inline-flex; align-items:center; gap:7px;
-          padding:13px 24px; border-radius:13px;
-          border:1.5px solid var(--border-md); background:rgba(255,255,255,0.8);
-          color:var(--text-2); font-size:14px; font-weight:600;
-          cursor:pointer; font-family:inherit; transition:all 0.18s;
-          backdrop-filter:blur(8px);
-        }
-        .cta-ghost:hover { border-color:var(--teal); color:var(--teal); background:#fff; }
-
-        .nav-link { color:var(--text-3); font-size:14px; font-weight:500; cursor:pointer; background:none; border:none; font-family:inherit; transition:color 0.16s; padding:4px 0; }
-        .nav-link:hover { color:var(--teal); }
-
-        .stat-item:hover .stat-num { color:var(--teal); }
-
-        @media(max-width:860px) {
+        @media(max-width:860px){
           .hero-grid { grid-template-columns:1fr !important; }
-          .hero-card-col { display:none !important; }
+          .hero-right{ display:none !important; }
           .feat-grid { grid-template-columns:1fr !important; }
-          .ema-grid  { grid-template-columns:1fr !important; }
+          .ema-grid  { grid-template-columns:1fr !important; gap:40px !important; }
+          .trust-row { flex-wrap:wrap !important; gap:16px !important; }
+          .footer-cols{ grid-template-columns:1fr 1fr !important; }
+        }
+        @media(max-width:560px){
+          .footer-cols{ grid-template-columns:1fr !important; }
+          .cta-main,.cta-ghost{ width:100%; justify-content:center; }
         }
       `}</style>
 
       {/* ── NAVBAR ── */}
-      <nav style={{
-        position:'sticky', top:0, zIndex:100,
-        background:scrolled ? 'rgba(255,255,255,0.92)' : 'transparent',
-        backdropFilter:scrolled ? 'blur(18px)' : 'none',
-        borderBottom:scrolled ? '1px solid var(--border)' : '1px solid transparent',
-        height:62, padding:'0 max(24px,5vw)',
-        display:'flex', alignItems:'center', justifyContent:'space-between',
-        transition:'all 0.35s ease',
-        boxShadow:scrolled ? '0 2px 16px rgba(26,35,50,0.06)' : 'none',
-      }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:11, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 3px 12px rgba(42,125,111,0.30)' }}>
-            <Heart size={15} color="#fff" fill="#fff"/>
+      <nav style={{ position:'sticky', top:0, zIndex:100, background:scrolled?'rgba(245,243,239,0.94)':'transparent', backdropFilter:scrolled?'blur(18px)':'none', borderBottom:scrolled?'1px solid #E6E2DA':'1px solid transparent', height:62, padding:'0 max(24px,5vw)', display:'flex', alignItems:'center', justifyContent:'space-between', transition:'all 0.3s ease', boxShadow:scrolled?'0 2px 14px rgba(26,35,50,0.05)':'none' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+          <div style={{ width:35, height:35, borderRadius:10, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 3px 10px rgba(42,125,111,0.25)' }}>
+            <Heart size={14} color="#fff" fill="#fff"/>
           </div>
-          <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:18, color:'var(--text-1)', letterSpacing:'-0.3px' }}>MindCare</span>
+          <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:17, color:'#1A2332', letterSpacing:'-0.3px' }}>MindCare</span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:20 }}>
-          <button className="nav-link" onClick={onGetStarted}>Sign In</button>
-          <button className="cta-main" onClick={onGetStarted} style={{ padding:'9px 20px', fontSize:13 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:18 }}>
+          {/* Sign In → goes to login */}
+          <button className="nav-link" onClick={handleSignIn}>Sign In</button>
+          {/* Get Started → goes to register */}
+          <button className="cta-main" onClick={onGetStarted} style={{ padding:'8px 18px', fontSize:13 }}>
             Get Started <ArrowRight size={13}/>
           </button>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section style={{ position:'relative', minHeight:'92vh', display:'flex', alignItems:'center', overflow:'hidden' }}>
-        <NatureBg/>
-        <div style={{ position:'relative', zIndex:1, width:'100%', maxWidth:1140, margin:'0 auto', padding:'64px max(24px,5vw) 72px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:56, alignItems:'center' }} className="hero-grid">
+      <section style={{ position:'relative', minHeight:'90vh', display:'flex', alignItems:'center', overflow:'hidden' }}>
+        <PageBg/>
+        <div className="hero-grid" style={{ position:'relative', zIndex:1, width:'100%', maxWidth:1120, margin:'0 auto', padding:'72px max(24px,5vw) 84px', display:'grid', gridTemplateColumns:'1.15fr 1fr', gap:52, alignItems:'center' }}>
 
-          {/* Text */}
           <div>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:99, background:'rgba(42,125,111,0.10)', border:'1px solid rgba(42,125,111,0.22)', marginBottom:26, animation:'heroBadge 0.6s ease both' }}>
-              <div style={{ width:7, height:7, borderRadius:'50%', background:'var(--teal)', animation:'pulse 2s infinite' }}/>
-              <span style={{ fontSize:11, fontWeight:700, color:'var(--teal)', letterSpacing:'0.07em' }}>AI-POWERED MENTAL WELLNESS</span>
-              <Star size={10} color="var(--teal)" fill="var(--teal)"/>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'5px 13px', borderRadius:8, background:'rgba(42,125,111,0.09)', border:'1px solid rgba(42,125,111,0.20)', marginBottom:28, animation:'heroIn 0.55s ease both' }}>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:'#2A7D6F', animation:'pulse 2.2s infinite' }}/>
+              <span style={{ fontSize:11, fontWeight:600, color:'#2A7D6F', letterSpacing:'0.04em' }}>Mental wellness, powered by AI</span>
             </div>
 
-            <h1 style={{ fontFamily:'Lora,serif', fontSize:'clamp(32px,4.8vw,58px)', fontWeight:700, color:'var(--text-1)', lineHeight:1.12, margin:'0 0 12px', letterSpacing:'-0.5px', animation:'heroTitle 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both' }}>
-              Your mind deserves
-            </h1>
-            <h1 style={{ fontFamily:'Lora,serif', fontSize:'clamp(32px,4.8vw,58px)', fontWeight:700, lineHeight:1.12, margin:'0 0 22px', letterSpacing:'-0.5px', animation:'heroTitle 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both' }}>
-              to feel{' '}
-              <WordCycle words={['understood.', 'supported.', 'peaceful.', 'heard.', 'better.']}/>
+            <h1 style={{ fontFamily:'Lora,serif', fontSize:'clamp(32px,4.8vw,58px)', fontWeight:700, color:'#1C2B3A', lineHeight:1.12, margin:'0 0 20px', letterSpacing:'-0.5px', animation:'heroIn 0.65s cubic-bezier(0.22,1,0.36,1) 0.08s both' }}>
+              Some days feel heavier<br/>
+              <em style={{ fontStyle:'italic', color:'#2A7D6F' }}>than others.</em>
             </h1>
 
-            <p style={{ fontSize:'clamp(14px,1.8vw,17px)', color:'var(--text-3)', lineHeight:1.78, maxWidth:480, margin:'0 0 34px', animation:'heroSub 0.7s ease 0.35s both' }}>
-              MindCare blends facial emotion AI, clinical assessments, and adaptive therapy chat to give you a real, honest picture of your mental health — updated in real time.
+            <p style={{ fontSize:'clamp(14px,1.7vw,16.5px)', color:'#4A5A6A', lineHeight:1.80, maxWidth:480, margin:'0 0 36px', animation:'heroIn 0.65s ease 0.22s both' }}>
+              MindCare helps you understand why. Emotion tracking, clinical screening, and an AI that adapts to exactly where you are — updated in real time, completely private.
             </p>
 
-            <div style={{ display:'flex', gap:13, flexWrap:'wrap', animation:'heroBtns 0.6s ease 0.5s both' }}>
-              <button className="cta-main" onClick={onGetStarted}>
-                Start for Free <ArrowRight size={15}/>
-              </button>
-              <button className="cta-ghost" onClick={onGetStarted}>
-                Sign In
-              </button>
+            <div style={{ display:'flex', gap:12, flexWrap:'wrap', animation:'heroIn 0.55s ease 0.36s both' }}>
+              <button className="cta-main" onClick={onGetStarted}>Start for free <ArrowRight size={14}/></button>
+              <button className="cta-ghost" onClick={handleSignIn}>Sign in</button>
             </div>
 
-            <div style={{ display:'flex', gap:22, marginTop:30, flexWrap:'wrap', animation:'heroBtns 0.6s ease 0.65s both' }}>
-              {[{ icon:Shield, label:'100% Private' },{ icon:Zap, label:'Real-time AI' },{ icon:CheckCircle, label:'Free forever' }].map(({ icon:Icon, label }) => (
-                <div key={label} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-4)', fontWeight:500 }}>
-                  <Icon size={13} color="var(--teal)"/> {label}
+            <div className="trust-row" style={{ display:'flex', gap:20, marginTop:28, flexWrap:'wrap', animation:'heroIn 0.55s ease 0.48s both' }}>
+              {[{Icon:Shield,l:'100% private'},{Icon:Zap,l:'Real-time'},{Icon:CheckCircle,l:'Free forever'}].map(({Icon,l}) => (
+                <div key={l} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#9CA3AF', fontWeight:500 }}>
+                  <Icon size={12} color="#2A7D6F"/> {l}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* App preview */}
-          <div className="hero-card-col" style={{ animation:'heroCard 0.8s cubic-bezier(0.22,1,0.36,1) 0.3s both' }}>
+          <div className="hero-right" style={{ animation:'cardIn 0.75s cubic-bezier(0.22,1,0.36,1) 0.25s both' }}>
             <AppPreview/>
           </div>
         </div>
 
-        {/* Scroll indicator */}
-        <div style={{ position:'absolute', bottom:28, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:6, animation:'scrollBob 2s ease-in-out infinite' }}>
-          <span style={{ fontSize:10, color:'var(--text-4)', fontWeight:500, letterSpacing:'0.06em' }}>SCROLL</span>
-          <ChevronDown size={16} color="var(--text-4)"/>
+        <div style={{ position:'absolute', bottom:24, left:'50%', transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', gap:4, animation:'scrollBob 2.4s ease-in-out infinite' }}>
+          <span style={{ fontSize:9, color:'#B0A99C', fontWeight:600, letterSpacing:'0.09em' }}>SCROLL</span>
+          <ChevronDown size={14} color="#B0A99C"/>
         </div>
       </section>
 
-      {/* ── STATS STRIP ── */}
-      <div style={{ background:'rgba(255,255,255,0.85)', backdropFilter:'blur(16px)', borderTop:'1px solid var(--border)', borderBottom:'1px solid var(--border)' }}>
-        <div style={{ maxWidth:900, margin:'0 auto', padding:'26px max(24px,5vw)', display:'flex', justifyContent:'space-around', flexWrap:'wrap', gap:16 }}>
+      {/* ── QUIET FEATURE STRIP ── */}
+      <div style={{ background:'rgba(255,255,255,0.80)', backdropFilter:'blur(12px)', borderTop:'1px solid #E6E2DA', borderBottom:'1px solid #E6E2DA' }}>
+        <div style={{ maxWidth:860, margin:'0 auto', padding:'22px max(24px,5vw)', display:'flex', justifyContent:'space-around', gap:20, flexWrap:'wrap' }}>
           {[
-            { value:7, suffix:'', label:'Emotions detected', icon:Smile, color:'#2A7D6F' },
-            { value:2, suffix:'', label:'Clinical tools (PHQ-9 & GAD-7)', icon:ClipboardList, color:'#3B6EA8' },
-            { value:100, suffix:'%', label:'Private — nothing stored', icon:Shield, color:'#C07436' },
-            { value:24, suffix:'/7', label:'AI always available', icon:Brain, color:'#7B5EA8' },
-          ].map(({ value, suffix, label, icon:Icon, color }) => (
-            <Reveal key={label}>
-              <div className="stat-item" style={{ display:'flex', alignItems:'center', gap:11, cursor:'default' }}>
-                <div style={{ width:38, height:38, borderRadius:11, background:`${color}10`, border:`1px solid ${color}18`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Icon size={16} color={color}/>
+            { Icon:Smile,        label:'7 emotions detected',     color:'#2A7D6F' },
+            { Icon:ClipboardList,label:'PHQ-9 & GAD-7 screeners', color:'#3B6EA8' },
+            { Icon:Shield,       label:'Nothing stored. Ever.',   color:'#C07436' },
+            { Icon:Brain,        label:'AI available 24/7',       color:'#7B5EA8' },
+          ].map(({ Icon, label, color }, i) => (
+            <Reveal key={label} delay={i * 60} from="bottom">
+              <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:`${color}0F`, border:`1px solid ${color}18`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Icon size={15} color={color}/>
                 </div>
-                <div>
-                  <div className="stat-num" style={{ fontSize:24, fontWeight:800, color:'var(--text-1)', lineHeight:1, fontFamily:'Lora,serif', transition:'color 0.2s' }}>
-                    <Counter target={value}/>{suffix}
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--text-4)', marginTop:2, fontWeight:500 }}>{label}</div>
-                </div>
+                <span style={{ fontSize:12.5, color:'#6B7280', fontWeight:500 }}>{label}</span>
               </div>
             </Reveal>
           ))}
@@ -492,59 +377,54 @@ export default function Landing({ onGetStarted }) {
       </div>
 
       {/* ── FEATURES ── */}
-      <section style={{ maxWidth:1080, margin:'0 auto', padding:'80px max(24px,5vw)' }}>
-        <Reveal>
-          <div style={{ textAlign:'center', marginBottom:56 }}>
-            <p style={{ fontSize:11, fontWeight:700, color:'var(--teal)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>WHAT MINDCARE DOES</p>
-            <h2 style={{ fontFamily:'Lora,serif', fontSize:'clamp(24px,3.5vw,40px)', fontWeight:700, color:'var(--text-1)', margin:'0 0 14px', letterSpacing:'-0.3px' }}>
+      <section style={{ maxWidth:1060, margin:'0 auto', padding:'80px max(24px,5vw)' }}>
+        <Reveal from="bottom">
+          <div style={{ marginBottom:52 }}>
+            <p style={{ fontSize:11, fontWeight:700, color:'#2A7D6F', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:10 }}>What MindCare does</p>
+            <h2 style={{ fontFamily:'Lora,serif', fontSize:'clamp(24px,3.2vw,40px)', fontWeight:700, color:'#1C2B3A', margin:'0 0 12px', letterSpacing:'-0.4px' }}>
               Three tools. One complete picture.
             </h2>
-            <p style={{ fontSize:15, color:'var(--text-3)', maxWidth:420, margin:'0 auto', lineHeight:1.7 }}>
-              Everything needed to understand your mental wellbeing — clearly and compassionately.
+            <p style={{ fontSize:14.5, color:'#6B7280', maxWidth:400, lineHeight:1.74, margin:0 }}>
+              Everything you need to understand your wellbeing — clearly and compassionately.
             </p>
           </div>
         </Reveal>
-
         <div className="feat-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:22 }}>
-          {FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={i * 100}>
-              <FeatureCard {...f}/>
-            </Reveal>
-          ))}
+          {FEATURES.map(f => <FeatureCard key={f.title} {...f}/>)}
         </div>
       </section>
 
       {/* ── HOW EMA WORKS ── */}
-      <section style={{ background:'linear-gradient(160deg,#F0FAF5 0%,#F8F6F2 60%,#EDF5FF 100%)', borderTop:'1px solid var(--border)', borderBottom:'1px solid var(--border)', padding:'80px max(24px,5vw)' }}>
-        <div style={{ maxWidth:980, margin:'0 auto' }}>
+      <section style={{ background:'linear-gradient(155deg,#EDF7F3 0%,#F5F3EF 55%,#EEF4FD 100%)', borderTop:'1px solid #E6E2DA', borderBottom:'1px solid #E6E2DA', padding:'80px max(24px,5vw)' }}>
+        <div style={{ maxWidth:960, margin:'0 auto' }}>
           <div className="ema-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:56, alignItems:'start' }}>
 
-            <Reveal>
+            <Reveal from="left">
               <div>
-                <p style={{ fontSize:11, fontWeight:700, color:'var(--teal)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:14 }}>HOW WE TRACK YOUR MOOD</p>
-                <h2 style={{ fontFamily:'Lora,serif', fontSize:'clamp(22px,3vw,36px)', fontWeight:700, color:'var(--text-1)', margin:'0 0 20px', lineHeight:1.2, letterSpacing:'-0.3px' }}>
-                  Your emotional trajectory,<br/><em style={{ fontStyle:'italic', color:'var(--teal)' }}>not just a snapshot</em>
+                <p style={{ fontSize:11, fontWeight:700, color:'#2A7D6F', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:14 }}>How we track your mood</p>
+                <h2 style={{ fontFamily:'Lora,serif', fontSize:'clamp(22px,2.8vw,36px)', fontWeight:700, color:'#1C2B3A', margin:'0 0 18px', lineHeight:1.20, letterSpacing:'-0.3px' }}>
+                  Your emotional<br/>
+                  <em style={{ fontStyle:'italic', color:'#2A7D6F' }}>trajectory, not just a snapshot</em>
                 </h2>
-                <p style={{ fontSize:14.5, color:'var(--text-3)', lineHeight:1.78, marginBottom:20 }}>
-                  A single day doesn't define you. MindCare uses an <strong style={{ color:'var(--text-2)' }}>Exponential Moving Average (EMA)</strong> — the same technique used in financial markets — to track your emotional trend over 72 hours.
+                <p style={{ fontSize:14, color:'#6B7280', lineHeight:1.80, marginBottom:16 }}>
+                  One bad day doesn't define you. MindCare uses an <strong style={{ color:'#374151' }}>Exponential Moving Average</strong> — the same technique used in financial markets — to track your emotional trend across 72 hours.
                 </p>
-                <p style={{ fontSize:14.5, color:'var(--text-3)', lineHeight:1.78, marginBottom:30 }}>
-                  Recent conversations weigh more than older ones, so your score always reflects <em>how you're doing right now</em> — not last week.
+                <p style={{ fontSize:14, color:'#6B7280', lineHeight:1.80, marginBottom:28 }}>
+                  Recent conversations carry more weight, so your score always reflects <em>where you are right now</em>.
                 </p>
-
                 <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
                   {[
-                    { range:'Trend improving', meaning:'AI is warm, affirming, and celebratory', color:'#2A7D6F', icon:TrendingUp },
-                    { range:'Trend stable',    meaning:'AI offers steady, balanced support',    color:'#C07436',  icon:BarChart2 },
-                    { range:'Trend declining', meaning:'AI is extra gentle and therapeutic',     color:'#3B6EA8',  icon:Activity },
+                    { range:'Improving', meaning:'AI is warm, affirming, and forward-looking', color:'#2A7D6F', Icon:TrendingUp },
+                    { range:'Stable',    meaning:'AI offers steady, grounded support',         color:'#C07436',  Icon:BarChart2 },
+                    { range:'Declining', meaning:'AI is extra gentle and therapeutic',          color:'#3B6EA8',  Icon:Activity  },
                   ].map(e => (
-                    <div key={e.range} style={{ display:'flex', alignItems:'center', gap:11, padding:'11px 14px', borderRadius:12, background:`${e.color}08`, border:`1px solid ${e.color}18` }}>
-                      <div style={{ width:30, height:30, borderRadius:9, background:`${e.color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <e.icon size={13} color={e.color}/>
+                    <div key={e.range} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:11, background:`${e.color}07`, border:`1px solid ${e.color}16` }}>
+                      <div style={{ width:30, height:30, borderRadius:8, background:`${e.color}12`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <e.Icon size={13} color={e.color}/>
                       </div>
                       <div>
                         <div style={{ fontSize:12, fontWeight:700, color:e.color }}>{e.range}</div>
-                        <div style={{ fontSize:12, color:'var(--text-3)', marginTop:1 }}>{e.meaning}</div>
+                        <div style={{ fontSize:11.5, color:'#6B7280', marginTop:1 }}>{e.meaning}</div>
                       </div>
                     </div>
                   ))}
@@ -552,31 +432,9 @@ export default function Landing({ onGetStarted }) {
               </div>
             </Reveal>
 
-            {/* Step cards */}
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              {[
-                { icon:MessageCircle, color:'#2A7D6F', step:'01', title:'You express yourself', desc:'Send a message. Our AI reads your emotional tone — joyful, calm, or struggling.' },
-                { icon:Activity,      color:'#C07436', step:'02', title:'We calculate your trend', desc:'Each session is weighted. Recent feelings matter more — just like real life.' },
-                { icon:TrendingUp,    color:'#3B6EA8', step:'03', title:'A clear direction emerges', desc:'Over days, a pattern appears: improving, stable, or needing extra care.' },
-                { icon:Brain,         color:'#7B5EA8', step:'04', title:'AI responds accordingly', desc:'MindCare adjusts its style automatically — gentler when you struggle, uplifting when you thrive.' },
-              ].map((s, i) => (
-                <Reveal key={s.step} delay={i * 80}>
-                  <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'18px 20px', boxShadow:'0 1px 6px rgba(26,35,50,0.04)', display:'flex', gap:14, alignItems:'flex-start' }}>
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, flexShrink:0 }}>
-                      <div style={{ width:34, height:34, borderRadius:10, background:`${s.color}12`, border:`1px solid ${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <s.icon size={15} color={s.color}/>
-                      </div>
-                      {i < 3 && <div style={{ width:1, height:14, background:'var(--border)' }}/>}
-                    </div>
-                    <div style={{ paddingTop:2 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                        <span style={{ fontSize:9, fontWeight:800, color:s.color, letterSpacing:'0.1em' }}>STEP {s.step}</span>
-                        <span style={{ fontSize:13, fontWeight:700, color:'var(--text-1)', fontFamily:'Lora,serif' }}>{s.title}</span>
-                      </div>
-                      <p style={{ fontSize:12.5, color:'var(--text-3)', lineHeight:1.62, margin:0 }}>{s.desc}</p>
-                    </div>
-                  </div>
-                </Reveal>
+            <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+              {STEPS.map((s, i) => (
+                <StepCard key={s.step} {...s} delay={i * 110} isLast={i === STEPS.length - 1}/>
               ))}
             </div>
           </div>
@@ -585,27 +443,25 @@ export default function Landing({ onGetStarted }) {
 
       {/* ── FINAL CTA ── */}
       <section style={{ padding:'88px max(24px,5vw)' }}>
-        <Reveal>
-          <div style={{ maxWidth:660, margin:'0 auto', background:'linear-gradient(145deg,#fff,#F3F8F5)', border:'1px solid var(--border)', borderRadius:26, padding:'52px 44px', textAlign:'center', boxShadow:'0 8px 48px rgba(42,125,111,0.08), 0 2px 12px rgba(26,35,50,0.06)', position:'relative', overflow:'hidden' }}>
-            {/* Background glow */}
-            <div style={{ position:'absolute', top:'-30%', left:'20%', width:320, height:320, borderRadius:'50%', background:'radial-gradient(ellipse,rgba(42,125,111,0.08),transparent)', pointerEvents:'none' }}/>
-
-            <div style={{ width:56, height:56, borderRadius:17, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 22px', boxShadow:'0 8px 24px rgba(42,125,111,0.30)' }}>
-              <Heart size={24} color="#fff" fill="#fff"/>
+        <Reveal from="bottom">
+          <div style={{ maxWidth:620, margin:'0 auto', background:'#fff', border:'1px solid #E6E2DA', borderRadius:24, padding:'52px 44px', textAlign:'center', boxShadow:'0 6px 48px rgba(42,125,111,0.08),0 2px 10px rgba(26,35,50,0.04)', position:'relative', overflow:'hidden' }}>
+            <div style={{ position:'absolute', top:'-15%', right:'10%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(ellipse,rgba(42,125,111,0.05),transparent)', pointerEvents:'none' }}/>
+            <div style={{ width:54, height:54, borderRadius:16, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 22px', boxShadow:'0 6px 20px rgba(42,125,111,0.26)' }}>
+              <Heart size={23} color="#fff" fill="#fff"/>
             </div>
-            <h2 style={{ fontFamily:'Lora,serif', fontSize:'clamp(22px,3.5vw,32px)', fontWeight:700, color:'var(--text-1)', margin:'0 0 14px', letterSpacing:'-0.3px' }}>
+            <h2 style={{ fontFamily:'Lora,serif', fontSize:'clamp(20px,3.2vw,32px)', fontWeight:700, color:'#1C2B3A', margin:'0 0 14px', letterSpacing:'-0.3px' }}>
               Ready to understand yourself better?
             </h2>
-            <p style={{ fontSize:15, color:'var(--text-3)', marginBottom:32, lineHeight:1.72, maxWidth:400, margin:'0 auto 32px' }}>
-              MindCare is free, private, and takes less than two minutes to begin. No credit card. No data sold. Ever.
+            <p style={{ fontSize:14.5, color:'#6B7280', lineHeight:1.74, maxWidth:380, margin:'0 auto 32px' }}>
+              MindCare is free and private. No credit card, no data sold, no conditions.
             </p>
-            <button className="cta-main" onClick={onGetStarted} style={{ fontSize:15, padding:'15px 34px' }}>
-              Begin Your Journey <ArrowRight size={16}/>
+            <button className="cta-main" onClick={onGetStarted} style={{ fontSize:15, padding:'14px 34px' }}>
+              Begin your journey <ArrowRight size={15}/>
             </button>
-            <div style={{ display:'flex', justifyContent:'center', gap:22, marginTop:24, flexWrap:'wrap' }}>
-              {['No credit card', 'Private & secure', 'Free forever'].map(t => (
-                <div key={t} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-4)', fontWeight:500 }}>
-                  <CheckCircle size={11} color="var(--teal)"/> {t}
+            <div style={{ display:'flex', justifyContent:'center', gap:20, marginTop:22, flexWrap:'wrap' }}>
+              {['No credit card','Private & secure','Free forever'].map(t => (
+                <div key={t} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11.5, color:'#9CA3AF', fontWeight:500 }}>
+                  <CheckCircle size={10} color="#2A7D6F"/> {t}
                 </div>
               ))}
             </div>
@@ -613,15 +469,107 @@ export default function Landing({ onGetStarted }) {
         </Reveal>
       </section>
 
-      {/* Footer */}
-      <footer style={{ borderTop:'1px solid var(--border)', padding:'20px max(24px,5vw)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10, background:'rgba(255,255,255,0.6)', backdropFilter:'blur(8px)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:24, height:24, borderRadius:7, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <Heart size={11} color="#fff" fill="#fff"/>
+      {/* ── FOOTER ── */}
+      <footer style={{ background:'linear-gradient(160deg,#1C2B3A,#0F1E2A)', color:'#fff', padding:0 }}>
+        <div style={{ height:2, background:'linear-gradient(90deg,#2A7D6F,#38A594,#3B6EA8,#7B5EA8,#C07436)' }}/>
+        <div style={{ maxWidth:1060, margin:'0 auto', padding:'52px max(24px,5vw) 36px' }}>
+          <div className="footer-cols" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:36, marginBottom:44 }}>
+
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:14 }}>
+                <div style={{ width:38, height:38, borderRadius:11, background:'linear-gradient(135deg,#2A7D6F,#38A594)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 14px rgba(42,125,111,0.30)', flexShrink:0 }}>
+                  <Heart size={16} color="#fff" fill="#fff"/>
+                </div>
+                <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:19, color:'#fff' }}>MindCare</span>
+              </div>
+              <p style={{ fontSize:13, color:'rgba(255,255,255,0.48)', lineHeight:1.76, maxWidth:240, marginBottom:20 }}>
+                AI-powered mental wellness that listens, understands, and grows with you.
+              </p>
+              <div style={{ display:'flex', gap:8 }}>
+                {[
+                  ['https://www.youtube.com/@MohitAgg07',   Youtube,   'YouTube'],
+                  ['https://www.linkedin.com/in/mohitagg07', Linkedin,  'LinkedIn'],
+                  ['https://www.instagram.com/mohitaggg7',  Instagram, 'Instagram'],
+                ].map(([href, Icon, title]) => (
+                  <a key={title} href={href} target="_blank" rel="noopener noreferrer" className="social-btn" title={title}>
+                    <Icon size={15} color="rgba(255,255,255,0.65)"/>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:16 }}>Product</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
+                {['AI Chat','Emotion Detection','PHQ-9 Screening','GAD-7 Screening','Dashboard','Analytics'].map(label => (
+                  <button key={label} onClick={onGetStarted} className="footer-link" style={{ border:'none', cursor:'pointer', background:'none', padding:0, fontFamily:'inherit', textAlign:'left', display:'flex', alignItems:'center', gap:5 }}>
+                    <ExternalLink size={9} style={{ opacity:0.35 }}/>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:16 }}>Support</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
+                <a href="https://www.linkedin.com/in/mohitagg07" target="_blank" rel="noopener noreferrer" className="footer-link">Privacy Policy</a>
+                <a href="https://www.linkedin.com/in/mohitagg07" target="_blank" rel="noopener noreferrer" className="footer-link">Terms of Use</a>
+                <button onClick={onGetStarted} className="footer-link" style={{ border:'none', cursor:'pointer', background:'none', padding:0, fontFamily:'inherit', textAlign:'left' }}>How It Works</button>
+                <a href="https://www.instagram.com/mohitaggg7" target="_blank" rel="noopener noreferrer" className="footer-link">Contact</a>
+                <a href="https://www.youtube.com/@MohitAgg07" target="_blank" rel="noopener noreferrer" className="footer-link">Demo Video</a>
+                <a href="https://github.com/mohitagg07" target="_blank" rel="noopener noreferrer" className="footer-link">GitHub</a>
+              </div>
+            </div>
+
+            <div>
+              <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:16 }}>Crisis Lines</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {[
+                  { name:'iCall India', num:'9152987821'    },
+                  { name:'Vandrevala',  num:'1860-2662-345' },
+                  { name:'AASRA',       num:'9820466627'    },
+                ].map(c => (
+                  <div key={c.name}>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,0.30)', marginBottom:3 }}>{c.name}</div>
+                    <a href={`tel:${c.num}`} style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.75)', textDecoration:'none', display:'flex', alignItems:'center', gap:5, transition:'color 0.15s' }}
+                      onMouseEnter={e=>e.currentTarget.style.color='#6EE7B7'}
+                      onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.75)'}>
+                      <Phone size={10}/> {c.num}
+                    </a>
+                  </div>
+                ))}
+                <div style={{ marginTop:4, padding:'9px 11px', borderRadius:9, background:'rgba(42,125,111,0.15)', border:'1px solid rgba(42,125,111,0.28)' }}>
+                  <p style={{ fontSize:10.5, color:'rgba(255,255,255,0.50)', margin:0, lineHeight:1.56 }}>
+                    MindCare is <strong style={{ color:'rgba(255,255,255,0.70)' }}>not</strong> a substitute for professional care. If you are in crisis, call a helpline immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <span style={{ fontFamily:'Lora,serif', fontWeight:600, fontSize:14, color:'var(--text-2)' }}>MindCare</span>
+
+          <div style={{ height:1, background:'rgba(255,255,255,0.07)', marginBottom:22 }}/>
+
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,0.28)', margin:0 }}>
+              © 2026 MindCare · Built with care by{' '}
+              <a href="https://www.linkedin.com/in/mohitagg07" target="_blank" rel="noopener noreferrer"
+                style={{ color:'rgba(255,255,255,0.50)', textDecoration:'none', transition:'color 0.15s' }}
+                onMouseEnter={e=>e.currentTarget.style.color='#6EE7B7'}
+                onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.50)'}>
+                Mohit Aggarwal
+              </a>
+            </p>
+            <div style={{ display:'flex', gap:18 }}>
+              {[['Privacy','https://www.linkedin.com/in/mohitagg07'],['Terms','https://www.linkedin.com/in/mohitagg07'],['GitHub','https://github.com/mohitagg07']].map(([label,href]) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize:12, color:'rgba(255,255,255,0.28)', textDecoration:'none', transition:'color 0.15s' }}
+                  onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.65)'}
+                  onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.28)'}>{label}</a>
+              ))}
+            </div>
+          </div>
         </div>
-        <p style={{ fontSize:11, color:'var(--text-4)', margin:0 }}>© 2026 MindCare · Not a substitute for professional mental health care · Crisis: iCall 9152987821</p>
       </footer>
     </div>
   )

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 import AuthGate from './components/AuthGate'
-import Landing from './components/Landing'
+import Landing from './pages/Landing'
 import Sidebar from './components/Sidebar'
 import Chat from './components/Chat'
 import Assessment from './components/Assessment'
@@ -16,6 +16,7 @@ function AppInner() {
   const [page, setPage] = useState('chat')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
+  const [authView, setAuthView] = useState('login')
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'var(--bg-page)', gap:16 }}>
@@ -31,9 +32,16 @@ function AppInner() {
     </div>
   )
 
-  // Show landing if not authed and not requesting auth
-  if (!isAuthed && !showAuth) return <Landing onGetStarted={() => setShowAuth(true)}/>
-  if (!isAuthed) return <AuthGate/>
+  // Landing — not yet authenticated
+  if (!isAuthed && !showAuth) return (
+    <Landing
+      onGetStarted={() => { setAuthView('register'); setShowAuth(true) }}
+      onSignIn={()     => { setAuthView('login');    setShowAuth(true) }}
+    />
+  )
+
+  // Goes straight to login or register — never re-renders landing
+  if (!isAuthed) return <AuthGate defaultView={authView} />
 
   const pages = { chat:Chat, assessment:Assessment, emotion:EmotionDetector, dashboard:Dashboard, metrics:Metrics }
   const PageComponent = pages[page] || Chat
