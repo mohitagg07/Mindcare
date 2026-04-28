@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # 🧠 MindCare: Empowering Mental Health
 
 > **AI-powered multimodal mental health assistant** — LLaMA-3 × CNN × PHQ-9 × GAD-7 × JWT Auth × Analytics
