@@ -1,180 +1,257 @@
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { Send, Trash2, Heart, User, RefreshCw, BookOpen, AlertCircle, Sparkles } from 'lucide-react'
+import {
+  Send, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
+  ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle,
+} from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
-import { sendChat, clearSession } from '../api/client.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { sendChat, clearSession, getChatHistory } from '../api/client.js'
+
+const QUICK_STARTS = [
+  { icon: Wind, title: 'I feel anxious', text: "I've been feeling anxious lately", tint: 'sage' },
+  { icon: Moon, title: 'Sleep has been hard', text: "I've been having trouble sleeping", tint: 'blue' },
+  { icon: Brain, title: 'Too much on my mind', text: 'I feel overwhelmed with everything', tint: 'plum' },
+]
+
+function formatTime(value, timeZone) {
+  const date = value ? new Date(value) : new Date()
+  if (Number.isNaN(date.getTime())) return ''
+  try {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...(timeZone ? { timeZone } : {}) })
+  } catch {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+}
+
+function Message({ msg, timeZone }) {
+  const isUser = msg.role === 'user'
+  return (
+    <article className={`chat-message ${isUser ? 'from-user' : 'from-assistant'}`}>
+      {!isUser && <div className="chat-avatar assistant-avatar"><Heart size={15} fill="currentColor" /></div>}
+      <div className="chat-message-stack">
+        <div className="chat-message-meta">
+          <span>{isUser ? 'You' : 'MindCare'}</span>
+          <time>{formatTime(msg.timestamp || msg.created_at, timeZone)}</time>
+        </div>
+        <div className="chat-bubble">
+          {isUser ? <p>{msg.content}</p> : (
+            <ReactMarkdown components={{
+              p: ({ children }) => <p>{children}</p>,
+              strong: ({ children }) => <strong>{children}</strong>,
+              ul: ({ children }) => <ul>{children}</ul>,
+              ol: ({ children }) => <ol>{children}</ol>,
+              li: ({ children }) => <li>{children}</li>,
+              a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer">{children}</a>,
+              blockquote: ({ children }) => <blockquote>{children}</blockquote>,
+            }}>{msg.content}</ReactMarkdown>
+          )}
+        </div>
+        {!isUser && (msg.rag_used || msg.crisis_detected || msg.metadata?.crisis_detected) && (
+          <div className="chat-message-badges">
+            {(msg.rag_used || msg.metadata?.rag_used) && <span><BookOpen size={12} /> Knowledge resources used</span>}
+            {(msg.crisis_detected || msg.metadata?.crisis_detected) && <span className="crisis-badge"><AlertCircle size={12} /> Safety resources included</span>}
+          </div>
+        )}
+      </div>
+      {isUser && <div className="chat-avatar user-avatar"><UserRound size={15} /></div>}
+    </article>
+  )
+}
 
 function TypingIndicator() {
   return (
-    <div style={{ display:'flex', gap:10, alignItems:'flex-end' }} className="animate-fade-in">
-      <div style={{ width:32, height:32, borderRadius:10, background:'linear-gradient(135deg,#2A7D6F,#38A594)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 2px 8px rgba(42,125,111,0.22)' }}>
-        <Heart size={13} color="#fff" fill="#fff"/>
-      </div>
-      <div style={{ padding:'11px 14px', borderRadius:'16px 16px 16px 4px', background:'#fff', border:'1px solid var(--border)', boxShadow:'0 1px 4px rgba(26,35,50,0.06)' }}>
-        <div style={{ display:'flex', gap:4, alignItems:'center', height:14 }}>
-          <div className="typing-dot"/><div className="typing-dot"/><div className="typing-dot"/>
-        </div>
+    <div className="chat-message from-assistant" role="status" aria-label="MindCare is responding">
+      <div className="chat-avatar assistant-avatar"><Heart size={15} fill="currentColor" /></div>
+      <div className="chat-message-stack">
+        <div className="chat-message-meta"><span>MindCare</span><span>Thinking it through</span></div>
+        <div className="chat-typing"><i /><i /><i /></div>
       </div>
     </div>
   )
 }
-
-function Message({ msg }) {
-  const isUser = msg.role === 'user'
-  const time = new Date(msg.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
-
-  if (isUser) return (
-    <div className="msg-enter" style={{ display:'flex', gap:8, alignItems:'flex-end', justifyContent:'flex-end' }}>
-      <div style={{ maxWidth:'72%' }}>
-        <p style={{ textAlign:'right', fontSize:10, color:'var(--text-4)', marginBottom:5 }}>{time}</p>
-        <div style={{ padding:'11px 16px', borderRadius:'16px 16px 4px 16px', background:'var(--teal)', color:'#fff', fontSize:14, lineHeight:1.6, boxShadow:'0 2px 12px rgba(42,125,111,0.22)' }}>
-          {msg.content}
-        </div>
-      </div>
-      <div style={{ width:30, height:30, borderRadius:9, flexShrink:0, background:'var(--teal-dim)', border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <User size={13} color="var(--teal)"/>
-      </div>
-    </div>
-  )
-
-  return (
-    <div className="msg-enter" style={{ display:'flex', gap:10, alignItems:'flex-end' }}>
-      <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:'linear-gradient(135deg,#2A7D6F,#38A594)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(42,125,111,0.22)' }}>
-        <Heart size={13} color="#fff" fill="#fff"/>
-      </div>
-      <div style={{ maxWidth:'76%' }}>
-        <p style={{ fontSize:10, color:'var(--text-4)', marginBottom:5 }}>MindCare · {time}</p>
-        <div style={{ padding:'12px 16px', borderRadius:'16px 16px 16px 4px', background:'#fff', border:'1px solid var(--border)', color:'var(--text-1)', fontSize:14, lineHeight:1.65, boxShadow:'0 1px 4px rgba(26,35,50,0.06)' }}>
-          <ReactMarkdown components={{
-            p:      ({ children }) => <p style={{ marginBottom:8 }}>{children}</p>,
-            strong: ({ children }) => <strong style={{ color:'var(--teal)', fontWeight:600 }}>{children}</strong>,
-            ul:     ({ children }) => <ul style={{ paddingLeft:18, marginTop:6, marginBottom:6, display:'flex', flexDirection:'column', gap:4 }}>{children}</ul>,
-            li:     ({ children }) => <li style={{ color:'var(--text-2)' }}>{children}</li>,
-          }}>
-            {msg.content}
-          </ReactMarkdown>
-        </div>
-        <div style={{ display:'flex', gap:8, marginTop:5, paddingLeft:2, flexWrap:'wrap' }}>
-          {msg.rag_used && (
-            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-              <BookOpen size={9} color="var(--teal)"/>
-              <span style={{ fontSize:10, color:'var(--teal)' }}>Knowledge base</span>
-            </div>
-          )}
-          {msg.crisis_detected && (
-            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-              <AlertCircle size={9} color="var(--rose)"/>
-              <span style={{ fontSize:10, color:'var(--rose)', fontWeight:600 }}>Crisis resources included</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const QUICK = [
-  "I've been feeling anxious lately",
-  "I'm having trouble sleeping",
-  "I feel overwhelmed with everything",
-  "What coping strategies can help me?",
-]
 
 export default function Chat() {
-  const { sessionId, phq9Result, gad7Result, currentEmotion, setRiskData, setRecommendations, messages, addMessage, clearMessages } = useApp()
-  const [input,   setInput]   = useState('')
+  const { user } = useAuth()
+  const {
+    sessionId, setSessionId, createNewSession, phq9Result, gad7Result,
+    currentEmotion, setRiskData, setRecommendations, setTrajectory,
+    messages, addMessage, replaceMessages, pendingChatPrompt, setPendingChatPrompt,
+  } = useApp()
+  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const bottomRef = useRef(null)
-  const inputRef  = useRef(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [notice, setNotice] = useState('')
+  const scrollAreaRef = useRef(null)
+  const inputRef = useRef(null)
+  const interacted = useRef(false)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, loading])
+  useEffect(() => {
+    let alive = true
+    interacted.current = false
+    setNotice('')
+    replaceMessages([])
+    setHistoryLoading(true)
+    getChatHistory(sessionId)
+      .then(({ data }) => {
+        if (!alive || interacted.current || !Array.isArray(data.history) || data.history.length === 0) return
+        const restored = data.history.map((row, index) => ({
+          id: row.id || `${sessionId}-${index}`,
+          role: row.role,
+          content: row.content,
+          timestamp: row.created_at || new Date().toISOString(),
+          emotion: row.emotion,
+          risk_score: row.risk_score,
+          metadata: row.metadata || {},
+        }))
+        replaceMessages(restored)
+      })
+      .catch((error) => {
+        // A 404 means this is a new session or its prior session was removed.
+        if (alive && error.status !== 404) setNotice('Could not restore the previous conversation. You can still start a new message.')
+      })
+      .finally(() => { if (alive) setHistoryLoading(false) })
+    return () => { alive = false }
+  }, [sessionId, replaceMessages])
 
-  const handleSend = async () => {
-    const text = input.trim()
+  useEffect(() => {
+    if (!pendingChatPrompt) return
+    setInput(pendingChatPrompt)
+    setPendingChatPrompt('')
+    window.setTimeout(() => inputRef.current?.focus(), 80)
+  }, [pendingChatPrompt, setPendingChatPrompt])
+
+  useEffect(() => {
+    const area = scrollAreaRef.current
+    if (!area) return
+    // Keep scrolling scoped to the chat viewport; scrollIntoView can scroll outer
+    // containers too and caused the workspace header/sidebar to visually collide.
+    area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
+  }, [messages, loading])
+
+  const handleSend = async (providedText) => {
+    const text = (providedText ?? input).trim()
     if (!text || loading) return
+    interacted.current = true
+    setNotice('')
     setInput('')
-    addMessage({ role:'user', content:text })
+    addMessage({ role: 'user', content: text })
     setLoading(true)
     try {
-      const { data } = await sendChat({ session_id:sessionId, message:text, phq9_score:phq9Result?.score??0, phq9_category:phq9Result?.category??'Not assessed', gad7_score:gad7Result?.score??0, gad7_category:gad7Result?.category??'Not assessed', emotion:currentEmotion?.emotion??'neutral' })
-      addMessage({ role:'assistant', content:data.response, rag_used:data.rag_used, crisis_detected:data.crisis_detected })
-      if (data.risk)            setRiskData(data.risk)
+      const { data } = await sendChat({
+        session_id: sessionId,
+        message: text,
+        phq9_score: phq9Result?.score ?? null,
+        phq9_category: phq9Result?.category ?? 'Not assessed',
+        phq9_crisis_flag: !!phq9Result?.crisis_flag,
+        gad7_score: gad7Result?.score ?? null,
+        gad7_category: gad7Result?.category ?? 'Not assessed',
+        emotion: currentEmotion?.confidence > 0 && currentEmotion?.emotion !== 'unavailable' ? currentEmotion.emotion : null,
+      })
+      if (data.session_id && data.session_id !== sessionId) setSessionId(data.session_id)
+      addMessage({
+        role: 'assistant', content: data.response, rag_used: data.rag_used,
+        crisis_detected: data.crisis_detected,
+      })
+      if (data.risk) setRiskData(data.risk)
       if (data.recommendations) setRecommendations(data.recommendations)
-    } catch (err) {
-      addMessage({ role:'assistant', content:`Connection issue — is the backend running? (${err.message})` })
+      if (data.trajectory) setTrajectory(data.trajectory)
+    } catch (error) {
+      addMessage({ role: 'assistant', content: `I couldn't complete that message just now. ${error.message || 'Please check your connection and try again.'}`, error: true })
     } finally {
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 
-  const handleClear = async () => {
-    try { await clearSession(sessionId) } catch {}
-    clearMessages()
+  const handleNewConversation = async () => {
+    if (loading) return
+    const confirmed = window.confirm('Start a new conversation? This removes the current conversation from your account history.')
+    if (!confirmed) return
+    try { await clearSession(sessionId) } catch { /* A fresh local session can still begin if no saved session exists. */ }
+    createNewSession()
+    interacted.current = false
+    setInput('')
+    setNotice('A new conversation is ready.')
   }
 
+  const isNewChat = messages.length <= 1
+
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'var(--bg-page)' }}>
-      {/* Header */}
-      <div style={{ padding:'13px 20px', flexShrink:0, borderBottom:'1px solid var(--border)', background:'var(--bg-card)', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
-        <div>
-          <h2 style={{ fontSize:15, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Chat with MindCare</h2>
-          <p style={{ fontSize:11, color:'var(--text-4)', marginTop:2 }}>Compassionate · Confidential · 24/7</p>
+    <section className="chat-workspace" aria-label="Chat with MindCare">
+      <header className="chat-panel-header">
+        <div className="chat-title-lockup">
+          <div className="chat-title-mark"><Heart size={18} fill="currentColor" /></div>
+          <div>
+            <h1>Talk to MindCare</h1>
+            <p>A little space to think out loud</p>
+          </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-          {phq9Result && <span style={{ fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:99, background:'var(--teal-dim)', color:'var(--teal)', border:'1px solid var(--teal-border)' }}>PHQ-9: {phq9Result.score}</span>}
-          {currentEmotion?.confidence > 0 && <span style={{ fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:99, background:'var(--blue-dim)', color:'var(--blue)', border:'1px solid rgba(59,110,168,0.22)', textTransform:'capitalize' }}>{currentEmotion.emotion}</span>}
-          <button onClick={handleClear} style={{ width:30, height:30, borderRadius:8, border:'1px solid var(--border)', background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-4)', transition:'all 0.16s' }}
-            onMouseEnter={e=>{ e.currentTarget.style.color='var(--rose)'; e.currentTarget.style.borderColor='rgba(192,66,74,0.25)'; e.currentTarget.style.background='var(--rose-dim)' }}
-            onMouseLeave={e=>{ e.currentTarget.style.color='var(--text-4)'; e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='transparent' }}>
-            <Trash2 size={13}/>
-          </button>
+        <div className="chat-header-actions">
+          <div className="chat-secure-label"><ShieldCheck size={14} /><span>Account-protected</span></div>
+          <button type="button" className="chat-icon-button" onClick={handleNewConversation} disabled={loading} aria-label="Start a new conversation" title="New conversation"><Trash2 size={17} /></button>
+        </div>
+      </header>
+
+      <div ref={scrollAreaRef} className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}>
+        <div className="chat-content-column">
+          {isNewChat ? (
+            <div className="chat-welcome animate-fade-up">
+              <div className="chat-welcome-orb"><Heart size={28} strokeWidth={1.6} /></div>
+              <p className="chat-welcome-kicker"><Sparkles size={13} /> START HERE</p>
+              <h2>Start anywhere.<br /><em>One thing at a time.</em></h2>
+              <p className="chat-welcome-copy">You can start with a thought, a feeling, or a question.</p>
+              <div className="chat-prompt-grid">
+                {QUICK_STARTS.map(({ icon: Icon, title, text, tint }) => (
+                  <button key={title} type="button" className={`chat-prompt-card tint-${tint}`} onClick={() => handleSend(text)} disabled={loading || historyLoading}>
+                    <span className="chat-prompt-icon"><Icon size={17} /></span>
+                    <span className="chat-prompt-title">{title}</span>
+                    <ArrowUpRight size={15} className="chat-prompt-arrow" />
+                  </button>
+                ))}
+              </div>
+              <div className="chat-welcome-note"><ShieldCheck size={15} /><span>Your chat is associated with your account. Avoid sharing passwords or information you don't need to share.</span></div>
+            </div>
+          ) : (
+            <div className="chat-message-list">
+              {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} />)}
+              {loading && <TypingIndicator />}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Messages */}
-      <div style={{ flex:1, overflowY:'auto', padding:'20px', display:'flex', flexDirection:'column', gap:14 }}>
-        {messages.map(msg => <Message key={msg.id} msg={msg}/>)}
-        {loading && <TypingIndicator/>}
-        <div ref={bottomRef}/>
-      </div>
+      {notice && <div className="chat-notice" role="status">{notice}</div>}
 
-      {/* Quick prompts */}
-      {messages.length === 1 && (
-        <div style={{ padding:'0 20px 12px', display:'flex', flexWrap:'wrap', gap:6 }}>
-          {QUICK.map(q => (
-            <button key={q} onClick={() => { setInput(q); inputRef.current?.focus() }}
-              style={{ fontSize:12, padding:'6px 12px', borderRadius:99, cursor:'pointer', background:'#fff', border:'1px solid var(--border)', color:'var(--text-3)', fontFamily:'inherit', transition:'all 0.16s', display:'flex', alignItems:'center', gap:5 }}
-              onMouseEnter={e=>{ e.currentTarget.style.borderColor='var(--teal-border)'; e.currentTarget.style.color='var(--teal)'; e.currentTarget.style.background='var(--teal-dim)' }}
-              onMouseLeave={e=>{ e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.color='var(--text-3)'; e.currentTarget.style.background='#fff' }}>
-              <Sparkles size={10}/>{q}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Input */}
-      <div style={{ padding:'12px 20px', flexShrink:0, borderTop:'1px solid var(--border)', background:'var(--bg-card)', boxShadow:'0 -1px 4px rgba(26,35,50,0.05)' }}>
-        <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
-          <textarea ref={inputRef} value={input} rows={1}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-            onInput={e => { e.target.style.height='auto'; e.target.style.height=Math.min(e.target.scrollHeight,120)+'px' }}
-            placeholder="Share how you're feeling… (Enter to send)"
-            className="input-field"
-            style={{ resize:'none', minHeight:44, maxHeight:120, lineHeight:1.55, paddingTop:12 }}
+      <footer className="chat-composer-shell">
+        <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); handleSend() }}>
+          <label className="sr-only" htmlFor="mindcare-chat-input">Your message</label>
+          <textarea
+            id="mindcare-chat-input"
+            ref={inputRef}
+            value={input}
+            rows={1}
+            maxLength={2000}
+            onChange={(event) => {
+              setInput(event.target.value)
+              event.target.style.height = 'auto'
+              event.target.style.height = `${Math.min(event.target.scrollHeight, 140)}px`
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend() }
+            }}
+            placeholder="Write what’s on your mind…"
+            disabled={loading || historyLoading}
           />
-          <button onClick={handleSend} disabled={!input.trim()||loading}
-            style={{ width:44, height:44, borderRadius:11, border:'none', flexShrink:0, background:input.trim()&&!loading?'var(--teal)':'var(--bg-elevated)', cursor:input.trim()&&!loading?'pointer':'not-allowed', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:input.trim()&&!loading?'0 2px 12px rgba(42,125,111,0.28)':'none', transition:'all 0.18s' }}>
-            {loading ? <RefreshCw size={15} color="var(--teal)" style={{ animation:'spin 1s linear infinite' }}/> : <Send size={15} color={input.trim()?'#fff':'var(--text-4)'}/>}
+          <button type="submit" disabled={!input.trim() || loading || historyLoading} aria-label="Send message" className="chat-send-button">
+            {loading ? <LoaderCircle size={18} className="spin-icon" /> : <Send size={17} />}
           </button>
+        </form>
+        <div className="chat-composer-meta">
+          <span><kbd>Enter</kbd> to send <span className="meta-separator">·</span> <kbd>Shift + Enter</kbd> for a new line</span>
+          <span className="chat-care-note">Not a substitute for professional care</span>
         </div>
-        <p style={{ fontSize:10, color:'var(--text-4)', marginTop:7, textAlign:'center' }}>
-          Not a substitute for professional care · Crisis: iCall 9152987821
-          {phq9Result && ` · PHQ-9: ${phq9Result.score}`}
-          {gad7Result && ` · GAD-7: ${gad7Result.score}`}
-        </p>
-      </div>
-    </div>
+      </footer>
+    </section>
   )
 }

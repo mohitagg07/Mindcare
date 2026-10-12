@@ -1,372 +1,161 @@
+# MindCare
 
-# 🧠 MindCare: Empowering Mental Health
+## Personal profile and response preferences
 
-> **AI-powered multimodal mental health assistant** — LLaMA-3 × CNN × PHQ-9 × GAD-7 × JWT Auth × Analytics
+For an existing Supabase project, run `supabase/migrations/20261013_personal_profile.sql`, `supabase/migrations/20261013_profile_permissions.sql`, and `supabase/migrations/20261013_dob_avatar_storage.sql` in the Supabase SQL Editor. The second migration explicitly grants least-privilege profile permissions. The third adds optional date of birth and a private `profile-avatars` Storage bucket with owner-only object policies. The API calculates age from date of birth and sends only the derived age—not the raw date—to Groq; all of these fields are optional. Profile reads and writes use the signed-in user's access token and existing profile row-level security policy. The preferred response style and selected focus areas are passed to the Groq system instructions as optional preferences; they are not diagnoses.
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?logo=fastapi)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
-[![LLaMA-3](https://img.shields.io/badge/LLaMA--3-70B-blueviolet)](https://groq.com)
-[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
 
----
+MindCare is a mental-wellbeing support application built with React + Vite, FastAPI, Groq inference, and Supabase (PostgreSQL + Supabase Auth).
 
-## 📌 What Is MindCare?
+> **Safety notice:** MindCare is a wellness-support prototype, not a medical device, diagnostic tool, or emergency service. PHQ-9/GAD-7 are screening instruments, not diagnoses. Facial-expression labels, text sentiment, and the weighted wellbeing indicator are not clinically validated risk assessments. Do not use them to make clinical decisions.
 
-MindCare is a **production-ready, full-stack AI mental health assistant** that fuses four intelligence sources into a single, empathetic response:
+## Production-oriented stack
 
-| Signal | Technology | Weight |
-|---|---|---|
-| Clinical depression screening | PHQ-9 (9-question DSM-5 tool) | 40% |
-| Clinical anxiety screening | GAD-7 (7-question) | 25% |
-| Facial emotion detection | CNN trained on FER2013 | 20% |
-| Text sentiment analysis | TextBlob NLP | 15% |
+- **Frontend:** React 18, Vite, Tailwind CSS
+- **API:** Python 3.11+, FastAPI, Pydantic, async HTTPX
+- **Identity:** Supabase Auth (email/password access tokens)
+- **Database:** Supabase PostgreSQL through PostgREST using the signed-in user's JWT; Row Level Security is enabled
+- **LLM/agent:** AsyncGroq with bounded tool calling; default text model `openai/gpt-oss-20b` (overridable via `GROQ_CHAT_MODEL`)
+- **Vision:** Groq's configurable `qwen/qwen3.8-27b` vision model; explicit unavailable state if the provider fails
+- **Retrieval:** lightweight PDF text extraction and keyword retrieval using pypdf
+- **Tests:** pytest; integration tests requiring external credentials are intentionally not run against production data
 
-The result: a **composite risk score (0–1)** that drives every chatbot response, exercise recommendation, and crisis escalation decision.
+No MongoDB driver or MongoDB fallback is included. The backend uses caller access tokens for PostgREST calls; it does not use or require a Supabase `service_role` key.
 
----
+## Brand, profile and personalization
 
-## 🏗️ System Architecture
+The supplied “MindCare — A Calmer You, Everyday” artwork is cropped into a compact mark and a horizontal lockup under `frontend/public/brand/` and used on the landing/auth shell, workspace sidebar, loading screen, and favicon. The Profile screen supports a display name, optional DOB with computed age, optional pronouns, timezone, response style, focus areas, and profile photo upload/removal. Avatar uploads are re-encoded to WebP to strip image metadata and stored in a private bucket at an owner-scoped path. The chatbot receives the saved display name/username, optional pronouns, calculated age (never the raw DOB), response style, and selected focus areas. It never receives a profile photo.
 
+New accounts without a preferred display name see a compact “Make this space yours” card on Home, linking to Profile. Personal details remain optional.
+
+## Frontend experience
+
+The authenticated workspace includes a responsive side navigation, an account-specific profile and response preferences, a welcoming overview with saved conversation/assessment recovery, a conversational chat layout with quick-start prompts and typing feedback, responsive assessment/emotion/insights screens, profile-time-zone-aware timestamps, keyboard-visible focus states, and reduced-motion handling. The public landing page includes plain-language privacy and use notices. Those notices are an application summary—not a substitute for a complete legal policy.
+
+## Project layout
+
+```text
+Mindcare-main/
+├── backend/
+│   ├── auth/dependencies.py      # Supabase session validation
+│   ├── db/supabase.py            # pooled async HTTP client for Auth/PostgREST
+│   ├── routers/                  # auth, chat, assessment, emotion, metrics
+│   ├── services/                 # Groq, RAG, risk indicators, trajectory
+│   ├── documents/                # reference PDFs for optional retrieval
+│   ├── tests/                    # offline unit/API tests
+│   ├── main.py
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/
+├── supabase/schema.sql           # schema, trigger, indexes, RLS, grants and private avatar bucket
+├── frontend/public/brand/       # supplied MindCare brand mark and wordmark lockup
+├── Dockerfile
+├── docker-compose.yml
+└── render.yaml
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      React Frontend                          │
-│  Login/Register  │  Chat  │  Assessment  │  Metrics         │
-└──────────┬───────────────────────────────────────┬──────────┘
-           │  REST + JWT                           │
-┌──────────▼───────────────────────────────────────▼──────────┐
-│                   FastAPI Backend (v3)                        │
-│                                                               │
-│  /api/auth    /api/chat    /api/emotion    /api/metrics       │
-│       │            │            │               │             │
-│  JWT+bcrypt  LLaMA-3 via   CNN model     SQLAlchemy ORM      │
-│  SQLAlchemy   Groq API    (emotion.h5)   MetricSnapshot       │
-│       │            │            │               │             │
-│  User/Session  LangChain    PIL/numpy    Latency middleware   │
-│  ChatMessage    ChromaDB    TensorFlow   Per-endpoint stats   │
-│       │         RAG             │               │             │
-└───────┴─────────────────────────┴───────────────┴────────────┘
-         │                                         │
-    SQLite DB                              ChromaDB vectors
-  (swap → PostgreSQL)                   (mental health PDFs)
-```
 
----
+## Setup
 
-## 🚀 Quick Start (Local)
+### 1. Configure Supabase
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- [Groq API key](https://console.groq.com) (free)
-- [HuggingFace token](https://huggingface.co/settings/tokens) (free)
+1. Create a Supabase project. For a **new** project, open SQL Editor and run all of `supabase/schema.sql`. For the existing MindCare project, run the three migrations in the Personal profile section at the top of this README; do not rerun the fresh-install schema blindly.
+3. In Project Settings → API, copy the project URL and publishable/anon key.
+4. In **Authentication → URL Configuration**, set **Site URL** to `http://localhost:5173` during local development and add `http://localhost:5173/**` to the Redirect URLs allowlist. Remove any stale `http://localhost:3000` entry as the Site URL unless you actually serve the app on port 3000.
+5. In **Authentication → Providers → Email**, keep email confirmation enabled if you want verified accounts. The app sends confirmation links to `/auth/callback`, provides a resend-confirmation flow for expired links, and supports password reset/update.
+6. The confirmation/reset emails must use Supabase’s confirmation URL or the configured redirect URL. If you customized the email template to hard-code `{{ .SiteURL }}`, update it so the confirmation flow respects the intended redirect; avoid manually hard-coding `localhost:3000`.
+7. Optional **Google sign-in**: in Supabase Authentication → Sign In / Providers, enable Google and enter your Google OAuth client ID and secret. In Google Cloud, add the app origin `http://localhost:5173` and the Supabase OAuth callback URL shown in the Supabase Google provider panel. Google sign-in is a real OAuth request, and will return a clear setup error until the provider is configured.
+8. Keep RLS enabled. Policies restrict profiles, conversations, messages, assessments, and trajectories to the signed-in owner. The backend uses the user's Supabase JWT when it accesses PostgREST.
 
-### 1. Clone & setup backend
+### 2. Backend
 
 ```bash
 cd backend
-python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
+python -m venv .venv
+```
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+Copy-Item .env.example .env
 pip install -r requirements.txt
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
 
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
 cp .env.example .env
-# Edit .env: set GROQ_API_KEY and HUGGINGFACEHUB_API_TOKEN
+pip install -r requirements.txt
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### 2. Add the emotion model
+Set these values in `backend/.env`:
 
-```bash
-# Copy emotion_model.h5 into:
-cp /path/to/emotion_model.h5 backend/models/emotion_model.h5
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY` (or Supabase publishable key supported by your project)
+- `GROQ_API_KEY`
+- `ALLOWED_ORIGINS` to your exact frontend origin
 
-# Then install TensorFlow:
-pip install tensorflow-cpu==2.15.0
-```
+Optional model overrides: `GROQ_CHAT_MODEL` and `GROQ_VISION_MODEL`. Defaults are the current Groq-supported model IDs documented in Groq's models/vision docs. Model availability can change; verify in Groq Console if an inference request returns a model error.
 
-### 3. Add mental health PDFs (for RAG)
+### 3. Frontend
 
-```bash
-# Drop any mental health PDF documents into:
-backend/documents/
-# The RAG system will index them automatically on startup.
-```
-
-### 4. Run backend
-
-```bash
-cd backend
-uvicorn main:app --reload --port 8000
-# API docs: http://localhost:8000/docs
-```
-
-### 5. Run frontend
+In a separate terminal:
 
 ```bash
 cd frontend
 npm install
-echo "VITE_API_URL=http://localhost:8000" > .env
+cp .env.example .env
 npm run dev
-# Open: http://localhost:5173
 ```
 
----
+Set `VITE_API_URL=http://localhost:8000` in `frontend/.env`. Open the Vite URL, typically `http://localhost:5173`.
 
-## 🐳 Docker (One-Command)
+### 4. Health / API docs
+
+- `GET /` — liveness
+- `GET /api/health` — verifies Supabase PostgREST schema reachability and optional feature state
+- `GET /docs` — Swagger API docs during development
+
+## Deployment
+
+For Render, create the service from `render.yaml` and set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `GROQ_API_KEY` in its environment. Set `ALLOWED_ORIGINS` to the exact Vercel URL. Do not set `DATABASE_URL`, `MONGO_URL`, or `DB_NAME`; MongoDB has been removed from this version.
+
+For Vercel, set `VITE_API_URL` to the deployed FastAPI URL. Never put Groq credentials or a Supabase service-role/secret key in any `VITE_*` variable. This version does not require the service-role key.
+
+## Performance choices
+
+- Reuses a pooled async HTTP client for Supabase network calls.
+- Uses AsyncGroq so inference waits do not block the event loop.
+- Uses bounded conversation history (last 12 persisted messages) and bounded completion size.
+- Keeps optional PDF retrieval lightweight; no ChromaDB, Torch, or LangChain dependency is installed by default.
+- Uses asynchronous Groq Vision requests and strict image type/size checks without loading local model weights at startup.
+- Uses Supabase refresh tokens to renew sessions rather than forcing sign-in on every access-token expiry.
+- Email verification, resend-confirmation, password recovery/password update, expired-link messaging, and optional Google OAuth all use real Supabase Auth endpoints.
+- Implements bounded read-only agent tools for local wellness-reference search and grounding exercises; no autonomous external actions.
+- Avoids requiring a remote database connection at process import/startup; health endpoint reports actual schema reachability.
+
+A free-tier host may still cold-start after inactivity; this is a host plan behavior, not something application code can fully eliminate.
+
+## Privacy and safety notes
+
+- The application intentionally stores conversations and assessment records in Supabase so history and trend tracking can persist. The in-app privacy notice explains the main data flows, but it is not a complete legal policy. Document retention, deletion requests, operator contact details, and legal requirements before public use.
+- Provide camera consent and a non-camera path; do not use emotion recognition as a clinical measure.
+- The heuristic wellbeing indicator is explanatory UI context only, not a diagnosis or validated suicide-risk score. Unavailable assessment signals are excluded rather than treated as zero.
+- Keyword crisis detection can miss indirect language. It is a safety layer, not a guarantee; verify local emergency resources and provide professional escalation guidance.
+- Do not log message text, access tokens, passwords, or image payloads.
+
+## Tests
 
 ```bash
-# Copy and fill .env
-cp backend/.env.example backend/.env
-
-docker-compose up --build
-# Frontend: http://localhost:5173
-# Backend:  http://localhost:8000
+cd backend
+pytest -q
 ```
 
----
+The automated suite is designed to run offline and validate core behavior/configuration without a real Supabase or Groq account. Before deployment, perform real integration smoke tests against a **separate test Supabase project**: signup with confirmation, email/password login, `/me`, chat persistence, history, session deletion, RLS cross-user isolation, trajectory, and metrics.
 
-## ☁️ Deploy to Production
+## Existing MongoDB data
 
-### Backend → [Render.com](https://render.com) (Free tier)
-
-1. Push repo to GitHub
-2. New Web Service → connect repo
-3. `render.yaml` is already configured
-4. Add environment variables in Render dashboard:
-   - `GROQ_API_KEY`
-   - `HUGGINGFACEHUB_API_TOKEN`
-   - `SECRET_KEY` (generate: `python -c "import secrets; print(secrets.token_hex(32))"`)
-
-### Frontend → [Vercel](https://vercel.com) (Free)
-
-```bash
-cd frontend
-# Set your backend URL:
-echo "VITE_API_URL=https://your-api.onrender.com" >> .env
-
-npx vercel --prod
-```
-
----
-
-## 🔑 Authentication
-
-MindCare uses **JWT (JSON Web Token)** with bcrypt password hashing.
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/auth/register` | POST | Create account (username, email, password) |
-| `/api/auth/login` | POST | Login → returns `access_token` |
-| `/api/auth/me` | GET | Get current user info |
-| `/api/auth/logout` | POST | Invalidate client token |
-
-All protected endpoints require: `Authorization: Bearer <token>`
-
----
-
-## 📊 Metrics & Evaluation
-
-The `/api/metrics` endpoints expose:
-
-| Endpoint | Description |
-|---|---|
-| `/api/metrics/overview` | Total users, sessions, messages, avg latency |
-| `/api/metrics/emotion-distribution` | Aggregate emotion counts |
-| `/api/metrics/risk-distribution` | Session risk level breakdown |
-| `/api/metrics/model-performance` | CNN accuracy, per-class F1 scores |
-| `/api/metrics/latency-timeseries` | AI response latency over time |
-| `/api/metrics/my-sessions` | Logged-in user's session history |
-
-### CNN Model Performance (FER2013)
-
-| Emotion   | Precision | Recall | F1   |
-|-----------|-----------|--------|------|
-| Happy     | 85%       | 83%    | **84%** |
-| Sad       | 77%       | 79%    | **78%** |
-| Neutral   | 78%       | 76%    | **77%** |
-| Angry     | 71%       | 70%    | **70%** |
-| Surprise  | 73%       | 72%    | **72%** |
-| Fear      | 61%       | 59%    | **60%** |
-| Disgust   | 58%       | 52%    | **55%** |
-
-**Overall Test Accuracy: 71.3%** · Training: 73% · Validation: 70.2%
-
----
-
-## 🧪 API Testing
-
-Interactive docs at **http://localhost:8000/docs**
-
-Quick curl tests:
-```bash
-# Register
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"demo","email":"demo@test.com","password":"demo123"}'
-
-# Chat (with token)
-curl -X POST http://localhost:8000/api/chat \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"I feel really anxious today","phq9_score":14,"emotion":"sad"}'
-
-# Health check
-curl http://localhost:8000/api/health
-```
-
----
-
-## 🛡️ Privacy & Ethics
-
-- ✅ No permanent storage of facial images — processed in-memory and discarded
-- ✅ PHQ-9/GAD-7 data stored only to personalise responses, never shared
-- ✅ All API keys stay server-side, never exposed to the client
-- ✅ Crisis detection triggers immediate helpline display
-- ✅ System never makes medical diagnoses — always recommends professional help
-- ✅ Webcam access requires explicit user consent
-
-**Crisis helplines embedded:**
-- iCall (India): 9152987821
-- Vandrevala Foundation: 1860-2662-345
-- AASRA: 9820466627
-- Crisis Text Line: Text HOME to 741741
-
----
-
-## 🗂️ Project Structure
-
-```
-mindcare/
-├── backend/
-│   ├── main.py                    # FastAPI app entry point
-│   ├── requirements.txt
-│   ├── .env.example
-│   ├── auth/
-│   │   ├── jwt.py                 # JWT + bcrypt helpers
-│   │   └── dependencies.py        # get_current_user dependency
-│   ├── db/
-│   │   ├── database.py            # SQLAlchemy engine + session
-│   │   └── models.py              # User, SessionLog, ChatMessage, MetricSnapshot
-│   ├── middleware/
-│   │   └── metrics.py             # Auto latency tracking
-│   ├── routers/
-│   │   ├── auth.py                # Register / login / me
-│   │   ├── chat.py                # Chat + risk fusion
-│   │   ├── assessment.py          # PHQ-9 / GAD-7
-│   │   ├── emotion.py             # CNN emotion analysis
-│   │   └── metrics.py             # Analytics endpoints
-│   ├── services/
-│   │   ├── groq_service.py        # LLaMA-3 via Groq API
-│   │   ├── emotion_service.py     # TF/Keras CNN wrapper
-│   │   ├── rag_service.py         # ChromaDB + LangChain RAG
-│   │   ├── assessment_service.py  # PHQ-9 / GAD-7 scoring logic
-│   │   └── fusion_service.py      # Multimodal risk computation
-│   ├── models/                    # Drop emotion_model.h5 here
-│   └── documents/                 # Drop mental health PDFs here
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx                # Root (auth-gated)
-│   │   ├── context/
-│   │   │   ├── AuthContext.jsx    # JWT auth state
-│   │   │   └── AppContext.jsx     # Session context
-│   │   ├── pages/
-│   │   │   ├── Login.jsx
-│   │   │   └── Register.jsx
-│   │   ├── components/
-│   │   │   ├── AuthGate.jsx       # Login/register switcher
-│   │   │   ├── Sidebar.jsx        # Nav + user info + logout
-│   │   │   ├── Chat.jsx           # Main chat interface
-│   │   │   ├── Assessment.jsx     # PHQ-9 + GAD-7 forms
-│   │   │   ├── EmotionDetector.jsx# Webcam emotion detection
-│   │   │   ├── Dashboard.jsx      # Risk overview
-│   │   │   └── Metrics.jsx        # Analytics dashboard
-│   │   └── api/client.js          # API helper (auth-aware)
-│   ├── vercel.json                # Vercel deployment config
-│   └── package.json
-├── Dockerfile                     # Backend container
-├── docker-compose.yml             # Full stack local dev
-├── render.yaml                    # Render.com deployment
-└── README.md
-```
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **LLM** | LLaMA-3.3-70B via Groq API |
-| **CNN** | TensorFlow/Keras · FER2013 dataset |
-| **RAG** | LangChain · ChromaDB · sentence-transformers |
-| **Backend** | FastAPI · Python 3.11 · Uvicorn |
-| **Auth** | JWT (python-jose) · bcrypt (passlib) |
-| **Database** | SQLAlchemy · SQLite → PostgreSQL |
-| **Frontend** | React 18 · Vite · TailwindCSS |
-| **Deploy** | Render (backend) · Vercel (frontend) · Docker |
-
----
-
-## 👨‍💻 Author
-
-**Mohit Aggarwal** (21BAI1277)  
-B.Tech CSE — AI & ML Specialisation  
-Vellore Institute of Technology, Chennai  
-Guide: Dr. Sivagami M
-
----
-
-*MindCare is a supplementary tool, not a replacement for professional mental health care.*
-=======
-🧠 MindCare: AI-Powered Mental Health Companion
-MindCare is a comprehensive AI-powered mental health assistant that combines facial emotion recognition (CNN), PHQ-9 questionnaire scoring, and an LLaMA-3-based conversational chatbot to provide holistic mental well-being analysis.
-
-🔧 Tech Stack
-Frontend: Gradio for intuitive UI
-
-Backend: Python (TensorFlow/Keras, NumPy, PIL)
-
-LLM: LLaMA-3 via Groq API
-
-Vector Store: ChromaDB with LangChain + HuggingFace Embeddings
-
-Data Sources: Facial image input, PHQ-9 responses, PDFs for mental health knowledge
-
-🚀 Features
-🧠 Mental Health Chatbot: LLaMA-3 chatbot trained on curated PDFs using LangChain.
-
-📄 PHQ-9 Assessment: Interactive 9-question depression screener with score interpretation.
-
-😊 Emotion Detection: CNN model identifies facial emotion from 48×48 grayscale image.
-
-📈 Biometric Inputs: Analyzes heart rate and sleep hours for mental wellness flags.
-
-🛡️ Privacy: No user data is stored; runs entirely within temporary session.
-
-
-💡 How to Run
-
-pip install gradio keras tensorflow langchain chromadb sentence-transformers
-python app.py
-
-📁 Project Structure
-
-📁 documents/          ← PDF mental health resources
-
-📁 chroma_db/          ← Vector DB for chatbot
-
-📁 face_model/         ← Trained CNN emotion model
-
-🧠 app.py              ← Main application script
-
-
-🧪 Accuracy (Mock Evaluation)
-
-Component	Accuracy / Evaluation
-
-CNN Emotion Model	92% (on FER+ dataset)
-
-PHQ-9 Assessment	Clinical logic-based
-
-LLaMA-3 Chatbot	86% helpfulness (manual)
-
-📜 License
-MIT License
-
->>>>>>> 78a3c85969a38be6f2a21711e31dba5caa33d4a1
+This codebase intentionally does not auto-migrate legacy MongoDB data. If the old deployment contains users or conversations worth retaining, export them and design a controlled migration to UUID-based Supabase Auth identities. Do not copy password hashes and assume they work with Supabase Auth; use a password-reset flow unless migration compatibility is explicitly validated.

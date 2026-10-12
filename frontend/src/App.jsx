@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { AppProvider } from './context/AppContext'
+import { AppProvider, useApp } from './context/AppContext'
 import AuthGate from './components/AuthGate'
 import Landing from './pages/Landing'
 import Sidebar from './components/Sidebar'
@@ -9,79 +9,91 @@ import Assessment from './components/Assessment'
 import EmotionDetector from './components/EmotionDetector'
 import Dashboard from './components/Dashboard'
 import Metrics from './components/Metrics'
-import { Heart, Menu } from 'lucide-react'
+import Profile from './components/Profile'
+import { Menu, ShieldCheck, Sparkles } from 'lucide-react'
 
-function AppInner() {
-  const { isAuthed, loading } = useAuth()
-  const [page, setPage] = useState('chat')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+const pageMeta = {
+  dashboard: { eyebrow: 'YOUR SPACE', title: 'A little room for you' },
+  chat: { eyebrow: 'TALK', title: 'Start wherever you are' },
+  assessment: { eyebrow: 'CHECK IN', title: 'Take a moment' },
+  emotion: { eyebrow: 'REFLECT', title: 'Pause and notice' },
+  metrics: { eyebrow: 'INSIGHTS', title: 'Your patterns' },
+  profile: { eyebrow: 'PROFILE', title: 'Make it yours' },
+}
+
+function LoadingScreen() {
+  return (
+    <div className="mc-loading-screen">
+      <div className="mc-loading-mark"><img src="/brand/mindcare-mark.png" alt="" /></div>
+      <div className="mc-loading-title">mindcare<span>.</span></div>
+      <p>Preparing your space…</p>
+      <span className="mc-loader" />
+    </div>
+  )
+}
+
+function AppRouter() {
+  const { isAuthed, loading, authFlow, authNotice } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
   const [authView, setAuthView] = useState('login')
 
-  if (loading) return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'var(--bg-page)', gap:16 }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}`}</style>
-      <div style={{ width:56, height:56, borderRadius:17, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 24px rgba(42,125,111,0.30)' }}>
-        <Heart size={24} color="#fff" fill="#fff"/>
-      </div>
-      <div style={{ animation:'fadeUp 0.5s ease 0.2s both', textAlign:'center' }}>
-        <p style={{ color:'var(--text-1)', fontSize:16, fontWeight:600, fontFamily:'Lora,serif' }}>MindCare</p>
-        <p style={{ color:'var(--text-4)', fontSize:13, marginTop:4 }}>Loading your space…</p>
-      </div>
-      <div style={{ marginTop:8, width:22, height:22, border:'2px solid var(--border)', borderTopColor:'var(--teal)', borderRadius:'50%', animation:'spin 0.9s linear infinite' }}/>
-    </div>
-  )
+  useEffect(() => {
+    if (authNotice || authFlow === 'recovery') setShowAuth(true)
+  }, [authNotice, authFlow])
 
-  // Landing — not yet authenticated
-  if (!isAuthed && !showAuth) return (
-    <Landing
+  if (loading) return <LoadingScreen />
+  if (authFlow === 'recovery') return <AuthGate key="password-recovery" defaultView="reset" />
+  if (!isAuthed && authNotice?.type === 'expired') return <AuthGate key="expired-auth-link" defaultView="resend" />
+  if (!isAuthed && authNotice) return <AuthGate key={`auth-notice-${authNotice.type}`} defaultView="login" />
+  if (!isAuthed && window.location.pathname.startsWith('/auth/callback')) return <AuthGate key="auth-callback-incomplete" defaultView="login" />
+  if (!isAuthed && !showAuth) {
+    return <Landing
       onGetStarted={() => { setAuthView('register'); setShowAuth(true) }}
-      onSignIn={()     => { setAuthView('login');    setShowAuth(true) }}
+      onSignIn={() => { setAuthView('login'); setShowAuth(true) }}
     />
-  )
-
-  // Goes straight to login or register — never re-renders landing
+  }
   if (!isAuthed) return <AuthGate defaultView={authView} />
+  return <Workspace />
+}
 
-  const pages = { chat:Chat, assessment:Assessment, emotion:EmotionDetector, dashboard:Dashboard, metrics:Metrics }
-  const PageComponent = pages[page] || Chat
-  const navigate = (p) => { setPage(p); setSidebarOpen(false) }
+function Workspace() {
+  return <AppProvider><AuthenticatedApp /></AppProvider>
+}
+
+function AuthenticatedApp() {
+  const { user } = useAuth()
+  const { activePage, setActivePage } = useApp()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pages = { chat: Chat, assessment: Assessment, emotion: EmotionDetector, dashboard: Dashboard, metrics: Metrics, profile: Profile }
+  const PageComponent = pages[activePage] || Dashboard
+  const meta = pageMeta[activePage] || pageMeta.dashboard
+  const initials = (user?.display_name || user?.username || user?.email || 'U').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+  const navigate = (page) => { setActivePage(page); setSidebarOpen(false) }
 
   return (
-    <AppProvider>
-      <style>{`
-        @media(min-width:768px){.mob-sb{position:relative!important;transform:none!important;z-index:auto!important;flex-shrink:0!important;} .mob-bar{display:none!important;}}
-        @media(max-width:767px){.mob-sb{position:fixed!important;top:0;left:0;bottom:0;z-index:50;width:250px!important;}}
-      `}</style>
-      <div style={{ display:'flex', height:'100dvh', background:'var(--bg-page)', overflow:'hidden', position:'relative' }}>
-        {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(26,35,50,0.38)', zIndex:40, backdropFilter:'blur(3px)' }}/>}
-
-        <div className="mob-sb" style={{ transform:sidebarOpen?'translateX(0)':'translateX(-100%)', transition:'transform 0.25s cubic-bezier(0.4,0,0.2,1)', flexShrink:0 }}>
-          <Sidebar currentPage={page} onNavigate={navigate} onClose={() => setSidebarOpen(false)}/>
-        </div>
-
-        <main style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
-          <div className="mob-bar" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'var(--bg-card)', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
-            <button onClick={() => setSidebarOpen(true)} style={{ width:38, height:38, borderRadius:10, border:'1px solid var(--border)', background:'var(--bg-elevated)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-3)' }}>
-              <Menu size={17}/>
-            </button>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:30, height:30, borderRadius:9, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Heart size={13} color="#fff" fill="#fff"/>
-              </div>
-              <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:16, color:'var(--text-1)' }}>MindCare</span>
-            </div>
-            <div style={{ width:38 }}/>
-          </div>
-          <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-            <PageComponent/>
-          </div>
-        </main>
+    <div className="mc-app-shell">
+      {sidebarOpen && <button className="mc-sidebar-scrim" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
+      <div className={`mc-sidebar-wrap${sidebarOpen ? ' is-open' : ''}`}>
+        <Sidebar currentPage={activePage} onNavigate={navigate} onClose={() => setSidebarOpen(false)} />
       </div>
-    </AppProvider>
+      <main className="mc-main">
+        <header className="mc-topbar">
+          <div className="mc-topbar-left">
+            <button className="mc-menu-button" type="button" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={19} /></button>
+            <div className="mc-topbar-heading"><span>{meta.eyebrow}</span><strong>{meta.title}</strong></div>
+          </div>
+          <div className="mc-topbar-actions">
+            <span className="mc-private-pill"><ShieldCheck size={14} /> Private space</span>
+            <button className={`mc-topbar-avatar mc-avatar-${user?.avatar_tone || 'sage'}${activePage === 'profile' ? ' is-active' : ''}${user?.avatar_url ? ' has-photo' : ''}`} type="button" title="Open your profile" aria-label="Open your profile" onClick={() => navigate('profile')}>{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</button>
+          </div>
+        </header>
+        <div className="mc-page-frame" key={activePage}><PageComponent /></div>
+        <div className="mc-bottom-note"><Sparkles size={12} /> Gentle support, not a diagnosis or a substitute for professional care.</div>
+      </main>
+    </div>
   )
 }
 
 export default function App() {
-  return <AuthProvider><AppInner/></AuthProvider>
+  return <AuthProvider><AppRouter /></AuthProvider>
 }

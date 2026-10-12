@@ -1,27 +1,33 @@
 @echo off
-echo Starting MindCare v3.0...
+setlocal
+if not defined WINDIR set "WINDIR=C:\Windows"
+set "ComSpec=%WINDIR%\System32\cmd.exe"
+cd /d "%~dp0"
 
-:: Backend
-cd backend
-if not exist .env copy .env.example .env
-python -m venv venv
-call venv\Scripts\activate
-pip install -r requirements.txt -q
-start /B uvicorn main:app --reload --port 8000
-cd ..
+if not exist "backend\.venv\Scripts\python.exe" python -m venv backend\.venv
+if errorlevel 1 (
+  echo Could not create the Python virtual environment.
+  pause
+  exit /b 1
+)
+call backend\.venv\Scripts\activate.bat
+python -m pip install -r backend\requirements.txt
+if errorlevel 1 (
+  echo Backend dependency installation failed. Review the error above.
+  pause
+  exit /b 1
+)
+if not exist "backend\.env" copy "backend\.env.example" "backend\.env" >nul
+if not exist "frontend\.env" copy "frontend\.env.example" "frontend\.env" >nul
 
-timeout /t 3 >nul
-
-:: Frontend
-cd frontend
-if not exist .env echo VITE_API_URL=http://localhost:8000 > .env
-call npm install -q
-start /B npm run dev
-cd ..
-
-echo.
-echo MindCare running!
-echo   Frontend: http://localhost:5173
-echo   Backend:  http://localhost:8000
-echo   API Docs: http://localhost:8000/docs
-pause
+start "MindCare API" /D "%~dp0backend" cmd /k "call .venv\Scripts\activate.bat && uvicorn main:app --reload --host 127.0.0.1 --port 8000"
+cd /d "%~dp0frontend"
+if not exist node_modules (
+  call npm ci
+  if errorlevel 1 (
+    echo Frontend dependency installation failed. Review the error above.
+    pause
+    exit /b 1
+  )
+)
+call npm run dev

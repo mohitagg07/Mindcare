@@ -211,7 +211,7 @@ export default function Assessment() {
             <ClipboardList size={20} color="var(--teal)"/>
           </div>
           <div>
-            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Clinical Assessment</h2>
+            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Wellbeing Screening</h2>
             {/* ✅ Clean subtitle — no technical jargon for client */}
             <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>Answer honestly — there are no right or wrong answers</p>
           </div>

@@ -1,54 +1,57 @@
-"""
-MindCare API v3.0 — Production-ready
-"""
-import os, logging
+"""MindCare API — FastAPI, Supabase Postgres/Auth, and asynchronous Groq."""
+import logging
+import os
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
 
 load_dotenv()
-
-# ── Logging ─────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("mindcare")
 
-# ── ENV CHECK ───────────────────────────────────────
-missing = [k for k in ["GROQ_API_KEY", "DATABASE_URL", "SECRET_KEY"] if not os.getenv(k)]
-if missing:
-    logger.warning(f"Missing env vars: {', '.join(missing)}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from db.supabase import is_configured, open_http_client, close_http_client
+    await open_http_client()
+    if not is_configured():
+        logger.warning("Supabase configuration is missing; API will return clear configuration errors until configured")
+    else:
+        logger.info("Supabase REST client initialized")
+    from services.rag_service import initialize_rag
+    try:
+        initialize_rag()
+    except Exception as exc:
+        logger.warning("RAG disabled during startup: %s", type(exc).__name__)
+    yield
+    try:
+        from services.groq_service import close_client as close_groq_client
+        await close_groq_client()
+    except Exception as exc:
+        logger.debug("Groq chat client shutdown skipped: %s", type(exc).__name__)
+    try:
+        from services.emotion_service import close_client as close_vision_client
+        await close_vision_client()
+    except Exception as exc:
+        logger.debug("Groq vision client shutdown skipped: %s", type(exc).__name__)
+    await close_http_client()
 
-# ── RATE LIMIT ──────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address)
+app = FastAPI(title="MindCare API", version="4.5.1", lifespan=lifespan,
+              description="Mental-wellbeing support API. Not a diagnostic or emergency service.")
 
-app = FastAPI(title="MindCare API", version="3.0.0")
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+allow_all = origins == ["*"]
+app.add_middleware(CORSMiddleware, allow_origins=["*"] if allow_all else origins,
+                   allow_credentials=not allow_all, allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+                   allow_headers=["Authorization", "Content-Type", "apikey"])
 
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# ── CORS ────────────────────────────────────────────
-origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ── ROUTERS ─────────────────────────────────────────
 from routers.auth import router as auth_router
 from routers.chat import router as chat_router
 from routers.assessment import router as assessment_router
 from routers.emotion import router as emotion_router
 from routers.metrics import router as metrics_router
-
 app.include_router(auth_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(assessment_router, prefix="/api")
@@ -56,44 +59,26 @@ app.include_router(emotion_router, prefix="/api")
 app.include_router(metrics_router, prefix="/api")
 
 
-# ── STARTUP ─────────────────────────────────────────
-@app.on_event("startup")
-async def startup():
-    logger.info("🚀 Starting MindCare API...")
-
-    from db.database import init_db
-    init_db()
-    logger.info("✅ MongoDB connected")
-
-    from services.emotion_service import load_model
-    load_model()
-
-    from services.rag_service import initialize_rag
-    try:
-        initialize_rag()
-        logger.info("✅ RAG initialized")
-    except Exception as e:
-        logger.warning(f"⚠️ RAG not available: {e}")
-
-    logger.info("🧠 MindCare API ready!")
+@app.get("/", tags=["system"])
+async def root():
+    return {"status": "ok", "app": "MindCare API", "version": "4.5.1"}
 
 
-# ── HEALTH ──────────────────────────────────────────
-@app.get("/api/health")
-def health():
+@app.get("/api/health", tags=["system"])
+async def health():
+    from db.supabase import is_configured, probe_database
     from services.emotion_service import is_model_loaded, get_backend
     from services.rag_service import is_rag_available
-
-    return {
-        "status": "healthy",
-        "emotion_model": is_model_loaded(),
+    configured = is_configured()
+    reachable = await probe_database() if configured else False
+    payload = {
+        "status": "healthy" if reachable else "degraded",
+        "database_connected": reachable,
+        "database": "supabase_postgres",
+        "supabase_configured": configured,
+        "emotion_provider_configured": is_model_loaded(),
         "emotion_backend": get_backend(),
         "rag_available": is_rag_available(),
-        "version": "3.0.0",
-        "database": "mongodb"
+        "version": "4.5.1",
     }
-
-
-@app.get("/")
-def root():
-    return {"status": "ok", "app": "MindCare API", "version": "3.0.0"}
+    return payload if reachable else JSONResponse(status_code=503, content=payload)

@@ -1,0 +1,291 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  UserRound, Mail, AtSign, Clock3, Heart, Sparkles, Check, LoaderCircle,
+  ShieldCheck, Palette, BookOpen, Compass, Sun, MessageCircle, CheckCircle2,
+  Save, RefreshCw, Info, Camera, Trash2, CalendarDays,
+} from 'lucide-react'
+import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar } from '../api/client'
+import { useAuth } from '../context/AuthContext'
+
+const SUPPORT_STYLES = [
+  { id: 'gentle', title: 'Gentle & reassuring', description: 'A little warmth first, with calm guidance when you want it.', icon: Heart },
+  { id: 'practical', title: 'Practical & focused', description: 'Clear language and one manageable next step at a time.', icon: Compass },
+  { id: 'reflective', title: 'Thoughtful & reflective', description: 'Space to explore what you feel and what matters to you.', icon: BookOpen },
+]
+
+const FOCUS_AREAS = [
+  { id: 'stress', title: 'Everyday stress', detail: 'Finding room to pause' },
+  { id: 'sleep', title: 'Rest & sleep', detail: 'Building a calmer routine' },
+  { id: 'confidence', title: 'Confidence', detail: 'Being kinder to yourself' },
+  { id: 'relationships', title: 'Relationships', detail: 'Navigating connection' },
+  { id: 'focus', title: 'Focus & balance', detail: 'Making space for what matters' },
+  { id: 'self_compassion', title: 'Self-compassion', detail: 'Less self-criticism' },
+  { id: 'emotional_balance', title: 'Emotional balance', detail: 'Understanding your feelings' },
+  { id: 'other', title: 'Something else', detail: 'A focus that is personal to you' },
+]
+
+const TIMEZONES = [
+  ['Asia/Kolkata', 'India Standard Time · Kolkata'],
+  ['Asia/Dubai', 'Gulf Standard Time · Dubai'],
+  ['Europe/London', 'United Kingdom · London'],
+  ['Europe/Paris', 'Central European Time · Paris'],
+  ['America/New_York', 'Eastern Time · New York'],
+  ['America/Los_Angeles', 'Pacific Time · Los Angeles'],
+  ['UTC', 'Coordinated Universal Time · UTC'],
+]
+
+const TONES = [
+  { id: 'sage', label: 'Sage', color: '#8db9a0', ink: '#244a3b' },
+  { id: 'ocean', label: 'Ocean', color: '#90b8ce', ink: '#224a62' },
+  { id: 'lavender', label: 'Lavender', color: '#b9a8d8', ink: '#4c3d69' },
+  { id: 'sunrise', label: 'Sunrise', color: '#e4b38d', ink: '#6a432b' },
+]
+
+function initialForm(user) {
+  return {
+    display_name: user?.display_name || '',
+    pronouns: user?.pronouns || '',
+    date_of_birth: user?.date_of_birth || '',
+    avatar_url: user?.avatar_url || null,
+    age: user?.age ?? null,
+    timezone: user?.timezone || 'Asia/Kolkata',
+    support_style: user?.support_style || 'gentle',
+    focus_areas: Array.isArray(user?.focus_areas) ? user.focus_areas : [],
+    avatar_tone: user?.avatar_tone || 'sage',
+  }
+}
+
+function initialsFor(value) {
+  const words = String(value || 'You').trim().split(/\s+/).filter(Boolean)
+  return words.slice(0, 2).map(word => word[0]?.toUpperCase() || '').join('') || 'Y'
+}
+
+function localTodayIso() {
+  const today = new Date()
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+}
+
+function ageFromDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return null
+  const [year, month, day] = value.split('-').map(Number)
+  const birth = new Date(year, month - 1, day)
+  if (birth.getFullYear() !== year || birth.getMonth() !== month - 1 || birth.getDate() !== day) return null
+  const today = new Date()
+  let age = today.getFullYear() - year
+  if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) age -= 1
+  return age >= 0 && age <= 125 ? age : null
+}
+
+export default function Profile() {
+  const { user, syncProfile } = useAuth()
+  const [form, setForm] = useState(() => initialForm(user))
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    let active = true
+    getMyProfile()
+      .then(({ data }) => {
+        if (!active) return
+        setForm(initialForm({ ...user, ...data }))
+        syncProfile?.(data)
+      })
+      .catch((err) => { if (active) setError(err.message || 'Your profile could not be loaded right now.') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+    // User identity is stable for the lifetime of this page; only load on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const displayLabel = form.display_name.trim() || user?.username || 'Your profile'
+  const completeness = useMemo(() => {
+    const checks = [Boolean(form.display_name.trim()), Boolean(form.timezone), Boolean(form.support_style), form.focus_areas.length > 0]
+    return Math.round(checks.filter(Boolean).length / checks.length * 100)
+  }, [form])
+  const avatarTone = TONES.find(tone => tone.id === form.avatar_tone) || TONES[0]
+
+  const setField = (key, value) => {
+    setForm(current => ({ ...current, [key]: value }))
+    setSuccess('')
+  }
+
+  const toggleFocus = (id) => {
+    setForm(current => {
+      const selected = current.focus_areas.includes(id)
+      if (!selected && current.focus_areas.length >= 6) return current
+      return { ...current, focus_areas: selected ? current.focus_areas.filter(item => item !== id) : [...current.focus_areas, id] }
+    })
+    setSuccess('')
+  }
+
+  const save = async (event) => {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+    setSaving(true)
+    try {
+      const payload = {
+        display_name: form.display_name.trim() || null,
+        pronouns: form.pronouns.trim() || null,
+        date_of_birth: form.date_of_birth || null,
+        timezone: form.timezone,
+        support_style: form.support_style,
+        focus_areas: form.focus_areas,
+        avatar_tone: form.avatar_tone,
+      }
+      const { data } = await updateMyProfile(payload)
+      const saved = { ...form, ...data }
+      setForm(initialForm(saved))
+      syncProfile?.(data)
+      setSuccess('Your profile is saved. MindCare will use these preferences in future conversations.')
+    } catch (err) {
+      setError(err.message || 'Your changes could not be saved. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const uploadAvatar = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    event.target.value = ''
+    setError('')
+    setSuccess('')
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Choose a JPG, PNG, or WebP photo.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Choose a photo smaller than 5 MB.')
+      return
+    }
+    setAvatarBusy(true)
+    try {
+      const { data } = await uploadMyAvatar(file)
+      setForm(current => ({ ...current, avatar_url: data.avatar_url || null }))
+      syncProfile?.({ avatar_url: data.avatar_url || null, avatar_path: data.avatar_path || null })
+      setSuccess('Your profile photo is saved privately.')
+    } catch (err) {
+      setError(err.message || 'Your photo could not be uploaded. Check that the avatar storage migration has been run.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  const removeAvatar = async () => {
+    setError('')
+    setSuccess('')
+    setAvatarBusy(true)
+    try {
+      const { data } = await deleteMyAvatar()
+      setForm(current => ({ ...current, avatar_url: null }))
+      syncProfile?.({ avatar_url: null, avatar_path: null })
+      setSuccess(data.message || 'Your profile photo was removed.')
+    } catch (err) {
+      setError(err.message || 'Your photo could not be removed. Please try again.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  const reset = () => { setForm(initialForm(user)); setError(''); setSuccess('') }
+
+  return (
+    <div className="profile-page">
+      <div className="profile-content">
+        <header className="profile-heading-row">
+          <div>
+            <div className="profile-eyebrow"><Sparkles size={13} /> YOUR PERSONAL SPACE</div>
+            <h1>Make it <em>yours.</em></h1>
+            <p>A few choices help MindCare feel more personal. Everything here is optional.</p>
+          </div>
+          <div className="profile-completion-card">
+            <div className="profile-completion-top"><span>PROFILE SETUP</span><strong>{completeness}%</strong></div>
+            <div className="profile-completion-track"><span style={{ width: `${completeness}%` }} /></div>
+            <small>Personalisation is optional.</small>
+          </div>
+        </header>
+
+        {error && <div className="profile-alert is-error" role="alert"><Info size={17} /><span>{error}</span></div>}
+        {success && <div className="profile-alert is-success" role="status"><CheckCircle2 size={17} /><span>{success}</span></div>}
+
+        <form onSubmit={save} className="profile-form">
+          <section className="profile-identity-card">
+            <div className="profile-avatar-column">
+              <div className={`profile-avatar profile-avatar-${avatarTone.id}${form.avatar_url ? ' has-photo' : ''}`} style={{ '--profile-avatar-bg': avatarTone.color, '--profile-avatar-ink': avatarTone.ink }}>
+                {form.avatar_url ? <img src={form.avatar_url} alt={`${displayLabel}'s profile`} /> : <span>{initialsFor(displayLabel)}</span>}
+                <i aria-hidden="true"><Heart size={13} fill="currentColor" /></i>
+              </div>
+              <input ref={fileInputRef} className="profile-file-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar} />
+              <button type="button" className="profile-photo-button" onClick={() => fileInputRef.current?.click()} disabled={avatarBusy}>
+                {avatarBusy ? <LoaderCircle size={14} className="profile-spinning" /> : <Camera size={14} />}{form.avatar_url ? 'Change photo' : 'Add photo'}
+              </button>
+              {form.avatar_url && <button type="button" className="profile-photo-remove" onClick={removeAvatar} disabled={avatarBusy}><Trash2 size={12} /> Remove</button>}
+            </div>
+            <div className="profile-identity-copy">
+              <span className="profile-section-kicker">YOUR PROFILE</span>
+              <h2>{displayLabel}</h2>
+              <p>{user?.email || 'Signed in account'} <span className="profile-verified-dot" /> Account connected</p>
+              <div className="profile-avatar-options" aria-label="Profile accent color">
+                {TONES.map(tone => (
+                  <button key={tone.id} type="button" className={`profile-tone-swatch${form.avatar_tone === tone.id ? ' is-selected' : ''}`} style={{ '--tone-color': tone.color }} onClick={() => setField('avatar_tone', tone.id)} aria-label={`Use ${tone.label} profile color`} aria-pressed={form.avatar_tone === tone.id} title={tone.label} />
+                ))}
+                <span><Palette size={12} /> Pick your color</span>
+              </div>
+            </div>
+            <div className="profile-identity-side"><ShieldCheck size={16} /><span>Your profile is private to your account.</span></div>
+          </section>
+
+          <div className="profile-main-grid">
+            <section className="profile-panel">
+              <div className="profile-panel-heading"><span className="profile-panel-icon"><UserRound size={17} /></span><div><h3>The basics</h3><p>Only what you choose to share.</p></div></div>
+              <div className="profile-fields-grid">
+                <label className="profile-field profile-field-span"><span>What should we call you?</span><input value={form.display_name} maxLength={60} onChange={e => setField('display_name', e.target.value)} placeholder={user?.username || 'Your preferred name'} autoComplete="nickname" /><small>This name can be used naturally in supportive replies.</small></label>
+                <label className="profile-field"><span>Username</span><div className="profile-input-with-icon"><AtSign size={15} /><input value={user?.username || ''} readOnly aria-readonly="true" /></div><small>Your account handle can't be changed here.</small></label>
+                <label className="profile-field"><span>Account email</span><div className="profile-input-with-icon"><Mail size={15} /><input value={user?.email || ''} readOnly aria-readonly="true" /></div><small>Managed by Supabase Auth.</small></label>
+                <label className="profile-field profile-field-span"><span>Pronouns <em>· optional</em></span><input value={form.pronouns} maxLength={40} onChange={e => setField('pronouns', e.target.value)} placeholder="e.g. she/her, he/him, they/them" autoComplete="off" /><small>Leave this blank if you'd rather not share it.</small></label>
+                <label className="profile-field profile-field-span"><span><CalendarDays size={14} /> Date of birth <em>· optional</em></span><input type="date" value={form.date_of_birth} max={localTodayIso()} min="1900-01-01" onChange={e => setField('date_of_birth', e.target.value)} autoComplete="bday" /><small>{form.date_of_birth ? `Age calculated automatically: ${ageFromDate(form.date_of_birth) ?? '—'} years. Only age is shared with AI; your date of birth is not.` : 'Used only to calculate your age. The date itself is not shared with the AI.'}</small></label>
+                <label className="profile-field profile-field-span"><span><Clock3 size={14} /> Time zone</span><select value={form.timezone} onChange={e => setField('timezone', e.target.value)}>{TIMEZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><small>Used to display times for your saved activity.</small></label>
+              </div>
+            </section>
+
+            <section className="profile-panel profile-personalisation-panel">
+              <div className="profile-panel-heading"><span className="profile-panel-icon"><MessageCircle size={17} /></span><div><h3>How should support feel?</h3><p>Choose a response style.</p></div></div>
+              <div className="profile-support-options">
+                {SUPPORT_STYLES.map(({ id, title, description, icon: Icon }) => (
+                  <button type="button" key={id} className={`profile-support-option${form.support_style === id ? ' is-selected' : ''}`} onClick={() => setField('support_style', id)} aria-pressed={form.support_style === id}>
+                    <span className="profile-support-icon"><Icon size={17} /></span>
+                    <span className="profile-support-copy"><strong>{title}</strong><small>{description}</small></span>
+                    <span className="profile-select-indicator">{form.support_style === id && <Check size={12} />}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <section className="profile-panel profile-focus-panel">
+            <div className="profile-panel-heading profile-focus-heading"><span className="profile-panel-icon"><Sun size={17} /></span><div><h3>Your focus areas</h3><p>Pick a few. Change them anytime.</p></div><span className="profile-selected-count">{form.focus_areas.length} selected</span></div>
+            <div className="profile-focus-grid">
+              {FOCUS_AREAS.map(({ id, title, detail }) => {
+                const selected = form.focus_areas.includes(id)
+                return <button type="button" key={id} className={`profile-focus-chip${selected ? ' is-selected' : ''}`} onClick={() => toggleFocus(id)} aria-pressed={selected}>
+                  <span className="profile-focus-check">{selected ? <Check size={12} /> : <span />}</span><span><strong>{title}</strong><small>{detail}</small></span>
+                </button>
+              })}
+            </div>
+            <p className="profile-focus-footnote"><Info size={13} /> Select up to 6. MindCare will use your choices only to tailor responses when relevant.</p>
+          </section>
+
+          <section className="profile-privacy-banner"><span><ShieldCheck size={18} /></span><div><strong>Your space stays personal.</strong><p>Only share what feels useful. MindCare supports reflection; it does not diagnose or replace professional care.</p></div></section>
+
+          <div className="profile-savebar"><div><span className="profile-save-dot" /><span>Unsaved changes stay here until you save.</span></div><div className="profile-save-actions"><button type="button" className="profile-reset-button" onClick={reset} disabled={saving}><RefreshCw size={14} /> Reset</button><button className="profile-save-button" type="submit" disabled={saving || loading}>{saving ? <><LoaderCircle size={15} className="profile-spinning" /> Saving…</> : <><Save size={15} /> Save my profile</>}</button></div></div>
+          {loading && <div className="profile-loading-note"><LoaderCircle size={15} className="profile-spinning" /> Loading your saved preferences…</div>}
+        </form>
+      </div>
+    </div>
+  )
+}

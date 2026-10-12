@@ -6,19 +6,19 @@ services:
     buildCommand: "pip install -r backend/requirements.txt"
     startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
       - key: GROQ_API_KEY
         sync: false
-      - key: HUGGINGFACEHUB_API_TOKEN
-        sync: false
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DATABASE_URL
-        sync: false
-      - key: DB_NAME
-        value: mindcare
+      - key: GROQ_CHAT_MODEL
+        value: openai/gpt-oss-20b
+      - key: GROQ_VISION_MODEL
+        value: qwen/qwen3.8-27b
       - key: ALLOWED_ORIGINS
-        value: "https://mindcare-eight-dusky.vercel.app,https://mindcare-silk.vercel.app,http://localhost:5173,http://localhost:3000"
-      - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: "1440"
+        value: "https://mindcare-eight-dusky.vercel.app,https://mindcare-silk.vercel.app,http://localhost:5173"
+      - key: LOG_LEVEL
+        value: INFO
     healthCheckPath: /api/health
     autoDeploy: true

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import LegalNotice from '../components/LegalNotice'
 import {
   Heart, MessageCircle, ArrowRight,
   TrendingUp, Shield, Brain, Activity, CheckCircle,
@@ -72,9 +73,9 @@ function AppPreview() {
   }, [shown])
 
   const moodItems = [
-    { label:'Risk',  value:'Low',    color:'#2A7D6F', Icon: Shield      },
-    { label:'Mood',  value:'Calm',   color:'#3B6EA8', Icon: Smile       },
-    { label:'Trend', value:'Rising', color:'#C07436', Icon: TrendingUp  },
+    { label:'Approach', value:'Support', color:'#2A7D6F', Icon: Shield },
+    { label:'Tools', value:'Optional', color:'#3B6EA8', Icon: Smile },
+    { label:'Focus', value:'You', color:'#C07436', Icon: TrendingUp },
   ]
 
   return (
@@ -86,11 +87,11 @@ function AppPreview() {
         </div>
         <div>
           <div style={{ color:'#fff', fontWeight:700, fontSize:14, fontFamily:'Lora,serif' }}>MindCare</div>
-          <div style={{ color:'rgba(255,255,255,0.55)', fontSize:10, marginTop:1 }}>Session active</div>
+          <div style={{ color:'rgba(255,255,255,0.55)', fontSize:10, marginTop:1 }}>Illustrative interface</div>
         </div>
         <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:99, background:'rgba(255,255,255,0.12)' }}>
           <div style={{ width:6, height:6, borderRadius:'50%', background:'#6EE7B7', animation:'pulse 2s infinite' }}/>
-          <span style={{ color:'rgba(255,255,255,0.9)', fontSize:10, fontWeight:600 }}>Live</span>
+          <span style={{ color:'rgba(255,255,255,0.9)', fontSize:10, fontWeight:600 }}>Preview</span>
         </div>
       </div>
 
@@ -131,8 +132,8 @@ function AppPreview() {
       {/* Sparkline */}
       <div style={{ margin:'0 16px 16px', padding:'10px 12px', background:'#F9F8F6', borderRadius:10 }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-          <span style={{ fontSize:9, fontWeight:700, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.07em' }}>72h Trend</span>
-          <span style={{ fontSize:10, fontWeight:700, color:'#2A7D6F' }}>Improving ↑</span>
+          <span style={{ fontSize:9, fontWeight:700, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.07em' }}>Illustrative trend</span>
+          <span style={{ fontSize:10, fontWeight:700, color:'#2A7D6F' }}>Example only</span>
         </div>
         <svg width="100%" height="28" viewBox="0 0 220 28">
           <defs>
@@ -212,7 +213,7 @@ function StepCard({ icon:Icon, color, step, title, desc, delay, isLast }) {
 const FEATURES = [
   {
     color:'#2A7D6F', accent:'rgba(42,125,111,0.08)',
-    title:'AI Therapy Chat', tagline:'Always listening',
+    title:'AI Wellbeing Chat', tagline:'Support when you need it',
     imgSrc:'https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=600&q=80&auto=format&fit=crop',
     imgAlt:'Person in a calm, supported conversation',
     points:['Responds to how you actually feel, not just what you type','Adapts its tone — gentle when you struggle, uplifting when you thrive','Grounding exercises available any time, day or night'],
@@ -220,33 +221,34 @@ const FEATURES = [
   },
   {
     color:'#C07436', accent:'rgba(192,116,54,0.08)',
-    title:'Facial Emotion Detection', tagline:'Reads what words miss',
+    title:'Expression Estimate', tagline:'An optional visual signal',
     imgSrc:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80&auto=format&fit=crop',
     imgAlt:'Person with a natural, calm expression',
-    points:['Instant read from your webcam or a photo','Recognises 7 distinct emotional states','No biometric data stored — ever'],
+    points:['Optional, consent-based webcam or photo analysis','Returns a tentative label from seven expression classes','Images are sent for analysis; a derived label may be saved with chat context'],
     from:'right',
   },
   {
     color:'#3B6EA8', accent:'rgba(59,110,168,0.08)',
-    title:'Clinical Screening', tagline:'Doctor-grade, simplified',
+    title:'Wellbeing Screening', tagline:'Clear, non-diagnostic context',
     imgSrc:'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80&auto=format&fit=crop',
     imgAlt:'Calm wellness and mental health setting',
-    points:['PHQ-9 and GAD-7 validated screeners','Results in plain language, not clinical jargon','Scores feed directly into your AI session context'],
+    points:['PHQ-9 and GAD-7 screening questionnaires','Results in plain language, not a diagnosis','Scores enter your chat context only when provided'],
     from:'left',
   },
 ]
 
 const STEPS = [
-  { icon:MessageCircle, color:'#2A7D6F', step:'01', title:'You express yourself',    desc:'Send a message. The AI reads your tone — joyful, drained, or somewhere in between.' },
-  { icon:Activity,      color:'#C07436', step:'02', title:'We calculate your trend', desc:'Each session is weighted by recency. How you feel today matters more than last week.' },
-  { icon:TrendingUp,    color:'#3B6EA8', step:'03', title:'A direction emerges',     desc:'Over days, a clear pattern forms: improving, holding steady, or needing more support.' },
-  { icon:Brain,         color:'#7B5EA8', step:'04', title:'The AI responds accordingly', desc:'MindCare adjusts its voice — quieter when you struggle, warmer when you rise.' },
+  { icon:MessageCircle, color:'#2A7D6F', step:'01', title:'You express yourself',    desc:'Share what is on your mind. Your message provides context for a supportive reply.' },
+  { icon:Activity,      color:'#C07436', step:'02', title:'We calculate your trend', desc:'Where enabled, the app summarizes patterns in recent check-ins. Those summaries are estimates, not clinical findings.' },
+  { icon:TrendingUp,    color:'#3B6EA8', step:'03', title:'A direction emerges',     desc:'Over time, available entries may show a rough trend; missing data can make those estimates incomplete.' },
+  { icon:Brain,         color:'#7B5EA8', step:'04', title:'The AI responds accordingly', desc:'The response can use the current message and available context to make suggestions that are more relevant.' },
 ]
 
 /* ── Main export ── */
 export default function Landing({ onGetStarted, onSignIn }) {
   const handleSignIn = onSignIn || onGetStarted
   const [scrolled, setScrolled] = useState(false)
+  const [legalView, setLegalView] = useState('')
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
@@ -257,8 +259,6 @@ export default function Landing({ onGetStarted, onSignIn }) {
   return (
     <div style={{ minHeight:'100vh', fontFamily:"'DM Sans',system-ui,sans-serif", overflowX:'hidden', background:'#F5F3EF' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
-
         @keyframes floatCard   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
         @keyframes msgPop      { from{opacity:0;transform:translateY(6px) scale(0.97)} to{opacity:1;transform:none} }
         @keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -295,9 +295,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
       {/* ── NAVBAR ── */}
       <nav style={{ position:'sticky', top:0, zIndex:100, background:scrolled?'rgba(245,243,239,0.94)':'transparent', backdropFilter:scrolled?'blur(18px)':'none', borderBottom:scrolled?'1px solid #E6E2DA':'1px solid transparent', height:62, padding:'0 max(24px,5vw)', display:'flex', alignItems:'center', justifyContent:'space-between', transition:'all 0.3s ease', boxShadow:scrolled?'0 2px 14px rgba(26,35,50,0.05)':'none' }}>
         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-          <div style={{ width:35, height:35, borderRadius:10, background:'linear-gradient(135deg,#1C3D35,#2A7D6F)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 3px 10px rgba(42,125,111,0.25)' }}>
-            <Heart size={14} color="#fff" fill="#fff"/>
-          </div>
+          <img src="/brand/mindcare-mark.png" alt="" style={{ width:39, height:39, objectFit:'cover', borderRadius:11, boxShadow:'0 3px 10px rgba(42,125,111,0.18)' }} />
           <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:17, color:'#1A2332', letterSpacing:'-0.3px' }}>MindCare</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:18 }}>
@@ -327,7 +325,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
             </h1>
 
             <p style={{ fontSize:'clamp(14px,1.7vw,16.5px)', color:'#4A5A6A', lineHeight:1.80, maxWidth:480, margin:'0 0 36px', animation:'heroIn 0.65s ease 0.22s both' }}>
-              MindCare helps you understand why. Emotion tracking, clinical screening, and an AI that adapts to exactly where you are — updated in real time, completely private.
+              MindCare offers a calm place to reflect. Chat support, PHQ-9 and GAD-7 self-reflection questionnaires, and optional tools can help you organize your thoughts — without claiming to diagnose you.
             </p>
 
             <div style={{ display:'flex', gap:12, flexWrap:'wrap', animation:'heroIn 0.55s ease 0.36s both' }}>
@@ -336,7 +334,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
             </div>
 
             <div className="trust-row" style={{ display:'flex', gap:20, marginTop:28, flexWrap:'wrap', animation:'heroIn 0.55s ease 0.48s both' }}>
-              {[{Icon:Shield,l:'100% private'},{Icon:Zap,l:'Real-time'},{Icon:CheckCircle,l:'Free forever'}].map(({Icon,l}) => (
+              {[{Icon:Shield,l:'Account-linked data'},{Icon:Zap,l:'AI-assisted support'},{Icon:CheckCircle,l:'Optional tools'}].map(({Icon,l}) => (
                 <div key={l} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#9CA3AF', fontWeight:500 }}>
                   <Icon size={12} color="#2A7D6F"/> {l}
                 </div>
@@ -453,13 +451,13 @@ export default function Landing({ onGetStarted, onSignIn }) {
               Ready to understand yourself better?
             </h2>
             <p style={{ fontSize:14.5, color:'#6B7280', lineHeight:1.74, maxWidth:380, margin:'0 auto 32px' }}>
-              MindCare is free and private. No credit card, no data sold, no conditions.
+              Start with a conversation or a self-reflection questionnaire. Your messages are associated with your account, so avoid sharing passwords or details you do not need to share.
             </p>
             <button className="cta-main" onClick={onGetStarted} style={{ fontSize:15, padding:'14px 34px' }}>
               Begin your journey <ArrowRight size={15}/>
             </button>
             <div style={{ display:'flex', justifyContent:'center', gap:20, marginTop:22, flexWrap:'wrap' }}>
-              {['No credit card','Private & secure','Free forever'].map(t => (
+              {['Start at your own pace','Screening is not diagnosis','Professional care still matters'].map(t => (
                 <div key={t} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11.5, color:'#9CA3AF', fontWeight:500 }}>
                   <CheckCircle size={10} color="#2A7D6F"/> {t}
                 </div>
@@ -483,7 +481,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
                 <span style={{ fontFamily:'Lora,serif', fontWeight:700, fontSize:19, color:'#fff' }}>MindCare</span>
               </div>
               <p style={{ fontSize:13, color:'rgba(255,255,255,0.48)', lineHeight:1.76, maxWidth:240, marginBottom:20 }}>
-                AI-powered mental wellness that listens, understands, and grows with you.
+                A calm place for guided reflection and supportive conversations.
               </p>
               <div style={{ display:'flex', gap:8 }}>
                 {[
@@ -513,8 +511,8 @@ export default function Landing({ onGetStarted, onSignIn }) {
             <div>
               <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:16 }}>Support</p>
               <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
-                <a href="https://www.linkedin.com/in/mohitagg07" target="_blank" rel="noopener noreferrer" className="footer-link">Privacy Policy</a>
-                <a href="https://www.linkedin.com/in/mohitagg07" target="_blank" rel="noopener noreferrer" className="footer-link">Terms of Use</a>
+                <button type="button" onClick={() => setLegalView('privacy')} className="footer-link">Privacy notice</button>
+                <button type="button" onClick={() => setLegalView('terms')} className="footer-link">Terms of use</button>
                 <button onClick={onGetStarted} className="footer-link" style={{ border:'none', cursor:'pointer', background:'none', padding:0, fontFamily:'inherit', textAlign:'left' }}>How It Works</button>
                 <a href="https://www.instagram.com/mohitaggg7" target="_blank" rel="noopener noreferrer" className="footer-link">Contact</a>
                 <a href="https://www.youtube.com/@MohitAgg07" target="_blank" rel="noopener noreferrer" className="footer-link">Demo Video</a>
@@ -525,20 +523,13 @@ export default function Landing({ onGetStarted, onSignIn }) {
             <div>
               <p style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:16 }}>Crisis Lines</p>
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                {[
-                  { name:'iCall India', num:'9152987821'    },
-                  { name:'Vandrevala',  num:'1860-2662-345' },
-                  { name:'AASRA',       num:'9820466627'    },
-                ].map(c => (
-                  <div key={c.name}>
-                    <div style={{ fontSize:10, color:'rgba(255,255,255,0.30)', marginBottom:3 }}>{c.name}</div>
-                    <a href={`tel:${c.num}`} style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.75)', textDecoration:'none', display:'flex', alignItems:'center', gap:5, transition:'color 0.15s' }}
-                      onMouseEnter={e=>e.currentTarget.style.color='#6EE7B7'}
-                      onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.75)'}>
-                      <Phone size={10}/> {c.num}
-                    </a>
-                  </div>
-                ))}
+                <div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.42)', marginBottom:3 }}>Tele-MANAS · India-wide, 24/7</div>
+                  <a href="tel:14416" style={{ fontSize:17, fontWeight:700, color:'rgba(255,255,255,0.9)', textDecoration:'none', display:'flex', alignItems:'center', gap:7, transition:'color 0.15s' }}
+                    onMouseEnter={e=>e.currentTarget.style.color='#6EE7B7'}
+                    onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.9)'}><Phone size={13}/> 14416</a>
+                  <a href="https://dghs.mohfw.gov.in/national-mental-health-programme.php" target="_blank" rel="noopener noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:4, marginTop:5, fontSize:10, color:'rgba(255,255,255,0.48)', textDecoration:'underline', textUnderlineOffset:3 }}>Official service information <ExternalLink size={10}/></a>
+                </div>
                 <div style={{ marginTop:4, padding:'9px 11px', borderRadius:9, background:'rgba(42,125,111,0.15)', border:'1px solid rgba(42,125,111,0.28)' }}>
                   <p style={{ fontSize:10.5, color:'rgba(255,255,255,0.50)', margin:0, lineHeight:1.56 }}>
                     MindCare is <strong style={{ color:'rgba(255,255,255,0.70)' }}>not</strong> a substitute for professional care. If you are in crisis, call a helpline immediately.
@@ -561,16 +552,14 @@ export default function Landing({ onGetStarted, onSignIn }) {
               </a>
             </p>
             <div style={{ display:'flex', gap:18 }}>
-              {[['Privacy','https://www.linkedin.com/in/mohitagg07'],['Terms','https://www.linkedin.com/in/mohitagg07'],['GitHub','https://github.com/mohitagg07']].map(([label,href]) => (
-                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize:12, color:'rgba(255,255,255,0.28)', textDecoration:'none', transition:'color 0.15s' }}
-                  onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.65)'}
-                  onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.28)'}>{label}</a>
-              ))}
+              <button type="button" onClick={() => setLegalView('privacy')} style={{ border:0, padding:0, background:'none', cursor:'pointer', fontSize:12, color:'rgba(255,255,255,0.36)' }}>Privacy</button>
+              <button type="button" onClick={() => setLegalView('terms')} style={{ border:0, padding:0, background:'none', cursor:'pointer', fontSize:12, color:'rgba(255,255,255,0.36)' }}>Terms</button>
+              <a href="https://github.com/mohitagg07" target="_blank" rel="noopener noreferrer" style={{ fontSize:12, color:'rgba(255,255,255,0.28)', textDecoration:'none' }}>GitHub</a>
             </div>
           </div>
         </div>
       </footer>
+      {legalView && <LegalNotice view={legalView} onClose={() => setLegalView('')} />}
     </div>
   )
 }

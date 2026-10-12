@@ -1,269 +1,214 @@
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ArrowRight, ArrowUpRight, BookOpen, Check, ChevronRight, ClipboardCheck,
+  Heart, Leaf, MessageCircle, ShieldCheck, Sparkles, Sun, Waves, X,
+} from 'lucide-react'
+import { api, getAssessmentHistory } from '../api/client'
 import { useApp } from '../context/AppContext'
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
-import { LayoutDashboard, Activity, ShieldAlert, Brain, Dumbbell, Phone, Smartphone, Globe, AlertTriangle, Info, MessageSquare, ClipboardList, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
-const RES_ICONS = { phone:Phone, app:Smartphone, text:Globe }
+const MOODS = [
+  { id: 'good', label: 'Good', face: '☀️', hint: 'Keep this feeling close.', prompt: "I'm feeling pretty good today. Help me understand what's going well and how I can keep it going." },
+  { id: 'okay', label: 'Okay', face: '🙂', hint: 'Okay is a place to start.', prompt: "I'm feeling okay, but I'd like to check in with myself for a moment." },
+  { id: 'tense', label: 'Tense', face: '😬', hint: 'Let’s make things feel smaller.', prompt: "I'm feeling tense right now. Can you help me slow down and work out what's weighing on me?" },
+  { id: 'low', label: 'Low', face: '🌧️', hint: 'You don’t have to solve it all.', prompt: "I've been feeling low. I'd like a gentle conversation to work out what I need right now." },
+  { id: 'overwhelmed', label: 'A lot', face: '🌊', hint: 'One thing at a time.', prompt: "I'm feeling overwhelmed. Can you help me focus on one manageable next step?" },
+]
 
-function Gauge({ score }) {
-  const pct   = Math.round(score * 100)
-  const color = score >= 0.75 ? '#C0424A' : score >= 0.5 ? '#C07436' : score >= 0.25 ? '#3B6EA8' : '#2A7D6F'
-  const label = score >= 0.75 ? 'High' : score >= 0.5 ? 'Moderate' : score >= 0.25 ? 'Low' : 'Minimal'
-  const r = 68, circ = Math.PI * r, dash = circ - (pct / 100) * circ
-  return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
-      <div style={{ position:'relative', width:190, height:100 }}>
-        <svg width="190" height="100" viewBox="0 0 190 100">
-          <path d="M 16 96 A 79 79 0 0 1 174 96" fill="none" stroke="var(--border)" strokeWidth="12" strokeLinecap="round"/>
-          <path d="M 16 96 A 79 79 0 0 1 174 96" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash} style={{ transition:'stroke-dashoffset 1s ease, stroke 0.4s' }}/>
-        </svg>
-        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', paddingTop:28 }}>
-          <span style={{ fontSize:32, fontWeight:700, color:'var(--text-1)', letterSpacing:'-1px', lineHeight:1, fontFamily:'Lora,serif' }}>
-            {pct}<span style={{ fontSize:16, color:'var(--text-4)' }}>%</span>
-          </span>
-          <span style={{ fontSize:12, fontWeight:700, color, marginTop:2 }}>{label} Risk</span>
-        </div>
-      </div>
-      <div style={{ display:'flex', justifyContent:'space-between', width:'100%', padding:'0 8px', marginTop:4 }}>
-        <span style={{ fontSize:10, color:'var(--text-4)' }}>Minimal</span>
-        <span style={{ fontSize:10, color:'var(--text-4)' }}>Severe</span>
-      </div>
-    </div>
-  )
+const TOUR_STEPS = [
+  { icon: MessageCircle, kicker: '01 / TALK', title: 'Let it out.', body: 'A conversation can start with just one sentence.', tint: 'mint' },
+  { icon: ClipboardCheck, kicker: '02 / CHECK IN', title: 'Notice how you feel.', body: 'Optional reflections help you put things into perspective.', tint: 'peach' },
+  { icon: ShieldCheck, kicker: '03 / YOUR SPACE', title: 'You stay in control.', body: 'Choose what to share, what to save, and what to revisit.', tint: 'lavender' },
+]
+
+function safeDate(value, timezone, options) {
+  if (!value) return 'Recently'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Recently'
+  try { return date.toLocaleDateString(undefined, { ...options, ...(timezone ? { timeZone: timezone } : {}) }) }
+  catch { return date.toLocaleDateString(undefined, options) }
 }
 
-function Bar({ label, value, color }) {
-  const pct = Math.round(value * 100)
-  return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
-        <span style={{ fontSize:12, color:'var(--text-3)' }}>{label}</span>
-        <span style={{ fontSize:12, fontWeight:700, color }}>{pct}%</span>
-      </div>
-      <div style={{ height:5, borderRadius:99, background:'var(--border)', overflow:'hidden' }}>
-        <div style={{ height:'100%', borderRadius:99, background:color, width:`${pct}%`, transition:'width 0.7s ease' }}/>
-      </div>
-    </div>
-  )
+function greeting(timezone) {
+  const hour = (() => { try { return Number(new Intl.DateTimeFormat('en', { hour: '2-digit', hourCycle: 'h23', timeZone: timezone || undefined }).format(new Date())) } catch { return new Date().getHours() } })()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
 }
 
 export default function Dashboard() {
-  const { riskData, recommendations, phq9Result, gad7Result, trajectory, setActivePage } = useApp()
+  const { setActivePage, setSessionId, setPendingChatPrompt } = useApp()
+  const { user } = useAuth()
+  const [sessions, setSessions] = useState([])
+  const [assessments, setAssessments] = useState([])
+  const [activityLoading, setActivityLoading] = useState(true)
+  const [mood, setMood] = useState(null)
+  const [tourOpen, setTourOpen] = useState(false)
+  const [tourStep, setTourStep] = useState(0)
+  const tz = user?.timezone || 'Asia/Kolkata'
+  const firstName = String(user?.display_name || '').trim().split(/\s+/)[0] || ''
+  const initials = (user?.display_name || user?.username || user?.email || 'U').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
 
-  if (!riskData && !phq9Result && !gad7Result) return (
-    <div style={{ height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:22, padding:40, textAlign:'center', background:'var(--bg-page)' }}>
-      <div style={{ width:68, height:68, borderRadius:20, background:'var(--teal-dim)', border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <LayoutDashboard size={28} color="var(--teal)"/>
-      </div>
-      <div>
-        <h3 style={{ fontSize:20, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Dashboard is empty</h3>
-        <p style={{ fontSize:13, color:'var(--text-3)', marginTop:10, maxWidth:360, lineHeight:1.7 }}>
-          Your wellbeing overview appears here after you chat or take an assessment.
-        </p>
-      </div>
-      <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
-        <button onClick={() => setActivePage?.('chat')} className="btn-primary"><MessageSquare size={14}/> Start a Chat</button>
-        <button onClick={() => setActivePage?.('assessment')} className="btn-ghost"><ClipboardList size={14}/> Take Assessment</button>
-      </div>
-    </div>
-  )
+  useEffect(() => {
+    let alive = true
+    Promise.allSettled([api.mySessions(), getAssessmentHistory()]).then(([sessionResult, assessmentResult]) => {
+      if (!alive) return
+      if (sessionResult.status === 'fulfilled' && Array.isArray(sessionResult.value.data)) setSessions(sessionResult.value.data)
+      if (assessmentResult.status === 'fulfilled' && Array.isArray(assessmentResult.value.data?.history)) setAssessments(assessmentResult.value.data.history)
+    }).finally(() => { if (alive) setActivityLoading(false) })
+    return () => { alive = false }
+  }, [])
 
-  const localRiskScore = (() => {
-    if (riskData) return riskData.risk_score
-    const p = phq9Result ? (phq9Result.score / 27) * 0.40 : 0
-    const g = gad7Result ? (gad7Result.score / 21) * 0.25 : 0
-    return p + g > 0 ? Math.min(p + g + 0.05, 1) : 0
-  })()
+  useEffect(() => {
+    if (!user?.id || activityLoading) return
+    const key = `mindcare-tour-seen-${user.id}`
+    const hasHistory = sessions.length > 0 || assessments.length > 0
+    try { setTourOpen(!hasHistory && !localStorage.getItem(key)) } catch { setTourOpen(false) }
+  }, [user?.id, activityLoading, sessions.length, assessments.length])
 
-  const radarData = [
-    { subject:'Depression', value:phq9Result ? Math.round((phq9Result.score / 27) * 100) : 0 },
-    { subject:'Anxiety',    value:gad7Result  ? Math.round((gad7Result.score  / 21) * 100) : 0 },
-    { subject:'Facial',     value:riskData    ? Math.round((riskData.components?.facial_contribution ?? 0) * 100) : 0 },
-    { subject:'Mood',       value:riskData    ? Math.round((riskData.components?.text_contribution   ?? 0) * 100) : 0 },
-  ]
+  const finishTour = () => {
+    try { if (user?.id) localStorage.setItem(`mindcare-tour-seen-${user.id}`, '1') } catch { /* storage may be disabled */ }
+    setTourOpen(false)
+  }
 
-  const trendColor = trajectory?.trend === 'improving' ? '#2A7D6F' : trajectory?.trend === 'deteriorating' ? '#C0424A' : 'var(--text-3)'
-  const TrendIcon  = trajectory?.trend === 'improving' ? TrendingUp : trajectory?.trend === 'deteriorating' ? TrendingDown : Minus
-  const recentPoints = (trajectory?.recent ?? []).map((p, i) => ({ x:i+1, ema:Math.round(p.ema * 100) }))
+  const startChat = (prompt = '') => {
+    if (prompt) setPendingChatPrompt?.(prompt)
+    setActivePage('chat')
+  }
+
+  const resume = (session) => {
+    if (session?.session_id) setSessionId?.(session.session_id)
+    setActivePage('chat')
+  }
+
+  const recent = useMemo(() => {
+    const items = [
+      ...sessions.map(item => ({ kind: 'chat', id: item.session_id, title: item.title || 'Conversation', date: item.started_at || item.created_at, detail: `${item.message_count || 0} messages`, session: item })),
+      ...assessments.map(item => ({ kind: 'assessment', id: item.id, title: `${item.instrument || 'Self-check'} check-in`, date: item.completed_at, detail: 'Reflection saved', item })),
+    ]
+    return items.filter(item => item.date || item.id).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 3)
+  }, [sessions, assessments])
+
+  const selectedMood = MOODS.find(item => item.id === mood)
+  const tour = TOUR_STEPS[tourStep]
+  const TourIcon = tour.icon
 
   return (
-    <div style={{ height:'100%', overflowY:'auto', background:'var(--bg-page)' }}>
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'24px 16px', display:'flex', flexDirection:'column', gap:16 }}>
-
-        <div style={{ display:'flex', alignItems:'center', gap:13 }}>
-          <div style={{ width:44, height:44, borderRadius:13, flexShrink:0, background:'var(--teal-dim)', border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <LayoutDashboard size={20} color="var(--teal)"/>
-          </div>
+    <div className="home-page">
+      <div className="home-content">
+        <header className="home-greeting-row">
           <div>
-            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Wellbeing Overview</h2>
-            <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>PHQ-9 · GAD-7 · Facial emotion · Chat mood · EMA trajectory</p>
+            <div className="home-date"><span className="home-date-dot" /> {safeDate(new Date(), tz, { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}</div>
+            <h1>{greeting(tz)}{firstName ? `, ${firstName}` : ''}<span className="home-greeting-period">.</span></h1>
+            <p>What would help, right now?</p>
           </div>
-        </div>
+          <button type="button" className="home-profile-shortcut" onClick={() => setActivePage('profile')} aria-label="Open profile">
+            <span className={`home-avatar mc-avatar-${user?.avatar_tone || 'sage'}${user?.avatar_url ? ' has-photo' : ''}`}>{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</span>
+            <span className="home-profile-shortcut-copy"><strong>Your space</strong><small>Personalized for you</small></span>
+            <ChevronRight size={16} />
+          </button>
+        </header>
 
-        <div style={{ display:'flex', gap:9, padding:'11px 15px', borderRadius:12, background:'#fff', border:'1px solid var(--border)' }}>
-          <Info size={12} color="var(--teal)" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:12, color:'var(--text-3)', lineHeight:1.65, margin:0 }}>
-            Risk score = <strong style={{ color:'var(--teal)' }}>PHQ-9 40%</strong> + <strong style={{ color:'var(--blue)' }}>GAD-7 25%</strong> + <strong style={{ color:'var(--amber)' }}>Facial 20%</strong> + <strong style={{ color:'var(--text-2)' }}>Chat Mood 15%</strong>. EMA trajectory tracks trends over time.
-          </p>
-        </div>
-
-        <div className="grid-1-2">
-          <div className="card" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-            <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', alignSelf:'flex-start' }}>Overall Risk</p>
-            <Gauge score={localRiskScore}/>
-          </div>
-          <div className="card" style={{ display:'flex', flexDirection:'column', gap:13 }}>
-            <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px' }}>Component Breakdown</p>
-            {riskData?.components ? (
-              <>
-                <Bar label="PHQ-9 — Depression (40%)"
-                  value={riskData.components.phq9_contribution > 0 ? riskData.components.phq9_contribution : phq9Result ? phq9Result.score/27 : 0}
-                  color="#2A7D6F"/>
-                <Bar label="GAD-7 — Anxiety (25%)"
-                  value={riskData.components.gad7_contribution > 0 ? riskData.components.gad7_contribution : gad7Result ? gad7Result.score/21 : 0}
-                  color="#3B6EA8"/>
-                <Bar label="Facial Emotion (20%)" value={riskData.components.facial_contribution} color="#C07436"/>
-                <Bar label="Chat Mood (15%)"      value={riskData.components.text_contribution}   color="#6B7280"/>
-              </>
-            ) : phq9Result || gad7Result ? (
-              <>
-                <Bar label="PHQ-9 — Depression (40%)" value={phq9Result ? phq9Result.score/27 : 0} color="#2A7D6F"/>
-                <Bar label="GAD-7 — Anxiety (25%)"    value={gad7Result ? gad7Result.score/21 : 0} color="#3B6EA8"/>
-                <Bar label="Facial Emotion (20%)" value={0} color="#C07436"/>
-                <Bar label="Chat Mood (15%)"      value={0} color="#6B7280"/>
-              </>
-            ) : (
-              <p style={{ fontSize:13, color:'var(--text-4)' }}>Send a chat message to generate breakdown.</p>
-            )}
-          </div>
-        </div>
-
-        {trajectory && (
-          <div className="card">
-            <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:14, flexWrap:'wrap' }}>
-              <p style={{ fontSize:11, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', margin:0, flex:1 }}>Mental State Trajectory (72h EMA)</p>
-              {trajectory.trend && (
-                <div style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:99, background:trendColor+'14', border:`1px solid ${trendColor}30`, fontSize:11, fontWeight:700, color:trendColor }}>
-                  <TrendIcon size={10}/>{trajectory.trend}
-                </div>
-              )}
-            </div>
-            {recentPoints.length > 1 ? (
-              <ResponsiveContainer width="100%" height={150}>
-                <LineChart data={recentPoints} margin={{ top:5, right:20, bottom:5, left:0 }}>
-                  <CartesianGrid stroke="var(--border)" vertical={false}/>
-                  <XAxis dataKey="x" tick={{ fill:'var(--text-4)', fontSize:10 }} axisLine={false} tickLine={false}/>
-                  <YAxis domain={[0,100]} tick={{ fill:'var(--text-4)', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
-                  <Tooltip contentStyle={{ background:'#fff', border:'1px solid var(--border)', borderRadius:10, fontSize:12 }} labelStyle={{ color:'var(--text-3)' }} formatter={v=>[`${v}% risk`,'EMA']}/>
-                  <Line type="monotone" dataKey="ema" stroke="var(--teal)" strokeWidth={2} dot={{ fill:'var(--teal)', r:3 }} activeDot={{ r:5 }}/>
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="grid-3">
-                {[['Current EMA', trajectory.current_ema!=null ? `${Math.round(trajectory.current_ema*100)}%`:'—','var(--teal)'], ['Avg Sentiment', trajectory.avg_sentiment!=null?(trajectory.avg_sentiment>0?'+':'')+trajectory.avg_sentiment.toFixed(2):'—','var(--blue)'], ['Data Points', trajectory.points??0,'var(--text-3)']].map(([l,v,c]) => (
-                  <div key={l} style={{ padding:'14px', borderRadius:12, textAlign:'center', background:'var(--bg-elevated)', border:'1px solid var(--border)' }}>
-                    <p style={{ fontSize:22, fontWeight:700, color:c, margin:0, fontFamily:'Lora,serif' }}>{v}</p>
-                    <p style={{ fontSize:11, color:'var(--text-4)', marginTop:5 }}>{l}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p style={{ fontSize:11, color:'var(--text-4)', marginTop:10, textAlign:'center' }}>Higher % = more distress · Lower % = improvement · EMA α=0.30</p>
-          </div>
+        {!String(user?.display_name || '').trim() && (
+          <section className="home-personalize-card" aria-label="Personalize your space">
+            <span className="home-personalize-mark"><Sparkles size={18} /></span>
+            <div className="home-personalize-copy"><strong>Make this space yours</strong><span>Add the name you prefer, your birthday if useful, and a photo. MindCare can then address you more naturally.</span></div>
+            <button type="button" onClick={() => setActivePage('profile')}>Set up profile <ArrowRight size={15} /></button>
+          </section>
         )}
 
-        <div className="grid-3">
-          {[
-            { label:'PHQ-9',    icon:Activity,    result:phq9Result, max:27,  special:null, color:'var(--teal)' },
-            { label:'GAD-7',    icon:ShieldAlert, result:gad7Result, max:21,  special:null, color:'var(--blue)' },
-            { label:'EMA State',icon:Brain,       result:null,       max:null, special:trajectory, color:'var(--amber)' },
-          ].map(({ label, icon:Icon, result, max, special, color }) => (
-            <div key={label} className="card" style={{ textAlign:'center', padding:'18px 12px' }}>
-              <div style={{ width:30, height:30, borderRadius:9, margin:'0 auto 10px', background:color+'14', border:`1px solid ${color}22`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Icon size={14} color={color}/>
-              </div>
-              <p style={{ fontSize:10, color:'var(--text-4)', marginBottom:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px' }}>{label}</p>
-              {result ? (
-                <>
-                  <p style={{ fontSize:26, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>{result.score}<span style={{ fontSize:13, color:'var(--text-4)' }}>/{max}</span></p>
-                  <p style={{ fontSize:12, fontWeight:700, marginTop:5, color:result.color }}>{result.category}</p>
-                </>
-              ) : special ? (
-                <>
-                  <p style={{ fontSize:24, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>{special.current_ema!=null?`${Math.round(special.current_ema*100)}%`:'—'}</p>
-                  <p style={{ fontSize:12, fontWeight:700, marginTop:5, color:trendColor, textTransform:'capitalize' }}>{special.trend??'no data'}</p>
-                </>
-              ) : (
-                <p style={{ fontSize:12, color:'var(--text-4)', marginTop:6 }}>Not assessed</p>
-              )}
+        <section className="home-hero">
+          <div className="home-hero-copy">
+            <span className="home-hero-kicker"><Sparkles size={13} /> A MOMENT FOR YOU</span>
+            <h2>Come as<br /><em>you are.</em></h2>
+            <p>No perfect words needed.</p>
+            <div className="home-hero-actions">
+              <button type="button" className="home-primary" onClick={() => startChat()}><MessageCircle size={17} /> Talk it out <ArrowUpRight size={15} /></button>
+              <button type="button" className="home-quiet-action" onClick={() => setActivePage('assessment')}>Check in <ArrowRight size={15} /></button>
             </div>
-          ))}
-        </div>
-
-        {(phq9Result || gad7Result) && (
-          <div className="card">
-            <p style={{ fontSize:11, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:14 }}>Wellbeing Radar</p>
-            <ResponsiveContainer width="100%" height={200}>
-              <RadarChart data={radarData} margin={{ top:10, right:24, bottom:10, left:24 }}>
-                <PolarGrid stroke="var(--border)"/>
-                <PolarAngleAxis dataKey="subject" tick={{ fill:'var(--text-3)', fontSize:11 }}/>
-                <Radar name="Risk" dataKey="value" stroke="var(--teal)" fill="var(--teal)" fillOpacity={0.12} strokeWidth={2}/>
-              </RadarChart>
-            </ResponsiveContainer>
           </div>
-        )}
+          <div className="home-visual" aria-hidden="true">
+            <div className="home-visual-glow" />
+            <div className="home-visual-orbit orbit-a" />
+            <div className="home-visual-orbit orbit-b" />
+            <div className="home-visual-orbit orbit-c" />
+            <div className="home-visual-center"><Heart size={34} strokeWidth={1.5} /></div>
+            <div className="home-floating-note note-top"><span className="home-note-icon"><Sun size={14} /></span><span><b>A little pause</b><small>is enough to begin</small></span></div>
+            <div className="home-floating-note note-bottom"><span className="home-note-dot" /><span><b>Your pace</b><small>always</small></span></div>
+          </div>
+          <div className="home-hero-grain" />
+        </section>
 
-        {recommendations && (
-          <div className="grid-2">
-            <div className="card" style={{ display:'flex', flexDirection:'column', gap:13 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <Dumbbell size={14} color="var(--teal)"/>
-                <p style={{ fontSize:14, fontWeight:600, color:'var(--text-1)', margin:0 }}>Exercises</p>
-              </div>
-              {recommendations.exercises.map((ex, i) => (
-                <div key={i} style={{ display:'flex', gap:10 }}>
-                  <div style={{ width:20, height:20, borderRadius:6, flexShrink:0, marginTop:1, background:'var(--teal-dim)', border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:'var(--teal)' }}>{i+1}</div>
-                  <p style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.65, margin:0 }}>{ex}</p>
-                </div>
+        <section className="home-checkin-section" aria-labelledby="home-mood-title">
+          <div className="home-section-head">
+            <div><span className="home-overline">QUICK CHECK-IN</span><h3 id="home-mood-title">How are you arriving?</h3></div>
+            <span className="home-section-aside">Just for this moment</span>
+          </div>
+          <div className="home-mood-row">
+            {MOODS.map(item => (
+              <button key={item.id} type="button" onClick={() => setMood(item.id)} className={`home-mood-option${mood === item.id ? ' is-selected' : ''}`} aria-pressed={mood === item.id}>
+                <span className="home-mood-face" aria-hidden="true">{item.face}</span><span>{item.label}</span>{mood === item.id && <Check size={13} className="home-mood-check" />}
+              </button>
+            ))}
+          </div>
+          {selectedMood && (
+            <div className="home-mood-followup" role="status">
+              <div><strong>{selectedMood.hint}</strong><span>Not saved — just a conversation starter.</span></div>
+              <button type="button" onClick={() => startChat(selectedMood.prompt)}>Put it into words <ArrowRight size={15} /></button>
+              <button type="button" className="home-mood-dismiss" aria-label="Clear mood selection" onClick={() => setMood(null)}><X size={14} /></button>
+            </div>
+          )}
+        </section>
+
+        <section className="home-tools-section">
+          <div className="home-section-head"><div><span className="home-overline">YOUR NEXT STEP</span><h3>Choose what feels right.</h3></div></div>
+          <div className="home-tools-grid">
+            <button type="button" className="home-tool-card home-tool-talk" onClick={() => startChat()}>
+              <span className="home-tool-art"><MessageCircle size={22} /></span><span className="home-tool-name">Talk</span><span className="home-tool-description">Untangle a thought</span><ArrowUpRight className="home-tool-arrow" size={17} />
+            </button>
+            <button type="button" className="home-tool-card home-tool-check" onClick={() => setActivePage('assessment')}>
+              <span className="home-tool-art"><ClipboardCheck size={22} /></span><span className="home-tool-name">Check in</span><span className="home-tool-description">PHQ-9 · GAD-7</span><ArrowUpRight className="home-tool-arrow" size={17} />
+            </button>
+            <button type="button" className="home-tool-card home-tool-reflect" onClick={() => setActivePage('emotion')}>
+              <span className="home-tool-art"><Waves size={22} /></span><span className="home-tool-name">Reflect</span><span className="home-tool-description">Take a quiet pause</span><ArrowUpRight className="home-tool-arrow" size={17} />
+            </button>
+          </div>
+        </section>
+
+        <section className="home-recent-section">
+          <div className="home-section-head"><div><span className="home-overline">YOUR SPACE</span><h3>Pick up where you left off.</h3></div><button type="button" className="home-text-link" onClick={() => setActivePage('metrics')}>View insights <ArrowRight size={14} /></button></div>
+          {recent.length > 0 ? (
+            <div className="home-recent-list">
+              {recent.map(item => (
+                <button type="button" className="home-recent-item" key={`${item.kind}-${item.id}`} onClick={() => item.kind === 'chat' ? resume(item.session) : setActivePage('metrics')}>
+                  <span className={`home-recent-icon ${item.kind === 'assessment' ? 'is-assessment' : ''}`}>{item.kind === 'chat' ? <MessageCircle size={17} /> : <BookOpen size={17} />}</span>
+                  <span className="home-recent-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
+                  <time>{safeDate(item.date, tz, { month: 'short', day: 'numeric' })}</time><ChevronRight size={16} className="home-recent-chevron" />
+                </button>
               ))}
             </div>
-            <div className="card" style={{ display:'flex', flexDirection:'column', gap:13 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <Activity size={14} color="var(--amber)"/>
-                <p style={{ fontSize:14, fontWeight:600, color:'var(--text-1)', margin:0 }}>Resources</p>
-              </div>
-              <p style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.65, padding:'10px 13px', borderRadius:9, background:'var(--bg-elevated)', border:'1px solid var(--border)' }}>{recommendations.message}</p>
-              {recommendations.resources.map((r, i) => {
-                const Icon = RES_ICONS[r.type] || Phone
-                return (
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, background:'var(--bg-elevated)', border:'1px solid var(--border)' }}>
-                    <div style={{ width:30, height:30, borderRadius:9, background:'var(--amber-dim)', border:'1px solid rgba(192,116,54,0.22)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <Icon size={13} color="var(--amber)"/>
-                    </div>
-                    <div>
-                      <p style={{ fontSize:12, fontWeight:600, color:'var(--text-1)', margin:0 }}>{r.name}</p>
-                      <p style={{ fontSize:11, color:'var(--text-4)', margin:0 }}>{r.contact}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+          ) : (
+            <button type="button" className="home-first-step" onClick={() => startChat()}>
+              <span className="home-first-step-icon"><Leaf size={19} /></span><span><strong>Your story starts here.</strong><small>{activityLoading ? 'Getting your space ready…' : 'Your recent activity will appear here.'}</small></span><ArrowUpRight size={17} />
+            </button>
+          )}
+        </section>
 
-        {riskData?.risk_level === 'HIGH' && (
-          <div style={{ display:'flex', gap:13, padding:'14px 16px', borderRadius:14, background:'var(--rose-dim)', border:'1px solid rgba(192,66,74,0.20)' }}>
-            <AlertTriangle size={17} color="var(--rose)" style={{ flexShrink:0, marginTop:1 }}/>
-            <div>
-              <p style={{ fontSize:14, fontWeight:700, color:'var(--rose)', marginBottom:5 }}>High Risk Detected</p>
-              <p style={{ fontSize:13, color:'#7A2832', lineHeight:1.65 }}>
-                Your scores indicate significant distress. Please reach out today.<br/>
-                <strong style={{ color:'var(--rose)' }}>iCall: 9152987821</strong> &nbsp;·&nbsp;
-                <strong style={{ color:'var(--rose)' }}>Vandrevala: 1860-2662-345</strong>
-              </p>
-            </div>
-          </div>
-        )}
+        <div className="home-footnote"><ShieldCheck size={14} /><span>Private to your account</span><i /> <span>Support, not diagnosis</span><button type="button" onClick={() => { setTourStep(0); setTourOpen(true) }}>How it works</button></div>
       </div>
+
+      {tourOpen && (
+        <div className="home-tour-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) finishTour() }}>
+          <section className="home-tour-modal" role="dialog" aria-modal="true" aria-labelledby="home-tour-title">
+            <button type="button" className="home-tour-close" onClick={finishTour} aria-label="Close introduction"><X size={17} /></button>
+            <div className={`home-tour-icon tint-${tour.tint}`}><TourIcon size={25} /></div>
+            <div className="home-tour-step">A QUICK TOUR <span>{tourStep + 1} / {TOUR_STEPS.length}</span></div>
+            <h2 id="home-tour-title">{tour.title}</h2><p>{tour.body}</p>
+            <div className="home-tour-progress">{TOUR_STEPS.map((step, index) => <span key={step.kicker} className={index <= tourStep ? 'is-filled' : ''} />)}</div>
+            <div className="home-tour-actions"><button type="button" className="home-tour-skip" onClick={finishTour}>Skip</button><button type="button" className="home-primary" onClick={() => tourStep < TOUR_STEPS.length - 1 ? setTourStep(step => step + 1) : finishTour()}>{tourStep < TOUR_STEPS.length - 1 ? 'Next' : 'Let’s begin'} <ArrowRight size={15} /></button></div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

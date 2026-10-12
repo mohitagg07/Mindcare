@@ -1,17 +1,5 @@
-Place mental health PDF files in this directory to enable RAG (Retrieval-Augmented Generation).
+MindCare local wellness reference documents
 
-Recommended files:
-  - Your MindCare project report (Mohit_final_report.pdf)
-  - Mental health guidelines
-  - CBT therapy guides
-  - Any relevant research papers
+PDF files in this folder are loaded at API startup by the lightweight pypdf retrieval service. The agent searches these local texts by keyword when appropriate.
 
-On first startup, MindCare will:
-  1. Load all PDFs from this folder
-  2. Split them into chunks
-  3. Create vector embeddings using sentence-transformers
-  4. Store in ChromaDB for semantic search
-
-This allows the AI to give research-backed, scientifically grounded responses.
-
-Without PDFs, the chatbot works normally using LLaMA-3 knowledge only.
+To add a reference: place a properly licensed, accessible PDF here and restart the API. Avoid copyrighted material without permission and do not treat retrieved content as clinical advice. This implementation deliberately does not install ChromaDB, embeddings, sentence-transformers, or Torch.

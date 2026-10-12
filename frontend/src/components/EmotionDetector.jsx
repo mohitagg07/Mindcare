@@ -5,13 +5,13 @@ import { analyzeEmotion } from '../api/client'
 import { useApp } from '../context/AppContext'
 
 const EMOTION_META = {
-  happy:    { color:'#2A7D6F', bg:'rgba(42,125,111,0.08)',  label:'Happy',     emoji:'😊', desc:'Positive, joyful expression'    },
-  sad:      { color:'#3B6EA8', bg:'rgba(59,110,168,0.08)',  label:'Sad',       emoji:'😢', desc:'Low mood or distress'            },
-  angry:    { color:'#C0424A', bg:'rgba(192,66,74,0.08)',   label:'Angry',     emoji:'😠', desc:'Frustration or irritation'       },
-  fear:     { color:'#7B5EA8', bg:'rgba(123,94,168,0.08)',  label:'Fearful',   emoji:'😨', desc:'Anxiety or apprehension'         },
-  disgust:  { color:'#C07436', bg:'rgba(192,116,54,0.08)',  label:'Disgust',   emoji:'🤢', desc:'Aversion or discomfort'          },
-  surprise: { color:'#B05090', bg:'rgba(176,80,144,0.08)',  label:'Surprised', emoji:'😲', desc:'Unexpected strong reaction'      },
-  neutral:  { color:'#6B7280', bg:'rgba(107,114,128,0.08)', label:'Neutral',   emoji:'😐', desc:'Calm or composed expression'     },
+  happy:    { color:'#2A7D6F', bg:'rgba(42,125,111,0.08)',  label:'Happy',     emoji:'😊', desc:'A visual pattern the model labelled happy; it may not reflect how you feel.' },
+  sad:      { color:'#3B6EA8', bg:'rgba(59,110,168,0.08)',  label:'Sad',       emoji:'😢', desc:'A visual pattern the model labelled sad; it is not a measure of mood.' },
+  angry:    { color:'#C0424A', bg:'rgba(192,66,74,0.08)',   label:'Angry',     emoji:'😠', desc:'A visual pattern the model labelled angry; it may be inaccurate.' },
+  fear:     { color:'#7B5EA8', bg:'rgba(123,94,168,0.08)',  label:'Fearful',   emoji:'😨', desc:'A visual pattern the model labelled fearful; it is not evidence of anxiety.' },
+  disgust:  { color:'#C07436', bg:'rgba(192,116,54,0.08)',  label:'Disgust',   emoji:'🤢', desc:'A visual pattern the model labelled disgust; it may be inaccurate.' },
+  surprise: { color:'#B05090', bg:'rgba(176,80,144,0.08)',  label:'Surprised', emoji:'😲', desc:'A visual pattern the model labelled surprised; it may not match your experience.' },
+  neutral:  { color:'#6B7280', bg:'rgba(107,114,128,0.08)', label:'Neutral',   emoji:'😐', desc:'A visual pattern the model labelled neutral; it does not establish emotional state.' },
 }
 
 function FaceSVG({ emotion, size = 44 }) {
@@ -38,12 +38,12 @@ function ConfRing({ value, color, size = 80 }) {
         <circle cx="34" cy="34" r={r} fill="none" stroke={color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={dash} strokeLinecap="round" style={{ transform:'rotate(-90deg)', transformOrigin:'34px 34px', transition:'stroke-dashoffset 1s ease' }}/>
         <text x="34" y="39" textAnchor="middle" fontSize="13" fontWeight="700" fill={color}>{Math.round(value * 100)}%</text>
       </svg>
-      <span style={{ fontSize:9, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px' }}>CONFIDENCE</span>
+      <span style={{ fontSize:9, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px' }}>REPORTED SCORE</span>
     </div>
   )
 }
 
-function CamFrame({ active }) {
+function CamFrame({ active, live = false }) {
   const corner = (style) => <div style={{ position:'absolute', width:22, height:22, borderWidth:2, borderStyle:'solid', borderColor:active?'var(--teal)':'var(--border)', transition:'border-color 0.4s', ...style }}/>
   return (
     <div style={{ position:'absolute', inset:0, pointerEvents:'none' }}>
@@ -52,10 +52,10 @@ function CamFrame({ active }) {
       {corner({ bottom:8, left:8,  borderRight:'none', borderTop:'none',  borderBottomLeftRadius:4 })}
       {corner({ bottom:8, right:8, borderLeft:'none',  borderTop:'none',  borderBottomRightRadius:4 })}
       {active && <div style={{ position:'absolute', left:0, right:0, height:2, top:'50%', opacity:0.6, background:'linear-gradient(90deg, transparent, var(--teal), transparent)', animation:'scanLine 2s ease-in-out infinite' }}/>}
-      <div style={{ position:'absolute', top:10, right:44, display:'flex', alignItems:'center', gap:4, padding:'2px 7px', borderRadius:6, background:'rgba(255,255,255,0.9)', backdropFilter:'blur(6px)' }}>
+      {live && <div style={{ position:'absolute', top:10, right:44, display:'flex', alignItems:'center', gap:4, padding:'2px 7px', borderRadius:6, background:'rgba(255,255,255,0.9)', backdropFilter:'blur(6px)' }}>
         <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--teal)', animation:'pulse 1.5s infinite' }}/>
-        <span style={{ fontSize:9, fontWeight:700, color:'var(--teal)', letterSpacing:'1px' }}>LIVE</span>
-      </div>
+        <span style={{ fontSize:9, fontWeight:700, color:'var(--teal)', letterSpacing:'1px' }}>CAMERA ON</span>
+      </div>}
     </div>
   )
 }
@@ -65,6 +65,7 @@ export default function EmotionDetector() {
   const webcamRef  = useRef(null)
   const fileRef    = useRef(null)
   const [mode,     setMode]     = useState('webcam')
+  const [cameraEnabled, setCameraEnabled] = useState(false)
   const [result,   setResult]   = useState(null)
   const [loading,  setLoading]  = useState(false)
   const [preview,  setPreview]  = useState(null)
@@ -94,6 +95,11 @@ export default function EmotionDetector() {
 
   const handleFile = (e) => {
     const file = e.target.files[0]; if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Please choose a JPEG, PNG, or WebP image.')
+      e.target.value = ''
+      return
+    }
     const reader = new FileReader()
     reader.onload = ev => { setPreview(ev.target.result); analyze(ev.target.result) }
     reader.readAsDataURL(file)
@@ -112,13 +118,14 @@ export default function EmotionDetector() {
             <Scan size={20} color="var(--teal)"/>
           </div>
           <div style={{ flex:1 }}>
-            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Emotion Detection</h2>
-            <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>AI-powered facial expression analysis · 7 emotion classes</p>
+            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Expression Estimate</h2>
+            <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>Optional visual estimate · not a measure of mental health</p>
+            <p style={{ fontSize:11, color:'var(--text-3)', marginTop:5, lineHeight:1.6 }}>The camera stays off until you enable it. Images are submitted for analysis only when you choose to capture or upload one.</p>
           </div>
           {result && (
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:99, fontSize:11, fontWeight:600, background:result.backend==='claude-vision'?'var(--teal-dim)':result.model_available?'var(--teal-dim)':'var(--amber-dim)', border:`1px solid ${result.backend==='claude-vision'?'var(--teal-border)':result.model_available?'var(--teal-border)':'rgba(192,116,54,0.25)'}`, color:result.backend==='claude-vision'?'var(--teal)':result.model_available?'var(--teal)':'var(--amber)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:99, fontSize:11, fontWeight:600, background:result.backend.startsWith('groq-vision')?'var(--teal-dim)':result.model_available?'var(--teal-dim)':'var(--amber-dim)', border:`1px solid ${result.backend.startsWith('groq-vision')?'var(--teal-border)':result.model_available?'var(--teal-border)':'rgba(192,116,54,0.25)'}`, color:result.backend.startsWith('groq-vision')?'var(--teal)':result.model_available?'var(--teal)':'var(--amber)' }}>
               <div style={{ width:6, height:6, borderRadius:'50%', background:'currentColor', animation:'pulse 1.5s infinite' }}/>
-              {result.backend==='claude-vision' ? '✦ Claude Vision' : result.model_available ? 'Model Active' : 'Model Offline'}
+              {result.backend.startsWith('groq-vision') ? '✦ Groq Vision' : result.model_available ? 'Model Active' : 'Model Offline'}
             </div>
           )}
         </div>
@@ -129,7 +136,7 @@ export default function EmotionDetector() {
             {/* Mode toggle */}
             <div style={{ display:'flex', gap:4, padding:4, borderRadius:12, background:'var(--bg-card)', border:'1px solid var(--border)' }}>
               {[{ id:'webcam', Icon:Camera, label:'Webcam' }, { id:'upload', Icon:Upload, label:'Upload Photo' }].map(m => (
-                <button key={m.id} onClick={() => { setMode(m.id); setPreview(null); setResult(null); setError(null) }} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'9px 12px', borderRadius:9, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${mode===m.id?'var(--teal-border)':'transparent'}`, background:mode===m.id?'var(--teal-dim)':'transparent', color:mode===m.id?'var(--teal)':'var(--text-3)', fontSize:13, fontWeight:500, transition:'all 0.16s' }}>
+                <button key={m.id} onClick={() => { if (m.id !== mode) { setMode(m.id); setPreview(null); setResult(null); setError(null); setCameraEnabled(false); setCamReady(false) } }} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'9px 12px', borderRadius:9, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${mode===m.id?'var(--teal-border)':'transparent'}`, background:mode===m.id?'var(--teal-dim)':'transparent', color:mode===m.id?'var(--teal)':'var(--text-3)', fontSize:13, fontWeight:500, transition:'all 0.16s' }}>
                   <m.Icon size={13}/>{m.label}
                 </button>
               ))}
@@ -139,18 +146,29 @@ export default function EmotionDetector() {
             {mode === 'webcam' && (
               <div style={{ background:'var(--bg-card)', borderRadius:16, padding:12, border:'1px solid var(--border)' }}>
                 <div style={{ position:'relative', borderRadius:12, overflow:'hidden', aspectRatio:'4/3', background:'#1A2332', border:'1px solid var(--border)' }}>
-                  <Webcam ref={webcamRef} screenshotFormat="image/jpeg" screenshotQuality={0.92} onUserMedia={() => setCamReady(true)} onUserMediaError={() => setError('Camera access denied')} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} mirrored/>
-                  {!camReady && (
+                  {cameraEnabled && <Webcam ref={webcamRef} screenshotFormat="image/jpeg" screenshotQuality={0.88} videoConstraints={{ facingMode:'user', width:{ ideal:640 }, height:{ ideal:480 } }} onUserMedia={() => setCamReady(true)} onUserMediaError={() => { setCamReady(false); setCameraEnabled(false); setError('Camera access was not granted. You can use photo upload instead.') }} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} mirrored/>}
+                  {!cameraEnabled && (
+                    <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:9, padding:18, textAlign:'center', background:'#172b2a' }}>
+                      <div style={{ width:52, height:52, borderRadius:16, display:'grid', placeItems:'center', color:'#c0dfc6', background:'rgba(190,225,197,.12)', border:'1px solid rgba(190,225,197,.2)' }}><Camera size={22}/></div>
+                      <span style={{ color:'rgba(255,255,255,.88)', fontSize:13, fontWeight:700 }}>Camera is off</span>
+                      <span style={{ maxWidth:260, color:'rgba(255,255,255,.58)', fontSize:11, lineHeight:1.6 }}>Enable it only when you are comfortable. Nothing is analysed until you choose Capture & Analyse.</span>
+                    </div>
+                  )}
+                  {cameraEnabled && !camReady && (
                     <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:9, background:'#1A2332' }}>
                       <div style={{ width:20, height:20, border:'2px solid rgba(255,255,255,0.15)', borderTopColor:'var(--teal)', borderRadius:'50%', animation:'spin 0.9s linear infinite' }}/>
                       <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>Initializing camera…</span>
                     </div>
                   )}
-                  <CamFrame active={scanning}/>
+                  {cameraEnabled && <CamFrame active={scanning} live={cameraEnabled}/>}
                 </div>
-                <button onClick={captureWebcam} disabled={loading || !camReady} style={{ marginTop:10, width:'100%', padding:'12px', borderRadius:10, border:'none', background:loading?'var(--teal-dim)':'var(--teal)', color:loading?'var(--teal)':'#fff', fontSize:14, fontWeight:600, fontFamily:'inherit', cursor:camReady&&!loading?'pointer':'not-allowed', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity:camReady?1:0.5, boxShadow:camReady&&!loading?'0 2px 12px rgba(42,125,111,0.28)':'none', transition:'all 0.18s' }}>
-                  {loading ? <><RefreshCw size={14} style={{ animation:'spin 1s linear infinite' }}/> Analysing…</> : <><Zap size={14}/> Capture &amp; Analyse</>}
-                </button>
+                {cameraEnabled ? (
+                  <button onClick={captureWebcam} disabled={loading || !camReady} style={{ marginTop:10, width:'100%', padding:'12px', borderRadius:10, border:'none', background:loading?'var(--teal-dim)':'var(--teal)', color:loading?'var(--teal)':'#fff', fontSize:14, fontWeight:600, fontFamily:'inherit', cursor:camReady&&!loading?'pointer':'not-allowed', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity:camReady?1:0.5, boxShadow:camReady&&!loading?'0 2px 12px rgba(42,125,111,0.28)':'none', transition:'all 0.18s' }}>
+                    {loading ? <><RefreshCw size={14} style={{ animation:'spin 1s linear infinite' }}/> Analysing…</> : <><Zap size={14}/> Capture &amp; Analyse</>}
+                  </button>
+                ) : (
+                  <button onClick={() => { setError(null); setCameraEnabled(true) }} style={{ marginTop:10, width:'100%', padding:'12px', borderRadius:10, border:'1px solid var(--teal-border)', background:'var(--teal)', color:'#fff', fontSize:14, fontWeight:600, fontFamily:'inherit', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}><Camera size={14}/> Enable camera</button>
+                )}
               </div>
             )}
 
@@ -168,9 +186,9 @@ export default function EmotionDetector() {
                         <p style={{ color:'var(--text-4)', fontSize:12, marginTop:4 }}>Face should be clearly visible</p>
                       </>
                   }
-                  {preview && <CamFrame active={scanning}/>}
+                  {preview && <CamFrame active={scanning} live={false}/>}
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleFile}/>
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display:'none' }} onChange={handleFile}/>
                 {preview && (
                   <button onClick={() => fileRef.current?.click()} disabled={loading} style={{ marginTop:10, width:'100%', padding:'11px', borderRadius:10, border:'1px solid var(--border)', background:'var(--bg-elevated)', color:'var(--text-3)', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}>
                     {loading ? <RefreshCw size={12} style={{ animation:'spin 1s linear infinite' }}/> : <Upload size={12}/>}
@@ -194,7 +212,7 @@ export default function EmotionDetector() {
                   <span style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>Emotion Backend Offline</span>
                 </div>
                 <p style={{ fontSize:12, color:'var(--text-3)', lineHeight:1.6, margin:0 }}>
-                  Set <code style={{ color:'var(--teal)', fontSize:11 }}>ANTHROPIC_API_KEY</code> in your backend <code style={{ color:'var(--teal)', fontSize:11 }}>.env</code> to enable Claude Vision detection.
+                  Set <code style={{ color:'var(--teal)', fontSize:11 }}>GROQ_API_KEY</code> in your backend <code style={{ color:'var(--teal)', fontSize:11 }}>.env</code> to enable Groq Vision estimates.
                 </p>
               </div>
             )}
@@ -202,12 +220,12 @@ export default function EmotionDetector() {
 
           {/* Results */}
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {result && dominant ? (
+            {result && result.model_available && dominant ? (
               <div style={{ animation:'fadeIn 0.4s ease', display:'flex', flexDirection:'column', gap:12 }}>
 
                 <div style={{ background:'#fff', border:`1.5px solid ${dominant.color}28`, borderRadius:18, padding:'20px 18px', position:'relative', overflow:'hidden', boxShadow:'0 2px 16px rgba(26,35,50,0.08)' }}>
                   <div style={{ position:'absolute', top:-20, right:-20, width:100, height:100, borderRadius:'50%', background:dominant.color+'08', filter:'blur(20px)', pointerEvents:'none' }}/>
-                  <p style={{ fontSize:9, color:dominant.color, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:14, opacity:0.8 }}>DETECTED EXPRESSION</p>
+                  <p style={{ fontSize:9, color:dominant.color, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:14, opacity:0.8 }}>MODEL’S TOP LABEL · UNCERTAIN</p>
 
                   <div style={{ display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
                     <div style={{ width:72, height:72, borderRadius:18, flexShrink:0, background:dominant.color+'12', border:`1.5px solid ${dominant.color}28`, display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -221,7 +239,7 @@ export default function EmotionDetector() {
                       <p style={{ fontSize:12, color:'var(--text-3)', margin:0, lineHeight:1.5 }}>{dominant.desc}</p>
                       <div style={{ marginTop:9, display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:99, background:dominant.color+'12', border:`1px solid ${dominant.color}28` }}>
                         <CheckCircle size={11} color={dominant.color}/>
-                        <span style={{ fontSize:11, fontWeight:700, color:dominant.color }}>{Math.round(result.confidence * 100)}% confidence</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:dominant.color }}>{Math.round(result.confidence * 100)}% reported score</span>
                       </div>
                     </div>
                     <ConfRing value={result.confidence} color={dominant.color} size={80}/>
@@ -229,7 +247,7 @@ export default function EmotionDetector() {
                 </div>
 
                 <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:16, padding:16, boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
-                  <p style={{ fontSize:9, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:12 }}>FULL BREAKDOWN</p>
+                  <p style={{ fontSize:9, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:12 }}>MODEL SCORE BREAKDOWN</p>
                   <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                     {scores.map(([emotion, score]) => {
                       const meta = EMOTION_META[emotion] ?? { color:'var(--text-3)', label:emotion, emoji:'🙂' }
@@ -253,8 +271,17 @@ export default function EmotionDetector() {
 
                 <div style={{ padding:'11px 13px', borderRadius:11, background:'var(--teal-dim)', border:'1px solid var(--teal-border)' }}>
                   <p style={{ fontSize:12, color:'var(--text-3)', lineHeight:1.6, margin:0 }}>
-                    <strong style={{ color:'var(--teal)' }}>{dominant.emoji} {dominant.label}</strong> recorded. This will personalise your next AI chat session.
+                    <strong style={{ color:'var(--teal)' }}>{dominant.emoji} {dominant.label}</strong> saved as a tentative model label for chat context. It may be inaccurate and cannot establish your mood, intent, or mental-health status.
                   </p>
+                </div>
+              </div>
+            ) : result && !result.model_available ? (
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, gap:14, textAlign:'center', background:'#fff', border:'1px solid var(--border)', borderRadius:18, padding:24, boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
+                <div style={{ width:58, height:58, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', background:'var(--amber-dim)', border:'1px solid rgba(192,116,54,0.20)' }}><Info size={24} color="var(--amber)"/></div>
+                <div>
+                  <p style={{ fontSize:16, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>No expression estimate</p>
+                  <p style={{ fontSize:13, color:'var(--text-4)', marginTop:7, lineHeight:1.65, maxWidth:280 }}>{result.note || 'Vision analysis is currently unavailable. No estimate was made.'}</p>
+                  <p style={{ fontSize:12, color:'var(--text-3)', marginTop:8 }}>Check the Groq API configuration and try again later.</p>
                 </div>
               </div>
             ) : (
@@ -268,7 +295,7 @@ export default function EmotionDetector() {
                 </div>
                 <div>
                   <p style={{ fontSize:15, fontWeight:600, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>No capture yet</p>
-                  <p style={{ fontSize:13, color:'var(--text-4)', marginTop:6, maxWidth:200, lineHeight:1.6 }}>Use your webcam or upload a photo to detect your emotion</p>
+                  <p style={{ fontSize:13, color:'var(--text-4)', marginTop:6, maxWidth:200, lineHeight:1.6 }}>With your consent, submit a photo for an uncertain expression estimate</p>
                 </div>
                 <div style={{ display:'flex', gap:7, flexWrap:'wrap', justifyContent:'center', opacity:0.5 }}>
                   {Object.keys(EMOTION_META).map(e => <div key={e} title={EMOTION_META[e].label}><FaceSVG emotion={e} size={28}/></div>)}

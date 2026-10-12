@@ -1,112 +1,85 @@
-"""Metrics router — MongoDB, heartbeat, online/total users, trajectory."""
-import time as _time, logging
+"""User-scoped analytics built from Supabase Postgres records."""
+from collections import Counter
 from fastapi import APIRouter, Depends, Response
 from auth.dependencies import get_current_user
-from db.database import get_db
+from db.supabase import select_rows
+from services.trajectory_service import get_trajectory_summary
 
-logger = logging.getLogger("mindcare.metrics")
 router = APIRouter(prefix="/metrics", tags=["metrics"])
-_heartbeats: dict = {}
-_ONLINE_WINDOW = 120
-
-
-@router.post("/heartbeat", status_code=204)
-def heartbeat(current_user=Depends(get_current_user)):
-    _heartbeats[str(current_user["_id"])] = _time.time()
-    return Response(status_code=204)
-
-
-@router.get("/online-users")
-def online_users(current_user=Depends(get_current_user)):
-    cutoff = _time.time() - _ONLINE_WINDOW
-    return {"online": max(sum(1 for t in _heartbeats.values() if t >= cutoff), 1)}
-
-
-@router.get("/total-users")
-def total_users(current_user=Depends(get_current_user)):
-    return {"total": get_db().users.count_documents({})}
-
-
 @router.get("/overview")
-def overview(current_user=Depends(get_current_user)):
-    db  = get_db()
-    uid = str(current_user["_id"])
-    total_sessions = db.sessions.count_documents({"user_id": uid})
-    total_messages = db.messages.count_documents({"user_id": uid})
-    latencies = list(db.messages.find(
-        {"user_id": uid, "role": "assistant", "latency_ms": {"$exists": True}},
-        {"latency_ms": 1}
-    ).sort("timestamp", -1).limit(200))
-    avg_latency = round(sum(d["latency_ms"] for d in latencies) / len(latencies)) if latencies else 0
-    return {"total_sessions": total_sessions, "total_messages": total_messages, "avg_latency_ms": avg_latency}
+async def overview(current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    _, sessions = await select_rows("conversations", token, {"select": "id", "user_id": f"eq.{uid}"}, count=True)
+    _, messages_count = await select_rows("messages", token, {"select": "id", "user_id": f"eq.{uid}"}, count=True)
+    recent, _ = await select_rows("messages", token, {
+        "select": "latency_ms", "user_id": f"eq.{uid}", "role": "eq.assistant",
+        "latency_ms": "not.is.null", "order": "created_at.desc", "limit": "200",
+    })
+    values = [int(row["latency_ms"]) for row in recent if row.get("latency_ms") is not None]
+    return {"total_sessions": sessions or 0, "total_messages": messages_count or 0,
+            "avg_latency_ms": round(sum(values) / len(values)) if values else 0}
 
 
 @router.get("/trajectory")
-def trajectory(current_user=Depends(get_current_user)):
-    """Get user's mental state trajectory (last 72h)."""
-    from services.trajectory_service import get_trajectory_summary
-    uid = str(current_user["_id"])
-    return get_trajectory_summary(uid)
+async def trajectory(current_user=Depends(get_current_user)):
+    return await get_trajectory_summary(current_user["id"], current_user["access_token"])
 
 
 @router.get("/emotion-distribution")
-def emotion_distribution(current_user=Depends(get_current_user)):
-    db  = get_db()
-    uid = str(current_user["_id"])
-    rows = list(db.messages.aggregate([
-        {"$match": {"user_id": uid, "emotion": {"$exists": True, "$ne": None}}},
-        {"$group": {"_id": "$emotion", "count": {"$sum": 1}}},
-    ]))
-    return [{"emotion": r["_id"], "count": r["count"]} for r in rows]
+async def emotion_distribution(current_user=Depends(get_current_user)):
+    rows, _ = await select_rows("messages", current_user["access_token"], {
+        "select": "emotion", "user_id": f"eq.{current_user['id']}",
+        "emotion": "not.is.null", "limit": "2000",
+    })
+    counts = Counter(row["emotion"] for row in rows if row.get("emotion"))
+    return [{"emotion": key, "count": value} for key, value in counts.items()]
 
 
 @router.get("/risk-distribution")
-def risk_distribution(current_user=Depends(get_current_user)):
-    db  = get_db()
-    uid = str(current_user["_id"])
-    rows = list(db.sessions.aggregate([
-        {"$match": {"user_id": uid, "risk_level": {"$exists": True, "$ne": None}}},
-        {"$group": {"_id": "$risk_level", "count": {"$sum": 1}}},
-    ]))
-    return [{"level": r["_id"], "count": r["count"]} for r in rows]
+async def risk_distribution(current_user=Depends(get_current_user)):
+    rows, _ = await select_rows("conversations", current_user["access_token"], {
+        "select": "risk_level", "user_id": f"eq.{current_user['id']}",
+        "risk_level": "not.is.null", "limit": "1000",
+    })
+    counts = Counter(row["risk_level"] for row in rows if row.get("risk_level"))
+    return [{"level": key, "count": value} for key, value in counts.items()]
 
 
 @router.get("/model-performance")
-def model_performance(current_user=Depends(get_current_user)):
+async def model_performance(current_user=Depends(get_current_user)):
+    from services.emotion_service import is_model_loaded, get_backend
     return {
-        "dataset": "FER2013 (35,887 images)",
-        "architecture": "Conv2Dx2 → MaxPool → Dense(128) → Dropout(0.5) → Softmax(7)",
-        "training_accuracy": 0.730, "validation_accuracy": 0.702, "test_accuracy": 0.713,
-        "epochs": 30, "optimizer": "Adam", "loss_function": "Categorical Crossentropy",
-        "per_class": [
-            {"emotion": "happy",    "precision": 0.85, "recall": 0.83, "f1": 0.84},
-            {"emotion": "neutral",  "precision": 0.78, "recall": 0.76, "f1": 0.77},
-            {"emotion": "sad",      "precision": 0.77, "recall": 0.79, "f1": 0.78},
-            {"emotion": "surprise", "precision": 0.73, "recall": 0.72, "f1": 0.72},
-            {"emotion": "angry",    "precision": 0.71, "recall": 0.70, "f1": 0.70},
-            {"emotion": "fear",     "precision": 0.61, "recall": 0.59, "f1": 0.60},
-            {"emotion": "disgust",  "precision": 0.58, "recall": 0.52, "f1": 0.55},
-        ],
+        "dataset": "No independent validation report configured",
+        "architecture": "Groq Vision API; no synthetic local fallback",
+        "training_accuracy": None, "validation_accuracy": None, "test_accuracy": None,
+        "available": is_model_loaded(), "backend": get_backend(), "per_class": [],
+        "note": "Emotion labels are uncertain visual estimates and are not clinical indicators.",
     }
 
 
 @router.get("/my-sessions")
-def my_sessions(current_user=Depends(get_current_user)):
-    db  = get_db()
-    uid = str(current_user["_id"])
-    sessions = list(db.sessions.find({"user_id": uid}).sort("started_at", -1).limit(20))
-    result = []
-    for s in sessions:
-        msg_count = db.messages.count_documents({"session_id": s["session_id"]})
-        result.append({
-            "session_id":      s["session_id"],
-            "started_at":      s["started_at"].isoformat() if s.get("started_at") else None,
-            "phq9_score":      s.get("phq9_score"),
-            "phq9_category":   s.get("phq9_category"),
-            "gad7_score":      s.get("gad7_score"),
-            "risk_level":      s.get("risk_level"),
-            "risk_score":      s.get("risk_score"),
-            "trajectory_trend":s.get("trajectory_trend"),
-            "message_count":   msg_count,
+async def my_sessions(current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    sessions, _ = await select_rows("conversations", token, {
+        "select": "id,created_at,phq9_score,phq9_category,gad7_score,risk_level,risk_score,trajectory_trend",
+        "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "20",
+    })
+    if not sessions:
+        return []
+    # Fetch recent message ownership metadata once instead of one network round trip per session.
+    session_ids = [item["id"] for item in sessions]
+    message_rows, _ = await select_rows("messages", token, {
+        "select": "conversation_id", "user_id": f"eq.{uid}",
+        "conversation_id": f"in.({','.join(session_ids)})", "limit": "5000",
+    })
+    message_counts = Counter(row["conversation_id"] for row in message_rows if row.get("conversation_id"))
+    results = []
+    for item in sessions:
+        results.append({
+            "session_id": item["id"], "started_at": item.get("created_at"),
+            "phq9_score": item.get("phq9_score"), "phq9_category": item.get("phq9_category"),
+            "gad7_score": item.get("gad7_score"), "risk_level": item.get("risk_level"),
+            "risk_score": item.get("risk_score"), "trajectory_trend": item.get("trajectory_trend"),
+            "message_count": message_counts.get(item["id"], 0),
         })
-    return result
+    return results

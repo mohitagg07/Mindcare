@@ -38,32 +38,36 @@ def check_crisis(text: str) -> Tuple[bool, str]:
 def get_text_sentiment_risk(text: str) -> float:
     """Returns 0.0 (very positive) to 1.0 (very negative) risk."""
     try:
-        from textblob import TextBlob
-        polarity = TextBlob(text).sentiment.polarity  # -1 to +1
-        return round((1.0 - polarity) / 2.0, 4)
+        from services.sentiment_service import compound_sentiment
+        compound = compound_sentiment(text)
+        return round((1.0 - compound) / 2.0, 4)
     except Exception:
         return 0.5
 
 
 def compute_risk_score(
-    phq9_score: int = 0,
-    gad7_score: int = 0,
-    emotion: str = "neutral",
+    phq9_score: int | None = None,
+    gad7_score: int | None = None,
+    emotion: str | None = None,
     text: str = "",
 ) -> dict:
-    phq9_n = phq9_score / 27.0
-    gad7_n = gad7_score / 21.0
-    facial_risk = EMOTION_RISK_MAP.get(emotion.lower(), 0.25)
-    text_risk = get_text_sentiment_risk(text) if text.strip() else 0.5
+    components = []
+    weights = []
+    phq9_n = (phq9_score / 27.0) if phq9_score is not None else None
+    gad7_n = (gad7_score / 21.0) if gad7_score is not None else None
+    facial_risk = EMOTION_RISK_MAP.get(emotion.lower()) if emotion and emotion.lower() in EMOTION_RISK_MAP else None
+    text_risk = get_text_sentiment_risk(text) if text.strip() else None
 
-    # Weighted fusion formula
-    final = (
-        0.40 * phq9_n
-        + 0.25 * gad7_n
-        + 0.20 * facial_risk
-        + 0.15 * text_risk
-    )
-    final = round(min(max(final, 0.0), 1.0), 3)
+    # Only include signals actually provided; do not treat a missing assessment as a zero score.
+    if phq9_n is not None:
+        components.append(phq9_n); weights.append(0.40)
+    if gad7_n is not None:
+        components.append(gad7_n); weights.append(0.25)
+    if facial_risk is not None:
+        components.append(facial_risk); weights.append(0.20)
+    if text_risk is not None:
+        components.append(text_risk); weights.append(0.15)
+    final = round(sum(value * weight for value, weight in zip(components, weights)) / sum(weights), 3) if weights else 0.0
 
     if final >= 0.75:
         level, color = "HIGH",      "#ef4444"
@@ -78,11 +82,18 @@ def compute_risk_score(
         "risk_score": final,
         "risk_level": level,
         "risk_color": color,
+        "is_clinical_assessment": False,
+        "available_signals": {
+            "phq9": phq9_score is not None,
+            "gad7": gad7_score is not None,
+            "emotion_label": facial_risk is not None,
+            "text_signal": text_risk is not None,
+        },
         "components": {
-            "phq9_contribution":   round(phq9_n, 3),
-            "gad7_contribution":   round(gad7_n, 3),
-            "facial_contribution": round(facial_risk, 3),
-            "text_contribution":   round(text_risk, 3),
+            "phq9_contribution": round(phq9_n, 3) if phq9_n is not None else None,
+            "gad7_contribution": round(gad7_n, 3) if gad7_n is not None else None,
+            "facial_contribution": round(facial_risk, 3) if facial_risk is not None else None,
+            "text_contribution": round(text_risk, 3) if text_risk is not None else None,
         },
     }
 

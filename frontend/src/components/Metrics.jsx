@@ -1,403 +1,199 @@
-import { useState, useEffect, useCallback } from 'react'
-import { BarChart3, Clock, MessageSquare, Layers, Cpu, History,
-         TrendingUp, TrendingDown, Minus, Brain, Users, Wifi,
-         RefreshCw, AlertTriangle, Activity } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  Activity, BarChart3, Clock3, MessageCircle, RefreshCw, ArrowUpRight,
+  TrendingUp, TrendingDown, Minus, CalendarDays, ShieldCheck, Sparkles,
+  Heart, ChevronRight, CircleHelp,
+} from 'lucide-react'
+import {
+  AreaChart, Area, CartesianGrid, ReferenceLine, ResponsiveContainer,
+  Tooltip, XAxis, YAxis,
+} from 'recharts'
 import { api } from '../api/client'
+import { useAuth } from '../context/AuthContext'
+import { useApp } from '../context/AppContext'
 
-const ECOL = {
-  happy:'#2A7D6F', sad:'#3B6EA8', angry:'#C0424A',
-  neutral:'#6B7280', fear:'#7B5EA8', disgust:'#C07436', surprise:'#B05090'
+const EMOTION_COLORS = {
+  happy: '#579879', sad: '#6d93ba', angry: '#cd7b70', neutral: '#9ca99c',
+  fear: '#9d8bc1', disgust: '#c99a63', surprise: '#c27da5',
 }
-const RCOL = { MINIMAL:'#2A7D6F', LOW:'#3B6EA8', MODERATE:'#C07436', HIGH:'#C0424A' }
+const RISK_LABELS = {
+  MINIMAL: 'Minimal', LOW: 'Low', MODERATE: 'Moderate', HIGH: 'High',
+}
+const numberFormat = value => new Intl.NumberFormat().format(Number(value || 0))
+function formatDateInProfileZone(value, timeZone, timeOnly) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const options = timeOnly
+    ? { hour: '2-digit', minute: '2-digit' }
+    : { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+  try { return date.toLocaleString([], { ...options, ...(timeZone ? { timeZone } : {}) }) }
+  catch { return date.toLocaleString([], options) }
+}
 
-function HBar({ label, value, max, color }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0
+function MetricCard({ icon: Icon, label, value, caption, tone = 'sage' }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-      <span style={{ width:72, fontSize:12, color:'var(--text-3)', textAlign:'right',
-        flexShrink:0, fontWeight:500, textTransform:'capitalize' }}>{label}</span>
-      <div style={{ flex:1, height:7, borderRadius:99, background:'var(--border)', overflow:'hidden' }}>
-        <div style={{ height:'100%', borderRadius:99, background:color, width:`${pct}%`, transition:'width 0.8s ease' }}/>
-      </div>
-      <span style={{ width:24, fontSize:12, fontWeight:700, color, textAlign:'right', flexShrink:0 }}>{value}</span>
-    </div>
+    <article className={`insight-stat-card tone-${tone}`}>
+      <div className="insight-stat-top"><span>{label}</span><span className="insight-stat-icon"><Icon size={17} /></span></div>
+      <strong>{value}</strong>
+      <p>{caption}</p>
+    </article>
   )
 }
 
-function StatCard({ label, value, sub, icon:Icon, color, pulse: hasPulse }) {
+function EmptyChart({ title, description, action }) {
   return (
-    <div style={{ background:'var(--bg-card)', border:`1px solid ${color}22`,
-      borderRadius:16, padding:'18px', display:'flex', flexDirection:'column', gap:8,
-      boxShadow:'0 1px 4px rgba(26,35,50,0.06)' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <span style={{ fontSize:12, color:'var(--text-3)', fontWeight:600 }}>{label}</span>
-        <div style={{ width:32, height:32, borderRadius:10, background:color+'15',
-          display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-          <Icon size={14} color={color}/>
-          {hasPulse && <div style={{ position:'absolute', top:-1, right:-1, width:9, height:9,
-            borderRadius:'50%', background:'#2A7D6F', border:'2px solid var(--bg-card)',
-            animation:'pulse 1.5s ease-in-out infinite' }}/>}
-        </div>
-      </div>
-      <p style={{ fontSize:30, fontWeight:800, color:'var(--text-1)', margin:0, letterSpacing:'-0.5px' }}>{value}</p>
-      {sub && <p style={{ fontSize:11, color:'var(--text-4)', margin:0 }}>{sub}</p>}
-    </div>
-  )
-}
-
-function SectionTitle({ icon:Icon, color, title, sub }) {
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
-      <div style={{ width:28, height:28, borderRadius:8, background:color+'15',
-        display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <Icon size={13} color={color}/>
-      </div>
-      <div>
-        <p style={{ fontSize:14, fontWeight:700, color:'var(--text-1)', margin:0 }}>{title}</p>
-        {sub && <p style={{ fontSize:11, color:'var(--text-3)', margin:0, marginTop:2 }}>{sub}</p>}
-      </div>
+    <div className="insight-empty-chart">
+      <span><Activity size={21} /></span>
+      <strong>{title}</strong>
+      <p>{description}</p>
+      {action}
     </div>
   )
 }
 
 export default function Metrics() {
-  const [overview,    setOverview]    = useState(null)
-  const [emotions,    setEmotions]    = useState([])
-  const [risks,       setRisks]       = useState([])
-  const [modelPerf,   setModelPerf]   = useState(null)
-  const [mySessions,  setMySessions]  = useState([])
-  const [trajectory,  setTrajectory]  = useState(null)
-  const [totalUsers,  setTotalUsers]  = useState(null)
-  const [onlineUsers, setOnlineUsers] = useState(null)
-  const [loading,     setLoading]     = useState(true)
+  const { user } = useAuth()
+  const { setActivePage } = useApp()
+  const [overview, setOverview] = useState(null)
+  const [emotions, setEmotions] = useState([])
+  const [risks, setRisks] = useState([])
+  const [sessions, setSessions] = useState([])
+  const [trajectory, setTrajectory] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState('')
   const [lastRefresh, setLastRefresh] = useState(null)
-  const [refreshing,  setRefreshing]  = useState(false)
 
   const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true); else setRefreshing(true)
-    try {
-      const [ov, em, rk, mp, ms, tr, tu, ou] = await Promise.all([
-        api.metricsOverview(), api.emotionDist(), api.riskDist(),
-        api.modelPerf(), api.mySessions(), api.trajectory(),
-        api.totalUsers(), api.onlineUsers(),
-      ])
-      setOverview(ov.data)
-      setEmotions(em.data.map(e => ({ label: e.emotion, value: e.count })))
-      setRisks(rk.data.map(r => ({ label: r.level, value: r.count })))
-      setModelPerf(mp.data)
-      setMySessions(ms.data)
-      setTrajectory(tr.data)
-      setTotalUsers(tu.data.total)
-      setOnlineUsers(ou.data.online)
-      setLastRefresh(new Date())
-    } catch (e) { console.error(e) }
-    finally { setLoading(false); setRefreshing(false) }
+    if (silent) setRefreshing(true); else setLoading(true)
+    setError('')
+    const results = await Promise.allSettled([
+      api.metricsOverview(), api.emotionDist(), api.riskDist(), api.mySessions(), api.trajectory(),
+    ])
+    const [overviewResult, emotionResult, riskResult, sessionsResult, trajectoryResult] = results
+    let successful = 0
+    if (overviewResult.status === 'fulfilled') { setOverview(overviewResult.value.data); successful += 1 }
+    if (emotionResult.status === 'fulfilled') { setEmotions(Array.isArray(emotionResult.value.data) ? emotionResult.value.data : []); successful += 1 }
+    if (riskResult.status === 'fulfilled') { setRisks(Array.isArray(riskResult.value.data) ? riskResult.value.data : []); successful += 1 }
+    if (sessionsResult.status === 'fulfilled') { setSessions(Array.isArray(sessionsResult.value.data) ? sessionsResult.value.data : []); successful += 1 }
+    if (trajectoryResult.status === 'fulfilled') { setTrajectory(trajectoryResult.value.data); successful += 1 }
+    if (successful === 0) {
+      setError('Your personal insights could not be loaded. Check your connection and try again.')
+    } else if (successful < results.length) {
+      setError('Some insight sections could not refresh. The sections that loaded remain available; try refreshing again.')
+    }
+    setLastRefresh(new Date())
+    setLoading(false)
+    setRefreshing(false)
   }, [])
 
   useEffect(() => { load() }, [load])
-  useEffect(() => { const id = setInterval(() => load(true), 30_000); return () => clearInterval(id) }, [load])
+  useEffect(() => {
+    const timer = window.setInterval(() => load(true), 60000)
+    return () => window.clearInterval(timer)
+  }, [load])
+
+  const points = useMemo(() => (trajectory?.recent || []).map((point, index) => ({
+    time: point.t ? formatDateInProfileZone(point.t, user?.timezone, true) : `Point ${index + 1}`,
+    date: point.t ? formatDateInProfileZone(point.t, user?.timezone, false) : `Observation ${index + 1}`,
+    signal: Math.round(Number(point.ema || 0) * 100),
+  })), [trajectory, user?.timezone])
+
+  const maxEmotion = Math.max(1, ...emotions.map(item => Number(item.count || 0)))
+  const maxRisk = Math.max(1, ...risks.map(item => Number(item.count || 0)))
+  const firstName = String(user?.display_name || '').trim().split(/\s+/)[0] || ''
+  const trend = trajectory?.trend || 'unknown'
+  const TrendIcon = trend === 'improving' ? TrendingUp : trend === 'deteriorating' ? TrendingDown : Minus
+  const hasPersonalData = Number(overview?.total_sessions || 0) > 0 || Number(overview?.total_messages || 0) > 0
 
   if (loading) return (
-    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center',
-      gap:12, flexDirection:'column', height:'100%', background:'var(--bg-page)' }}>
-      <div style={{ width:20, height:20, border:'2.5px solid var(--border-md)',
-        borderTopColor:'var(--teal)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
-      <p style={{ color:'var(--text-3)', fontSize:13 }}>Loading analytics…</p>
-    </div>
+    <div className="insights-page"><div className="insights-loading"><span className="insights-spinner" /><p>Bringing your insights together…</p></div></div>
   )
 
-  const maxEmo    = Math.max(...emotions.map(e => e.value), 1)
-  const maxRisk   = Math.max(...risks.map(r => r.value), 1)
-  const trendColor = trajectory?.trend==='improving' ? '#2A7D6F' : trajectory?.trend==='deteriorating' ? '#C0424A' : '#6B7280'
-  const TrendIcon  = trajectory?.trend==='improving' ? TrendingUp : trajectory?.trend==='deteriorating' ? TrendingDown : Minus
-
   return (
-    <div style={{ height:'100%', overflowY:'auto', background:'var(--bg-page)' }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}`}</style>
-      <div style={{ maxWidth:980, margin:'0 auto', padding:'24px 16px', display:'flex', flexDirection:'column', gap:18 }}>
-
-        {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:13 }}>
-            <div style={{ width:44, height:44, borderRadius:13,
-              background:'var(--teal-dim)', border:'1px solid var(--teal-border)',
-              display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <BarChart3 size={20} color="var(--teal)"/>
-            </div>
-            <div>
-              <h2 style={{ fontSize:20, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Analytics</h2>
-              <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>
-                {lastRefresh ? `Last updated ${lastRefresh.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' })}` : 'Loading…'}
-              </p>
-            </div>
+    <div className="insights-page">
+      <div className="insights-content">
+        <header className="insights-header">
+          <div>
+            <span className="insights-eyebrow"><Sparkles size={13} /> YOUR PRIVATE INSIGHTS</span>
+            <h1>{firstName ? <>A little more understanding, <em>{firstName}.</em></> : <>A little more understanding.</>}</h1>
+            <p>Notice patterns in your own activity, without turning them into labels or expectations.</p>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <button onClick={() => load(true)} disabled={refreshing}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:99,
-                border:'1px solid var(--border-md)', background:'var(--bg-card)', color:'var(--text-3)',
-                fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-              <RefreshCw size={12} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}/>
-              Refresh
-            </button>
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 13px', borderRadius:99,
-              background:'var(--teal-dim)', border:'1px solid var(--teal-border)',
-              color:'var(--teal)', fontSize:11, fontWeight:700 }}>
-              <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--teal)', animation:'pulse 1.5s infinite' }}/>
-              Live · auto-refresh 30s
-            </div>
-          </div>
-        </div>
+          <button className="insights-refresh" type="button" onClick={() => load(true)} disabled={refreshing}>
+            <RefreshCw size={15} className={refreshing ? 'insights-spin' : ''} /> Refresh
+          </button>
+        </header>
 
-        {/* Platform stats */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:14 }}>
-          <div style={{ background:'var(--bg-card)', border:'1px solid var(--teal-border)', borderRadius:16,
-            padding:'18px 20px', display:'flex', alignItems:'center', gap:14,
-            boxShadow:'0 1px 4px rgba(26,35,50,0.06)' }}>
-            <div style={{ width:46, height:46, borderRadius:13, background:'var(--teal-dim)',
-              border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <Users size={20} color="var(--teal)"/>
-            </div>
-            <div>
-              <p style={{ fontSize:30, fontWeight:800, color:'var(--text-1)', margin:0, letterSpacing:'-1px' }}>{totalUsers ?? '—'}</p>
-              <p style={{ fontSize:12, color:'var(--teal)', margin:0, fontWeight:600 }}>Total Registered Users</p>
-              <p style={{ fontSize:11, color:'var(--text-4)', margin:0 }}>Platform-wide accounts</p>
-            </div>
-          </div>
-          <div style={{ background:'var(--bg-card)', border:'1px solid var(--teal-border)', borderRadius:16,
-            padding:'18px 20px', display:'flex', alignItems:'center', gap:14,
-            boxShadow:'0 1px 4px rgba(26,35,50,0.06)' }}>
-            <div style={{ width:46, height:46, borderRadius:13, background:'var(--teal-dim)',
-              border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, position:'relative' }}>
-              <Wifi size={20} color="var(--teal)"/>
-              <div style={{ position:'absolute', top:6, right:6, width:8, height:8,
-                borderRadius:'50%', background:'var(--teal)', animation:'pulse 1.5s infinite' }}/>
-            </div>
-            <div>
-              <p style={{ fontSize:30, fontWeight:800, color:'var(--text-1)', margin:0, letterSpacing:'-1px' }}>{onlineUsers ?? '—'}</p>
-              <p style={{ fontSize:12, color:'var(--teal)', margin:0, fontWeight:600 }}>Users Online Now</p>
-              <p style={{ fontSize:11, color:'var(--text-4)', margin:0 }}>Active in last 2 minutes</p>
-            </div>
-          </div>
-        </div>
+        {error && <div className="insights-error" role="alert"><CircleHelp size={16} />{error}<button type="button" onClick={() => load(true)}>Try again</button></div>}
 
-        {/* Your stats */}
-        {overview && (
-          <>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <Activity size={13} color="var(--teal)"/>
-              <p style={{ fontSize:11, fontWeight:700, color:'var(--text-3)', margin:0,
-                textTransform:'uppercase', letterSpacing:'0.8px' }}>Your Stats</p>
-            </div>
-            <div className="grid-3">
-              <StatCard label="Your Sessions"   value={overview.total_sessions}       icon={Layers}        color="#2A7D6F"/>
-              <StatCard label="Messages Sent"   value={overview.total_messages}       icon={MessageSquare} color="#3B6EA8"/>
-              <StatCard label="Avg AI Response" value={`${overview.avg_latency_ms}ms`} sub="Response time"  icon={Clock}   color="#C07436"/>
-            </div>
-          </>
-        )}
+        <section className="insights-welcome-strip">
+          <div className="insights-welcome-icon"><Heart size={21} /></div>
+          <div><strong>Your pace is the right pace.</strong><p>These summaries reflect activity saved to your account. More activity will make trends easier to explore; there is no target to hit.</p></div>
+          <div className="insights-refresh-time">{lastRefresh ? `Updated ${formatDateInProfileZone(lastRefresh, user?.timezone, true)}` : 'Your space'}</div>
+        </section>
 
-        {/* Trajectory */}
-        {trajectory && (
-          <div className="card">
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:8 }}>
-              <SectionTitle icon={Brain} color="var(--teal)" title="Mental State Trajectory (72h)" sub="EMA-based emotional tracking"/>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                {trajectory.last_trigger==='high_risk' && (
-                  <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:700,
-                    padding:'4px 10px', borderRadius:6, background:'var(--rose-dim)', color:'var(--rose)',
-                    border:'1px solid rgba(192,66,74,0.2)' }}>
-                    <AlertTriangle size={9}/> Risk Alert
-                  </span>
-                )}
-                {trajectory.trend && (
-                  <div style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 12px', borderRadius:99,
-                    background:trendColor+'12', border:`1px solid ${trendColor}28`,
-                    color:trendColor, fontSize:12, fontWeight:700 }}>
-                    <TrendIcon size={11}/>{trajectory.trend}
-                  </div>
-                )}
+        <section className="insights-stat-grid" aria-label="Your activity summary">
+          <MetricCard icon={MessageCircle} label="Conversations" value={numberFormat(overview?.total_sessions)} caption="Saved in your account" tone="sage" />
+          <MetricCard icon={Activity} label="Messages exchanged" value={numberFormat(overview?.total_messages)} caption="Your chat activity" tone="blue" />
+          <MetricCard icon={Clock3} label="Average AI response" value={overview?.avg_latency_ms ? `${numberFormat(overview.avg_latency_ms)} ms` : '—'} caption={overview?.avg_latency_ms ? 'Across recent replies' : 'Available after your first reply'} tone="peach" />
+        </section>
+
+        <div className="insights-section-heading"><div><span>LOOKING BACK, GENTLY</span><h2>Your recent rhythm</h2></div><span>Personal activity · not a clinical measure</span></div>
+        <section className="insights-main-grid">
+          <article className="insights-chart-card">
+            <div className="insights-card-heading"><div><span className="insights-card-icon"><Activity size={16} /></span><div><h3>Conversation signal</h3><p>Experimental language signal over recent chats</p></div></div><span className={`insights-trend trend-${trend}`}><TrendIcon size={13} />{trend === 'unknown' ? 'Building context' : trend}</span></div>
+            {points.length > 1 ? (
+              <div className="insights-chart-wrap">
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={points} margin={{ top: 10, right: 10, bottom: 0, left: -18 }}>
+                    <defs><linearGradient id="mindcarePersonalSignal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#5a9b7d" stopOpacity={0.23} /><stop offset="100%" stopColor="#5a9b7d" stopOpacity={0.015} /></linearGradient></defs>
+                    <CartesianGrid stroke="#e9eee5" strokeDasharray="4 5" vertical={false} />
+                    <XAxis dataKey="time" tick={{ fill: '#93a097', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={22} />
+                    <YAxis domain={[-100, 100]} ticks={[-100, -50, 0, 50, 100]} tick={{ fill: '#93a097', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <ReferenceLine y={0} stroke="#cad8ca" strokeDasharray="4 4" />
+                    <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ''} formatter={value => [`${value > 0 ? '+' : ''}${value} index points`, 'Exploratory signal']} contentStyle={{ border: '1px solid #e1e9df', borderRadius: 14, background: '#fffefa', boxShadow: '0 12px 28px rgba(36,72,50,.1)', fontSize: 12 }} />
+                    <Area type="monotone" dataKey="signal" stroke="#438666" strokeWidth={2.5} fill="url(#mindcarePersonalSignal)" activeDot={{ r: 5, stroke: '#fffefa', strokeWidth: 3 }} dot={{ r: 2.5, fill: '#438666', stroke: '#fffefa', strokeWidth: 1.5 }} isAnimationActive animationDuration={600} />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <p className="insights-chart-disclaimer">This is an experimental text-based trend signal. It can be wrong and does not measure mental health or diagnose a condition.</p>
               </div>
-            </div>
-            <div className="grid-3">
-              {[
-                ['Current EMA',   trajectory.current_ema  != null ? `${Math.round(trajectory.current_ema*100)}%` : '—', '#2A7D6F'],
-                ['Avg Sentiment', trajectory.avg_sentiment != null ? (trajectory.avg_sentiment>0?'+':'')+trajectory.avg_sentiment.toFixed(2) : '—', '#3B6EA8'],
-                ['Data Points',   trajectory.points ?? 0, '#6B7280'],
-              ].map(([l, v, c]) => (
-                <div key={l} style={{ padding:'14px', borderRadius:12, background:'var(--bg-elevated)',
-                  border:`1px solid ${c}18`, textAlign:'center' }}>
-                  <p style={{ fontSize:26, fontWeight:800, color:c, margin:0 }}>{v}</p>
-                  <p style={{ fontSize:11, color:'var(--text-3)', marginTop:5 }}>{l}</p>
-                </div>
-              ))}
-            </div>
-            {trajectory.recent?.length > 1 && (
-              <div style={{ marginTop:14 }}>
-                <p style={{ fontSize:11, color:'var(--text-4)', marginBottom:8 }}>EMA trend (last {trajectory.recent.length} points)</p>
-                <svg width="100%" height="52" viewBox={`0 0 ${trajectory.recent.length * 40} 52`}
-                  preserveAspectRatio="none" style={{ borderRadius:8, background:'var(--bg-elevated)', border:'1px solid var(--border)' }}>
-                  {(() => {
-                    const pts = trajectory.recent
-                    const vals = pts.map(p => p.ema)
-                    const mn = Math.min(...vals), mx = Math.max(...vals)
-                    const range = mx - mn || 0.01
-                    const points = pts.map((p, i) => {
-                      const x = (i/(pts.length-1)) * (pts.length*40-8) + 4
-                      const y = 46 - ((p.ema-mn)/range) * 36
-                      return `${x},${y}`
-                    }).join(' ')
-                    return (
-                      <>
-                        <polyline fill="none" stroke={trendColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={points}/>
-                        {pts.map((p,i) => {
-                          const x = (i/(pts.length-1)) * (pts.length*40-8) + 4
-                          const y = 46 - ((p.ema-mn)/range) * 36
-                          return <circle key={i} cx={x} cy={y} r="3" fill={trendColor}/>
-                        })}
-                      </>
-                    )
-                  })()}
-                </svg>
+            ) : <EmptyChart title="Your story is still unfolding" description="After a few saved conversations, this space can show an exploratory pattern from your own activity." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('chat')}>Start a conversation <ArrowUpRight size={14} /></button>} />}
+          </article>
+
+          <article className="insights-side-card">
+            <div className="insights-card-heading"><div><span className="insights-card-icon is-lilac"><CalendarDays size={16} /></span><div><h3>Your recent activity</h3><p>The last {Math.min(sessions.length, 5)} saved conversations</p></div></div></div>
+            {sessions.length ? <div className="insights-session-list">{sessions.slice(0, 5).map(session => (
+              <div className="insights-session-row" key={session.session_id}>
+                <span className="insights-session-dot" />
+                <div><strong>{session.phq9_score != null || session.gad7_score != null ? 'Self-reflection session' : 'Supportive conversation'}</strong><small>{session.started_at ? new Date(session.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Saved activity'} · {session.message_count || 0} messages</small></div>
               </div>
-            )}
-          </div>
-        )}
+            ))}</div> : <EmptyChart title="No saved conversations yet" description="Your recent activity will appear here when you start a conversation." />}
+            <button className="insights-inline-action insights-full-action" type="button" onClick={() => setActivePage('chat')}>Go to conversation <ChevronRight size={14} /></button>
+          </article>
+        </section>
 
-        {/* Distributions */}
-        <div className="grid-2">
-          <div className="card">
-            <SectionTitle icon={Activity} color="#2A7D6F" title="Emotion Distribution" sub="From your chat sessions"/>
-            {emotions.length===0
-              ? <p style={{ fontSize:12, color:'var(--text-4)' }}>No data yet — start chatting</p>
-              : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  {emotions.map(e => <HBar key={e.label} label={e.label} value={e.value} max={maxEmo} color={ECOL[e.label]||'#6B7280'}/>)}
-                </div>
-            }
-          </div>
-          <div className="card">
-            <SectionTitle icon={AlertTriangle} color="#C07436" title="Risk Distribution" sub="Across your sessions"/>
-            {risks.length===0
-              ? <p style={{ fontSize:12, color:'var(--text-4)' }}>No data yet — complete a session</p>
-              : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  {risks.map(r => <HBar key={r.label} label={r.label.toLowerCase()} value={r.value} max={maxRisk} color={RCOL[r.label]||'#6B7280'}/>)}
-                </div>
-            }
-          </div>
-        </div>
+        <section className="insights-distribution-grid">
+          <article className="insights-chart-card">
+            <div className="insights-card-heading"><div><span className="insights-card-icon"><Heart size={16} /></span><div><h3>Expression labels</h3><p>Optional labels captured in your conversations</p></div></div></div>
+            {emotions.length ? <div className="insights-bars">{[...emotions].sort((a,b) => b.count - a.count).map(item => {
+              const color = EMOTION_COLORS[String(item.emotion || '').toLowerCase()] || '#92a99a'
+              return <div className="insights-bar-row" key={item.emotion}><div><span>{item.emotion}</span><strong>{item.count}</strong></div><div className="insights-bar-track"><span style={{ width: `${Math.max(3, Number(item.count) / maxEmotion * 100)}%`, background: color }} /></div></div>
+            })}</div> : <EmptyChart title="Nothing to chart yet" description="If you use the optional reflection feature, its uncertain expression labels may appear here." />}
+            <p className="insights-small-print">Facial expressions are not reliable evidence of how someone feels. This is not used as a diagnosis.</p>
+          </article>
+          <article className="insights-chart-card">
+            <div className="insights-card-heading"><div><span className="insights-card-icon is-peach"><ShieldCheck size={16} /></span><div><h3>Conversation indicators</h3><p>Experimental categories recorded for your account</p></div></div></div>
+            {risks.length ? <div className="insights-bars">{[...risks].sort((a,b) => b.count - a.count).map(item => {
+              const colors = { MINIMAL: '#579879', LOW: '#7c9dbb', MODERATE: '#ce9b61', HIGH: '#ca7972' }
+              const color = colors[item.level] || '#92a99a'
+              return <div className="insights-bar-row" key={item.level}><div><span>{RISK_LABELS[item.level] || String(item.level).toLowerCase()}</span><strong>{item.count}</strong></div><div className="insights-bar-track"><span style={{ width: `${Math.max(3, Number(item.count) / maxRisk * 100)}%`, background: color }} /></div></div>
+            })}</div> : <EmptyChart title="No indicators saved" description="Conversation indicators only appear after activity is saved." />}
+            <p className="insights-small-print">These system indicators are experimental, not a validated safety assessment. Trust how you feel and seek human support when you need it.</p>
+          </article>
+        </section>
 
-        {/* Model performance */}
-        {modelPerf && (
-          <div className="card">
-            <SectionTitle icon={Cpu} color="#3B6EA8" title="Emotion AI — Model Performance" sub={`${modelPerf.dataset} · ${modelPerf.architecture}`}/>
-            <div className="grid-3" style={{ marginBottom:18 }}>
-              {[
-                ['Training Accuracy',   modelPerf.training_accuracy,   '#2A7D6F'],
-                ['Validation Accuracy', modelPerf.validation_accuracy, '#3B6EA8'],
-                ['Test Accuracy',       modelPerf.test_accuracy,       '#7B5EA8'],
-              ].map(([l, v, c]) => (
-                <div key={l} style={{ background:'var(--bg-elevated)', border:`1px solid ${c}18`,
-                  borderRadius:12, padding:'14px' }}>
-                  <p style={{ fontSize:28, fontWeight:800, color:c, margin:0 }}>{(v*100).toFixed(1)}%</p>
-                  <p style={{ fontSize:11, color:'var(--text-3)', marginTop:5 }}>{l}</p>
-                  <div style={{ height:3, borderRadius:99, background:'var(--border)', marginTop:8, overflow:'hidden' }}>
-                    <div style={{ height:'100%', borderRadius:99, background:c, width:`${v*100}%` }}/>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom:`1px solid var(--border)` }}>
-                  {['Emotion','Precision','Recall','F1 Score'].map(h => (
-                    <th key={h} style={{ padding:'8px 10px', textAlign:h==='Emotion'?'left':'center',
-                      fontSize:11, fontWeight:700, color:'var(--text-4)',
-                      textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {modelPerf.per_class.map(row => {
-                  const col = row.f1>=0.75?'#2A7D6F':row.f1>=0.65?'#C07436':'#C0424A'
-                  const ec  = ECOL[row.emotion]||'#6B7280'
-                  return (
-                    <tr key={row.emotion} style={{ borderBottom:`1px solid var(--border)` }}>
-                      <td style={{ padding:'11px 10px', fontSize:14, fontWeight:700, color:ec, textTransform:'capitalize' }}>{row.emotion}</td>
-                      <td style={{ padding:'11px 10px', textAlign:'center', fontSize:13, color:'var(--text-2)' }}>{(row.precision*100).toFixed(0)}%</td>
-                      <td style={{ padding:'11px 10px', textAlign:'center', fontSize:13, color:'var(--text-2)' }}>{(row.recall*100).toFixed(0)}%</td>
-                      <td style={{ padding:'11px 10px', textAlign:'center' }}>
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                          <div style={{ width:56, height:5, borderRadius:99, background:'var(--border)', overflow:'hidden' }}>
-                            <div style={{ height:'100%', borderRadius:99, background:col, width:`${row.f1*100}%` }}/>
-                          </div>
-                          <span style={{ fontSize:12, fontWeight:700, color:col, minWidth:28 }}>{(row.f1*100).toFixed(0)}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Session history */}
-        <div className="card">
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <SectionTitle icon={History} color="#C07436" title="My Session History" sub="Most recent 20 sessions"/>
-            <span style={{ fontSize:11, color:'var(--text-4)', background:'var(--bg-elevated)',
-              borderRadius:6, padding:'3px 9px', border:'1px solid var(--border)' }}>{mySessions.length} sessions</span>
-          </div>
-          {mySessions.length===0
-            ? <p style={{ fontSize:13, color:'var(--text-4)' }}>No sessions yet. Start a chat to begin tracking.</p>
-            : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {mySessions.map(s => {
-                  const rc  = RCOL[s.risk_level] || '#6B7280'
-                  const trc = s.trajectory_trend==='improving'?'#2A7D6F':s.trajectory_trend==='deteriorating'?'#C0424A':'#6B7280'
-                  return (
-                    <div key={s.session_id} style={{ display:'flex', alignItems:'center', gap:12,
-                      padding:'11px 14px', borderRadius:12, background:'var(--bg-elevated)',
-                      border:'1px solid var(--border)' }}>
-                      <div style={{ width:9, height:9, borderRadius:'50%', background:rc,
-                        boxShadow:`0 0 6px ${rc}50`, flexShrink:0 }}/>
-                      <div style={{ flex:1 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:3 }}>
-                          <span style={{ fontSize:13, fontWeight:700, color:rc, textTransform:'capitalize' }}>
-                            {s.risk_level ? s.risk_level.toLowerCase()+' risk' : 'Session'}
-                          </span>
-                          {s.trajectory_trend && (
-                            <span style={{ fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:6,
-                              background:trc+'12', color:trc, border:`1px solid ${trc}25` }}>
-                              {s.trajectory_trend}
-                            </span>
-                          )}
-                          {s.phq9_category && (
-                            <span style={{ fontSize:11, color:'var(--text-3)', background:'var(--bg-card)',
-                              borderRadius:5, padding:'2px 7px', border:'1px solid var(--border)' }}>
-                              PHQ-9: {s.phq9_score} · {s.phq9_category}
-                            </span>
-                          )}
-                          <span style={{ fontSize:11, color:'var(--text-3)', background:'var(--bg-card)',
-                            borderRadius:5, padding:'2px 7px', border:'1px solid var(--border)' }}>
-                            {s.message_count} msgs
-                          </span>
-                        </div>
-                        <span style={{ fontSize:11, color:'var(--text-4)' }}>
-                          {s.started_at ? new Date(s.started_at).toLocaleDateString('en-IN',
-                            { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'}
-                        </span>
-                      </div>
-                      {s.risk_score != null && (
-                        <span style={{ fontSize:15, fontWeight:800, color:rc, flexShrink:0 }}>
-                          {(s.risk_score*100).toFixed(0)}%
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-          }
-        </div>
-
+        {!hasPersonalData && <section className="insights-empty-cta"><span><Heart size={20} /></span><div><strong>There's no pressure to track anything.</strong><p>MindCare is here for conversation first. These insights are optional and will fill in naturally as you use the space.</p></div><button type="button" onClick={() => setActivePage('chat')}>Talk to MindCare <ArrowUpRight size={14} /></button></section>}
+        <footer className="insights-footer-note"><ShieldCheck size={15} /><span>Only activity associated with your signed-in account is shown here. These summaries are for reflection, not diagnosis.</span></footer>
       </div>
     </div>
   )
