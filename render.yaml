@@ -16,8 +16,10 @@ services:
         value: openai/gpt-oss-20b
       - key: GROQ_VISION_MODEL
         value: qwen/qwen3.8-27b
+      - key: FRONTEND_URL
+        value: "https://mindcare-opal.vercel.app"
       - key: ALLOWED_ORIGINS
-        value: "https://mindcare-eight-dusky.vercel.app,https://mindcare-silk.vercel.app,http://localhost:5173"
+        value: "https://mindcare-opal.vercel.app,http://localhost:5173"
       - key: LOG_LEVEL
         value: INFO
     healthCheckPath: /api/health
