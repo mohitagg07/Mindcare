@@ -174,7 +174,11 @@ export function AuthProvider({ children }) {
     if (data.access_token) {
       saveTokens(data)
       setToken(data.access_token)
-      setUser(await enrichWithProfile(data.access_token, { id: data.user_id, username: data.username, email: data.email }))
+      const baseUser = { id: data.user_id, username: data.username, email: data.email }
+      setUser(baseUser)
+      enrichWithProfile(data.access_token, baseUser).then(enriched => {
+        if (enriched) setUser(enriched)
+      })
       localStorage.removeItem('mc_pending_email')
       setAuthEmail('')
     } else if (data.requires_email_confirmation) {
@@ -195,7 +199,11 @@ export function AuthProvider({ children }) {
     const data = await readResponse(response)
     saveTokens(data)
     setToken(data.access_token)
-    setUser(await enrichWithProfile(data.access_token, { id: data.user_id, username: data.username, email: data.email }))
+    const baseUser = { id: data.user_id, username: data.username, email: data.email }
+    setUser(baseUser)
+    enrichWithProfile(data.access_token, baseUser).then(enriched => {
+      if (enriched) setUser(enriched)
+    })
     localStorage.removeItem('mc_pending_email')
     setAuthEmail('')
     setAuthFlow('normal')
