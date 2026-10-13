@@ -1,0 +1,27 @@
+name: Keep Render Service Alive
+
+on:
+  schedule:
+    # Runs every 14 minutes (Render free tier sleeps after 15 minutes of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Render Web Service
+        run: |
+          TARGET="${{ vars.TARGET_URL }}"
+          if [ -z "$TARGET" ]; then
+            TARGET="https://mindcare-api-ti47.onrender.com"
+          fi
+          echo "Sending keep-alive ping to: $TARGET"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$TARGET" || echo "failed")
+          echo "HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
+            echo "Service is awake and responding!"
+          else
+            echo "Ping completed with status: $HTTP_STATUS"
+          fi
