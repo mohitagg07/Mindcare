@@ -50,9 +50,9 @@
 }
 .mcd-setup-nudge-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; color: #477b58; background: #edf5e8; }
 .mcd-setup-nudge > div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
-.mcd-setup-nudge strong { color: #3c5b46; font-size: 10.5px; font-weight: 750; }
-.mcd-setup-nudge p { margin: 0; color: #89968c; font-size: 10px; line-height: 1.5; }
-.mcd-setup-nudge > button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #dce6d9; border-radius: 9px; color: #447454; background: #fff; font: 700 10px 'DM Sans',sans-serif; cursor: pointer; }
+.mcd-setup-nudge strong { color: #3c5b46; font-size: 12px; font-weight: 750; }
+.mcd-setup-nudge p { margin: 0; color: #748278; font-size: 11.5px; line-height: 1.55; }
+.mcd-setup-nudge > button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #dce6d9; border-radius: 9px; color: #447454; background: #fff; font: 700 11px 'DM Sans',sans-serif; cursor: pointer; }
 .mcd-setup-nudge > button:hover { border-color: #b6cfb5; background: #f5f9f1; }
 
 .mcd-top-grid {
@@ -80,7 +80,7 @@
 .mcd-eyebrow {
   margin: 0;
   color: #78917c;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   line-height: 1.4;
   letter-spacing: 1.05px;
@@ -95,7 +95,7 @@
   max-width: 390px;
   margin: 11px 0 22px;
   color: #708175;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.75;
 }
 .mcd-start-actions {
@@ -117,7 +117,7 @@
   color: #fffefa;
   background: #397854;
   box-shadow: 0 2px 3px rgba(33, 75, 49, .08);
-  font: 650 11px/1 'DM Sans', sans-serif;
+  font: 650 13px/1.25 'DM Sans', sans-serif;
   cursor: pointer;
   transition: background .16s ease, border-color .16s ease, transform .16s ease;
 }
@@ -132,7 +132,7 @@
   border: 0;
   color: #477257;
   background: transparent;
-  font: 650 11px/1.4 'DM Sans', sans-serif;
+  font: 650 13px/1.4 'DM Sans', sans-serif;
   cursor: pointer;
 }
 .mcd-button-text:hover,
@@ -151,7 +151,7 @@
 .mcd-checkin-heading h2 {
   margin: 6px 0 0;
   color: #294538;
-  font: 500 21px/1.2 'Fraunces', 'Lora', Georgia, serif;
+  font: 500 22px/1.2 'Fraunces', 'Lora', Georgia, serif;
   letter-spacing: -.3px;
 }
 .mcd-icon-link {
@@ -199,17 +199,17 @@
 .mcd-activity-copy strong {
   overflow: hidden;
   color: #3a5143;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mcd-activity-copy small { color: #8b978d; font-size: 10px; }
-.mcd-activity-row time { flex: 0 0 auto; color: #89968b; font-size: 10px; white-space: nowrap; }
+.mcd-activity-copy small { color: #748278; font-size: 11.5px; }
+.mcd-activity-row time { flex: 0 0 auto; color: #748278; font-size: 11px; white-space: nowrap; }
 .mcd-activity-chevron { flex: 0 0 auto; color: #a2afa3; }
 .mcd-activity-empty { padding: 19px 1px 13px; border-top: 1px solid #edf0e9; }
 .mcd-empty-title { margin: 0; color: #435d4b; font: 500 16px/1.25 'Fraunces', 'Lora', Georgia, serif; }
-.mcd-activity-empty > p:nth-child(2) { max-width: 275px; margin: 7px 0 12px; color: #89958b; font-size: 11px; line-height: 1.65; }
+.mcd-activity-empty > p:nth-child(2) { max-width: 275px; margin: 7px 0 12px; color: #748278; font-size: 12px; line-height: 1.65; }
 .mcd-activity-empty > button,
 .mcd-activity-message > button {
   display: inline-flex;
@@ -219,24 +219,24 @@
   border: 0;
   color: #427456;
   background: transparent;
-  font: 650 10px 'DM Sans', sans-serif;
+  font: 650 12px 'DM Sans', sans-serif;
   cursor: pointer;
 }
 .mcd-activity-empty > button:hover,
 .mcd-activity-message > button:hover { color: #234d35; }
 .mcd-activity-message { padding: 20px 0 13px; border-top: 1px solid #edf0e9; }
-.mcd-activity-message p { margin: 0 0 8px; color: #7d8a80; font-size: 11px; line-height: 1.6; }
+.mcd-activity-message p { margin: 0 0 8px; color: #68796c; font-size: 12px; line-height: 1.6; }
 .mcd-activity-skeleton { display: grid; gap: 15px; padding: 19px 0 12px; }
 .mcd-activity-skeleton span { display: block; height: 13px; border-radius: 5px; background: linear-gradient(90deg, #eef1e9 25%, #f7f8f3 45%, #eef1e9 65%); background-size: 250% 100%; animation: mcd-shimmer 1.25s ease-in-out infinite; }
 .mcd-activity-skeleton span:nth-child(2) { width: 85%; }
 .mcd-activity-skeleton span:nth-child(3) { width: 72%; }
-.mcd-partial-warning { margin: 8px 0 0; color: #8e806a; font-size: 10px; line-height: 1.6; }
+.mcd-partial-warning { margin: 8px 0 0; color: #756c5e; font-size: 11px; line-height: 1.6; }
 .mcd-partial-warning button { padding: 0; border: 0; color: #477257; background: transparent; font: inherit; font-weight: 700; cursor: pointer; }
 
 .mcd-checkin { margin-top: 17px; padding: 20px 21px; }
 .mcd-checkin-heading { margin-bottom: 15px; }
 .mcd-checkin-heading h2 { font-size: 22px; }
-.mcd-not-saved { color: #98a195; font-size: 10px; white-space: nowrap; }
+.mcd-not-saved { color: #748278; font-size: 11px; white-space: nowrap; }
 .mcd-mood-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
 .mcd-mood-option {
   position: relative;
@@ -251,7 +251,7 @@
   border-radius: 11px;
   color: #617367;
   background: #fff;
-  font: 600 11px 'DM Sans', sans-serif;
+  font: 600 12.5px 'DM Sans', sans-serif;
   cursor: pointer;
   transition: border-color .16s ease, background .16s ease, color .16s ease;
 }
@@ -262,8 +262,8 @@
 .mcd-mood-check { position: absolute; top: 5px; right: 5px; color: #4c855b; }
 .mcd-mood-followup { display: flex; align-items: center; gap: 12px; margin-top: 13px; padding: 12px 13px; border: 1px solid #e1e9dc; border-radius: 11px; background: #f8faf5; }
 .mcd-mood-followup-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
-.mcd-mood-followup-copy strong { color: #3e5d47; font-size: 11px; font-weight: 650; }
-.mcd-mood-followup-copy span { color: #8a978b; font-size: 10px; line-height: 1.5; }
+.mcd-mood-followup-copy strong { color: #3e5d47; font-size: 12px; font-weight: 650; }
+.mcd-mood-followup-copy span { color: #748278; font-size: 11px; line-height: 1.5; }
 .mcd-followup-action { flex: 0 0 auto; }
 .mcd-clear-mood { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; border: 1px solid #e1e8de; border-radius: 8px; color: #7c8d80; background: #fff; cursor: pointer; }
 .mcd-clear-mood:hover { color: #355c42; border-color: #bfd4bd; }
@@ -300,8 +300,9 @@
   .mcd-checkin-heading { align-items: flex-start; }
   .mcd-checkin-heading h2 { max-width: 245px; font-size: 20px; }
   .mcd-not-saved { max-width: 94px; padding-top: 13px; text-align: right; white-space: normal; }
-  .mcd-mood-options { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-  .mcd-mood-option { min-height: 65px; flex-direction: column; gap: 6px; padding: 9px 2px; border-radius: 10px; font-size: 10px; }
+  .mcd-mood-options { grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 8px; }
+  .mcd-mood-option { min-height: 62px; flex-direction: column; gap: 6px; padding: 9px 5px; border-radius: 10px; font-size: 12px; }
+  .mcd-mood-option > span { overflow-wrap: anywhere; text-align: center; }
   .mcd-mood-option > svg:first-child { width: 17px; height: 17px; }
   .mcd-mood-check { top: 3px; right: 3px; width: 11px; height: 11px; }
   .mcd-mood-followup { align-items: flex-start; flex-wrap: wrap; gap: 7px; }
@@ -313,11 +314,11 @@
 @media (max-width: 370px) {
   .mcd-content { padding-right: 12px; padding-left: 12px; }
   .mcd-heading h1 { font-size: 26px; }
-  .mcd-button-primary { gap: 7px; padding: 0 11px; font-size: 10px; }
+  .mcd-button-primary { gap: 7px; padding: 0 11px; font-size: 12px; }
   .mcd-start-actions { gap: 10px; }
-  .mcd-mood-option { font-size: 9px; }
+  .mcd-mood-option { font-size: 11px; }
   .mcd-activity-row { gap: 7px; }
-  .mcd-activity-row time { font-size: 9px; }
+  .mcd-activity-row time { font-size: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

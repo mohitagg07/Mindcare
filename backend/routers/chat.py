@@ -81,7 +81,7 @@ async def list_saved_memories(current_user=Depends(get_current_user)):
         })
         return {"memories": rows, "limit": 20}
     except SupabaseError as exc:
-        logger.warning("Saved memory list failed (%s)", exc.message)
+        logger.warning("Saved memory list failed (HTTP %s)", exc.status_code)
         raise HTTPException(status_code=503, detail="Saved memory is not configured yet. Run supabase/migrations/20261017_user_memories.sql in the Supabase SQL Editor, then retry.") from exc
 
 
@@ -102,7 +102,7 @@ async def create_saved_memory(req: MemoryCreateRequest, current_user=Depends(get
     except HTTPException:
         raise
     except SupabaseError as exc:
-        logger.warning("Saved memory creation failed (%s)", exc.message)
+        logger.warning("Saved memory creation failed (HTTP %s)", exc.status_code)
         raise HTTPException(status_code=503, detail="Saved memory is not configured or could not be saved. Check the user_memories migration and try again.") from exc
 
 
@@ -118,7 +118,7 @@ async def remove_saved_memory(memory_id: uuid.UUID, current_user=Depends(get_cur
     except HTTPException:
         raise
     except SupabaseError as exc:
-        logger.warning("Saved memory deletion failed (%s)", exc.message)
+        logger.warning("Saved memory deletion failed (HTTP %s)", exc.status_code)
         raise HTTPException(status_code=503, detail="The memory could not be removed. Check the user_memories migration and retry.") from exc
 
 
@@ -164,7 +164,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
                 timezone_name = profile_context.pop("timezone", None)
                 profile_context["age"] = calculate_age(dob, timezone_name=timezone_name)
         except SupabaseError as profile_exc:
-            logger.info("Profile personalization unavailable for this request (%s)", profile_exc.message)
+            logger.info("Profile personalization unavailable for this request (HTTP %s)", profile_exc.status_code)
 
         # Only notes the user explicitly saved in Memory settings cross conversation boundaries.
         # Missing migration or database trouble must not make ordinary chat unavailable.
@@ -181,7 +181,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
                 if isinstance(row.get("content"), str) and row.get("content", "").strip()
             ]
         except SupabaseError as memory_exc:
-            logger.info("Saved memories unavailable for this request (%s)", memory_exc.message)
+            logger.info("Saved memories unavailable for this request (HTTP %s)", memory_exc.status_code)
 
         # Durable conversation context; no worker-local memory is required.
         history_rows, _ = await select_rows("messages", token, {
@@ -243,7 +243,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             "trajectory_trend": traj_summary.get("trend"),
         })
 
-        logger.info("Chat complete user=%s risk_level=%s latency_ms=%d", uid[:8], risk["risk_level"], latency_ms)
+        logger.info("Chat request completed latency_ms=%d", latency_ms)
         return {
             "session_id": session_id, "response": response, "risk": risk,
             "recommendations": recommendations, "crisis_detected": crisis_detected,
@@ -254,11 +254,11 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
     except HTTPException:
         raise
     except SupabaseError as exc:
-        logger.warning("Supabase operation failed during chat: %s", exc.message)
+        logger.warning("Supabase operation failed during chat (HTTP %s)", exc.status_code)
         status_code = 503 if exc.status_code >= 500 else 400
         raise HTTPException(status_code=status_code, detail="MindCare could not save or retrieve your conversation. Please retry.") from exc
     except Exception as exc:
-        logger.exception("Chat request failed (%s)", type(exc).__name__)
+        logger.error("Chat request failed (%s)", type(exc).__name__)
         raise HTTPException(status_code=503, detail="MindCare could not complete this response. Please try again shortly.") from exc
 
 

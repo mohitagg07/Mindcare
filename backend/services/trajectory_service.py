@@ -80,7 +80,7 @@ async def update_trajectory(user_id: str, access_token: str, message: str, risk_
     recent.append({key: point[key] for key in ("state_ema", "delta", "trigger", "created_at", "sentiment_score")})
     recent = recent[-_MAX_POINTS:]
     summary = _summary_from_points(recent)
-    logger.info("Trajectory updated for user=%s trigger=%s", user_id[:8], trigger)
+    logger.debug("Trajectory point stored")
     return {"state_ema": state_ema, "delta": delta, "trigger": trigger, "sentiment": sentiment, "summary": summary}
 
 

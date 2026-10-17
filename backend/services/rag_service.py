@@ -86,7 +86,8 @@ def query_rag(question: str) -> Optional[str]:
         return " ... ".join(top)[:1500]
 
     except Exception as e:
-        logger.error(f"RAG query error: {e}")
+        # Do not risk echoing a user's search text or derived context into logs.
+        logger.error("RAG query failed (%s)", type(e).__name__)
         return None
 
 

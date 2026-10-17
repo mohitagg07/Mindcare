@@ -254,6 +254,11 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
+            ) : someActivityRequestFailed ? (
+              <div className="mcd-activity-message" role="status">
+                <p>Some of your activity is still unavailable, so this list may be incomplete.</p>
+                <button type="button" onClick={() => setReloadKey(key => key + 1)}><RotateCcw size={14} /> Retry activity</button>
+              </div>
             ) : (
               <div className="mcd-activity-empty">
                 <p className="mcd-empty-title">Nothing to pick up yet.</p>
@@ -262,7 +267,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            {!activityLoading && someActivityRequestFailed && !allActivityRequestsFailed && (
+            {!activityLoading && recent.length > 0 && someActivityRequestFailed && !allActivityRequestsFailed && (
               <p className="mcd-partial-warning" role="status">Some activity couldn’t be loaded. <button type="button" onClick={() => setReloadKey(key => key + 1)}>Retry</button></p>
             )}
           </section>

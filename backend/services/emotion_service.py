@@ -128,7 +128,7 @@ async def predict_emotion(image_data: str) -> dict[str, Any]:
         )
         text = response.choices[0].message.content or ""
         result = _parse_response(text, model)
-        logger.info("Vision estimate completed: model=%s emotion=%s", model, result["emotion"])
+        logger.info("Vision estimate completed: model=%s", model)
         return result
     except Exception as exc:
         logger.warning("Vision estimate unavailable (%s)", type(exc).__name__)

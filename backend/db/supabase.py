@@ -98,7 +98,9 @@ async def _request(method: str, url: str, *, headers: dict[str, str], params=Non
 
     if response.status_code >= 400:
         message = _error_message(response)
-        logger.info("Supabase API returned HTTP %s: %s", response.status_code, message)
+        # Supabase error details can echo row values (including health data). Keep
+        # server logs diagnostic without copying response bodies into log storage.
+        logger.info("Supabase API returned HTTP %s", response.status_code)
         raise SupabaseError(response.status_code, message)
     if response.status_code == 204 or not response.content:
         return None, response

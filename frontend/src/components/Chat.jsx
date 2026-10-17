@@ -100,6 +100,8 @@ export default function Chat() {
   const [memorySuccess, setMemorySuccess] = useState('')
   const scrollAreaRef = useRef(null)
   const inputRef = useRef(null)
+  const memoryTriggerRef = useRef(null)
+  const memoryDialogRef = useRef(null)
   const interacted = useRef(false)
 
   useEffect(() => {
@@ -146,9 +148,39 @@ export default function Chat() {
 
   useEffect(() => {
     if (!memoryOpen) return
-    const closeOnEscape = event => { if (event.key === 'Escape') setMemoryOpen(false) }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+    const dialog = memoryDialogRef.current
+    const focusable = () => [...(dialog?.querySelectorAll('a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])') || [])]
+      .filter(element => element.getClientRects().length > 0)
+    const firstControl = focusable()[0]
+    ;(firstControl || dialog)?.focus()
+
+    const containFocus = event => {
+      if (event.key === 'Escape') {
+        setMemoryOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const controls = focusable()
+      if (!controls.length) {
+        event.preventDefault()
+        dialog?.focus()
+        return
+      }
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && (document.activeElement === last || !dialog?.contains(document.activeElement))) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', containFocus)
+    return () => {
+      window.removeEventListener('keydown', containFocus)
+      memoryTriggerRef.current?.focus()
+    }
   }, [memoryOpen])
 
   useEffect(() => {
@@ -322,7 +354,7 @@ export default function Chat() {
         </div>
         <div className="chat-header-actions">
           <div className="chat-secure-label"><ShieldCheck size={14} /><span>Account-protected</span></div>
-          <button type="button" className="chat-memory-trigger" onClick={() => { setMemoryOpen(true); setMemoryError(''); setMemorySuccess('') }} aria-label="Manage saved memories" title="Manage saved memories"><Bookmark size={15} /><span>Memory</span></button>
+          <button ref={memoryTriggerRef} type="button" className="chat-memory-trigger" onClick={() => { setMemoryOpen(true); setMemoryError(''); setMemorySuccess('') }} aria-label="Manage saved memories" title="Manage saved memories"><Bookmark size={15} /><span>Memory</span></button>
           <button type="button" className="chat-icon-button chat-new-button" onClick={handleNewConversation} disabled={loading || historyLoading} aria-label="Start a new conversation" title="New conversation"><Plus size={18} /></button>
         </div>
       </header>
@@ -390,7 +422,7 @@ export default function Chat() {
 
       {memoryOpen && (
         <div className="chat-memory-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setMemoryOpen(false) }}>
-          <section className="chat-memory-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-memory-title">
+          <section ref={memoryDialogRef} className="chat-memory-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-memory-title" tabIndex={-1}>
             <header className="chat-memory-heading">
               <div className="chat-memory-heading-icon"><Bookmark size={19} /></div>
               <div><span>YOUR CONTROL</span><h2 id="chat-memory-title">Saved memories</h2><p>Only notes you choose to save carry into future chats.</p></div>

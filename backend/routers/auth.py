@@ -167,7 +167,7 @@ def _profile_error(exc: SupabaseError) -> HTTPException:
         )
     if exc.status_code in (401, 403):
         return HTTPException(status_code=exc.status_code, detail="Please sign in again to manage your profile.")
-    logger.warning("Profile request failed: HTTP %s (%s)", exc.status_code, exc.message)
+    logger.warning("Profile request failed: HTTP %s", exc.status_code)
     return HTTPException(status_code=503 if exc.status_code >= 500 else 400, detail="Could not load or save your profile. Please try again.")
 
 
@@ -243,7 +243,7 @@ async def register(req: RegisterRequest):
             "email": user.get("email", req.email),
         }
     username = (user.get("user_metadata") or {}).get("username", req.username.lower())
-    logger.info("User registered: %s", username)
+    logger.info("User registration completed")
     return TokenResponse(access_token=token, refresh_token=payload.get("refresh_token"), user_id=str(user.get("id", "")), username=username, email=user.get("email", req.email))
 
 
@@ -366,7 +366,7 @@ async def _profile_response(profile: dict, current_user: dict) -> dict:
             )
         except SupabaseError as exc:
             # A photo problem should not make the rest of a valid profile unavailable.
-            logger.warning("Could not sign profile avatar URL: %s", exc.message)
+            logger.warning("Could not sign profile avatar URL (HTTP %s)", exc.status_code)
     return result
 
 
@@ -465,7 +465,7 @@ async def upload_profile_avatar(file: UploadFile = File(...), current_user=Depen
     except SupabaseError as exc:
         if exc.status_code == 401:
             raise HTTPException(status_code=401, detail="Please sign in again to manage your profile photo.") from exc
-        logger.warning("Profile photo upload failed: %s", exc.message)
+        logger.warning("Profile photo upload failed (HTTP %s)", exc.status_code)
         lowered = exc.message.lower()
         if "bucket" in lowered or "storage" in lowered or "row-level security" in lowered or "policy" in lowered or exc.status_code == 404 or exc.status_code == 403:
             raise HTTPException(status_code=503, detail="Profile photo storage is not ready. Run supabase/migrations/20261013_dob_avatar_storage.sql in Supabase, then retry.") from exc
@@ -487,7 +487,7 @@ async def delete_profile_avatar(current_user=Depends(get_current_user)):
         if exc.status_code == 401:
             raise HTTPException(status_code=401, detail="Please sign in again to manage your profile photo.") from exc
         if exc.status_code in (403, 404) or any(term in exc.message.lower() for term in ("storage", "bucket", "row-level security", "policy")):
-            logger.warning("Profile photo deletion was blocked by Storage permissions/configuration: %s", exc.message)
+            logger.warning("Profile photo deletion was blocked by Storage permissions/configuration (HTTP %s)", exc.status_code)
             raise HTTPException(status_code=503, detail="Profile photo storage is not ready. Check the profile-avatars bucket and owner policies from supabase/migrations/20261013_dob_avatar_storage.sql.") from exc
         raise _profile_error(exc) from exc
 
@@ -535,5 +535,5 @@ async def logout(token: str = Depends(oauth2_scheme)):
     except SupabaseError as exc:
         # Local logout should remain possible even if Supabase is temporarily unavailable.
         if exc.status_code not in (401, 403):
-            logger.warning("Supabase logout could not be confirmed: %s", exc.message)
+            logger.warning("Supabase logout could not be confirmed (HTTP %s)", exc.status_code)
     return {"message": "Logged out successfully"}

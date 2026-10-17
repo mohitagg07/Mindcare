@@ -157,7 +157,7 @@ cd backend
 pytest -q
 ```
 
-The automated suite is designed to run offline and validate core behavior/configuration without a real Supabase or Groq account. Before deployment, perform real integration smoke tests against a **separate test Supabase project**: signup with confirmation, email/password login, `/me`, chat persistence, history, session deletion, RLS cross-user isolation, trajectory, and metrics.
+Install the backend test and audit tools first with `pip install -r requirements-dev.txt`. The automated suite is designed to run offline and validate core behavior/configuration without a real Supabase or Groq account. Before deployment, perform real integration smoke tests against a **separate test Supabase project**: signup with confirmation, email/password login, `/me`, chat persistence, history, session deletion, RLS cross-user isolation, trajectory, and metrics.
 
 ## Existing MongoDB data
 

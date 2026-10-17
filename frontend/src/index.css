@@ -1,7 +1,5 @@
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --bg-base:     #F8F6F2;
@@ -921,6 +919,14 @@ button, input, textarea { font-family: inherit; }
 
 /* Profile page */
 .profile-page { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: radial-gradient(ellipse at 88% 0%, rgba(224,239,217,.55), transparent 30%), radial-gradient(ellipse at 0% 80%, rgba(250,229,207,.25), transparent 34%), #f7f8f3; }
+.profile-load-state,.profile-load-error { display:flex; align-items:center; gap:12px; width:min(760px,100%); margin:20px auto 0; padding:17px 19px; border:1px solid #dfe8dc; border-radius:14px; color:#607563; background:#fffefa; font-size:13px; line-height:1.6; }
+.profile-load-error { border-color:#efddd1; color:#89644f; background:#fffaf6; }
+.profile-load-error > svg { flex:0 0 auto; }
+.profile-load-error > div { flex:1; min-width:0; }
+.profile-load-error strong { color:#6e503f; }
+.profile-load-error p { margin:4px 0 0; color:#806f62; }
+.profile-load-error button { display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:0 12px; border:1px solid #dfc8b9; border-radius:10px; color:#76563f; background:#fff; font:600 12px 'DM Sans',sans-serif; cursor:pointer; }
+.profile-load-error button:hover { background:#fff3e8; }
 .profile-content { width: min(1160px,100%); margin: 0 auto; padding: 34px clamp(18px,3vw,38px) 38px; }
 .profile-heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 25px; }
 .profile-eyebrow,.insights-eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #70947a; font-size: 10px; font-weight: 800; letter-spacing: 1.65px; }
@@ -1336,8 +1342,10 @@ button, input, textarea { font-family: inherit; }
   .assessment-instrument-switch button svg { position: absolute; right: 19px; }
   .assessment-card { border-radius: 16px; }
   .assessment-question { padding: 14px; }
-  .assessment-step-list { gap: 4px; }
+  .assessment-progress-top { align-items: stretch; flex-direction: column; gap: 6px; }
+  .assessment-step-list { flex-wrap: nowrap; justify-content: space-between; gap: 2px; }
   .assessment-step-dot { width: 27px; height: 27px; }
+  .assessment-answered-count { align-self: flex-end; }
   .assessment-option { min-height: 48px; }
   .assessment-range-list { gap: 5px; }
   .assessment-range { gap: 5px; padding: 0 7px; font-size: 9px; }

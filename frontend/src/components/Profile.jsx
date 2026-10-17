@@ -84,6 +84,8 @@ export default function Profile() {
   const { user, syncProfile, logout } = useAuth()
   const [form, setForm] = useState(() => initialForm(user))
   const [loading, setLoading] = useState(true)
+  const [loadRetry, setLoadRetry] = useState(0)
+  const [profileLoadError, setProfileLoadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -96,6 +98,8 @@ export default function Profile() {
 
   useEffect(() => {
     let active = true
+    setLoading(true)
+    setProfileLoadError('')
     getMyProfile()
       .then(({ data }) => {
         if (!active) return
@@ -103,12 +107,12 @@ export default function Profile() {
         setAccountDeletionAvailable(Boolean(data?.account_deletion_enabled))
         syncProfile?.(data)
       })
-      .catch((err) => { if (active) setError(err.message || 'Your profile could not be loaded right now.') })
+      .catch((err) => { if (active) setProfileLoadError(err.message || 'Your profile could not be loaded right now.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-    // User identity is stable for the lifetime of this page; only load on mount.
+    // Reload only when the signed-in identity changes or the user retries.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [loadRetry, user?.id])
 
   const displayLabel = form.display_name.trim() || user?.username || 'Your profile'
   const completeness = useMemo(() => {
@@ -233,6 +237,31 @@ export default function Profile() {
     }
   }
 
+  if (loading || profileLoadError) {
+    return (
+      <div className="profile-page">
+        <div className="profile-content">
+          <header className="profile-heading-row">
+            <div>
+              <div className="profile-eyebrow"><Sparkles size={13} /> YOUR PERSONAL SPACE</div>
+              <h1>Make it <em>yours.</em></h1>
+              <p>A few choices help MindCare feel more personal. Everything here is optional.</p>
+            </div>
+          </header>
+          {loading ? (
+            <div className="profile-load-state" role="status" aria-live="polite"><LoaderCircle size={19} className="profile-spinning" /> Loading your saved preferences…</div>
+          ) : (
+            <div className="profile-load-error" role="alert">
+              <Info size={18} />
+              <div><strong>Your saved profile is unavailable.</strong><p>{profileLoadError} Your existing details are protected; retry before making changes.</p></div>
+              <button type="button" onClick={() => setLoadRetry(value => value + 1)}><RefreshCw size={14} /> Try again</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="profile-page">
       <div className="profile-content">
@@ -333,7 +362,6 @@ export default function Profile() {
           </section>
 
           <div className="profile-savebar"><div><span className="profile-save-dot" /><span>Unsaved changes stay here until you save.</span></div><div className="profile-save-actions"><button type="button" className="profile-reset-button" onClick={reset} disabled={saving}><RefreshCw size={14} /> Reset</button><button className="profile-save-button" type="submit" disabled={saving || loading}>{saving ? <><LoaderCircle size={15} className="profile-spinning" /> Saving…</> : <><Save size={15} /> Save my profile</>}</button></div></div>
-          {loading && <div className="profile-loading-note"><LoaderCircle size={15} className="profile-spinning" /> Loading your saved preferences…</div>}
         </form>
       </div>
     </div>
