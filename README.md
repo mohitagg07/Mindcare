@@ -7,7 +7,7 @@ For an existing Supabase project, apply the files in `supabase/migrations/` in f
 
 MindCare is a mental-wellbeing support application built with React + Vite, FastAPI, Groq inference, and Supabase (PostgreSQL + Supabase Auth).
 
-> **Safety notice:** MindCare is a wellness-support prototype, not a medical device, diagnostic tool, or emergency service. PHQ-9/GAD-7 are screening instruments, not diagnoses. Facial-expression labels, text sentiment, and the weighted wellbeing indicator are not clinically validated risk assessments. Do not use them to make clinical decisions.
+> **Safety notice:** MindCare is a wellness-support prototype, not a medical device, diagnostic tool, or emergency service. The user-facing PHQ-9 is a screening instrument, not a diagnosis. Legacy GAD-7 database fields and API support remain for backward compatibility but are not exposed in the product. Facial-expression labels, text sentiment, and the weighted wellbeing indicator are not clinically validated risk assessments. Do not use them to make clinical decisions.
 
 ## Production-oriented stack
 
@@ -18,7 +18,7 @@ MindCare is a mental-wellbeing support application built with React + Vite, Fast
 - **LLM/agent:** AsyncGroq with bounded tool calling; default text model `openai/gpt-oss-20b` (overridable via `GROQ_CHAT_MODEL`)
 - **Vision:** Groq's configurable `qwen/qwen3.8-27b` vision model; explicit unavailable state if the provider fails
 - **Retrieval:** lightweight PDF text extraction and keyword retrieval using pypdf
-- **Tests:** pytest; integration tests requiring external credentials are intentionally not run against production data
+- **Tests:** pytest and Node's built-in test runner; integration tests requiring external credentials are intentionally not run against production data
 
 No MongoDB driver or MongoDB fallback is included. Normal data operations use caller access tokens for PostgREST and Storage, so RLS remains active. A Supabase service-role key is optional and used only by the server-side account deletion endpoint; it is never sent to the browser.
 
@@ -32,7 +32,7 @@ New accounts without a preferred display name see a compact “Make this space y
 
 ## Frontend experience
 
-The authenticated workspace includes a responsive side navigation, an account-specific profile and response preferences, a welcoming overview with saved conversation/assessment recovery, a conversational chat layout with quick-start prompts and typing feedback, responsive assessment/emotion/insights screens, profile-time-zone-aware timestamps, keyboard-visible focus states, and reduced-motion handling. The public landing page includes plain-language privacy and use notices. Those notices are an application summary—not a substitute for a complete legal policy.
+The authenticated workspace includes a responsive side navigation, an account-specific profile and response preferences, a welcoming overview with saved conversation/assessment recovery, a conversational chat layout with quick-start prompts, streamed replies, stop/retry behavior and saved-history navigation, a PHQ-9-only assessment journey, responsive emotion/insights screens, profile-time-zone-aware timestamps, keyboard-visible focus states, and reduced-motion handling. The public landing page includes plain-language privacy and use notices. Those notices are an application summary—not a substitute for a complete legal policy.
 
 ## Project layout
 
@@ -60,7 +60,7 @@ Mindcare-main/
 
 ### 1. Configure Supabase
 
-1. Create a Supabase project. For a **new** project, open SQL Editor and run all of `supabase/schema.sql`. For the existing MindCare project, apply each file under `supabase/migrations/` in filename order; do not rerun the fresh-install schema blindly.
+1. Create a Supabase project. For a **new** project, open SQL Editor and run all of `supabase/schema.sql`. For the existing MindCare project, apply each file under `supabase/migrations/` in filename order; do not rerun the fresh-install schema blindly. Supabase manages RLS on `storage.objects`; the MindCare SQL adds owner-scoped avatar policies without attempting to change the managed table's RLS mode or owner.
 3. In Project Settings → API, copy the project URL and publishable/anon key.
 4. In **Authentication → URL Configuration**, set **Site URL** to `http://localhost:5173` during local development and add `http://localhost:5173/**` to the Redirect URLs allowlist. Remove any stale `http://localhost:3000` entry as the Site URL unless you actually serve the app on port 3000.
 5. In **Authentication → Providers → Email**, keep email confirmation enabled if you want verified accounts. The app sends confirmation links to `/auth/callback`, provides a resend-confirmation flow for expired links, and supports password reset/update.
@@ -133,6 +133,7 @@ For Vercel, set `VITE_API_URL` to the deployed FastAPI URL. Never put Groq crede
 - Reuses a pooled async HTTP client for Supabase network calls.
 - Uses AsyncGroq so inference waits do not block the event loop.
 - Uses bounded conversation history (last 12 persisted messages) and bounded completion size.
+- Streams chat output over server-sent events and derives stable message IDs from the session/request IDs so retries can recover an already-saved reply without duplicating the pair.
 - Keeps optional PDF retrieval lightweight; no ChromaDB, Torch, or LangChain dependency is installed by default.
 - Uses asynchronous Groq Vision requests and strict image type/size checks without loading local model weights at startup.
 - Uses Supabase refresh tokens to renew sessions rather than forcing sign-in on every access-token expiry.
@@ -153,11 +154,15 @@ A free-tier host may still cold-start after inactivity; this is a host plan beha
 ## Tests
 
 ```bash
-cd backend
-pytest -q
+cd frontend
+npm test
+npm run build
+
+cd ../backend
+python -m pytest -q
 ```
 
-Install the backend test and audit tools first with `pip install -r requirements-dev.txt`. The automated suite is designed to run offline and validate core behavior/configuration without a real Supabase or Groq account. Before deployment, perform real integration smoke tests against a **separate test Supabase project**: signup with confirmation, email/password login, `/me`, chat persistence, history, session deletion, RLS cross-user isolation, trajectory, and metrics.
+Install frontend dependencies with `npm ci`. Install the backend test and audit tools first with `pip install -r requirements-dev.txt`. The automated suites validate stream parsing, scoring, API contracts, and configuration without a real Supabase or Groq account. Before deployment, perform real integration smoke tests against a **separate test Supabase project**: signup with confirmation, email/password login, `/me`, streamed chat persistence, history, session deletion, PHQ-9 persistence, profile/avatar persistence, RLS cross-user isolation, trajectory, and metrics.
 
 ## Existing MongoDB data
 

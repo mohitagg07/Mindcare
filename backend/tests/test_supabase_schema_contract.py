@@ -53,6 +53,7 @@ def test_dob_avatar_migration_uses_private_owner_scoped_storage():
     for policy in ("mindcare_avatar_select_own", "mindcare_avatar_insert_own", "mindcare_avatar_update_own", "mindcare_avatar_delete_own"):
         assert f'create policy "{policy}"' in migration
     assert "storage.foldername(name))[1] = (select auth.uid()::text)" in migration
+    assert "alter table storage.objects enable row level security" not in migration
 
 
 def test_fresh_schema_includes_dob_and_private_avatar_storage():
@@ -61,6 +62,7 @@ def test_fresh_schema_includes_dob_and_private_avatar_storage():
     assert "avatar_path text" in schema
     assert 'create policy "mindcare_avatar_select_own"' in schema
     assert 'create policy "mindcare_avatar_insert_own"' in schema
+    assert "alter table storage.objects enable row level security" not in schema
 
 
 def test_user_memories_table_is_private_and_owner_scoped():

@@ -6,7 +6,7 @@ const AppContext = createContext(null)
 const welcomeMessage = () => ({
   id: uuidv4(),
   role: 'assistant',
-  content: "Hello, I'm **MindCare** — a calm space to talk about your wellbeing.\n\nYou can share what's on your mind, explore a PHQ-9 or GAD-7 screening, or try a guided reflection. I'll respond without judgment.\n\nWhat feels most important to talk about today?",
+  content: "Hello, I'm **MindCare** — a calm space to talk about your wellbeing.\n\nYou can share what's on your mind, explore a PHQ-9 screening, or try a guided reflection. I'll respond without judgment.\n\nWhat feels most important to talk about today?",
   timestamp: new Date().toISOString(),
 })
 
@@ -27,7 +27,6 @@ export function AppProvider({ children }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [pendingChatPrompt, setPendingChatPrompt] = useState('')
   const [phq9Result, setPhq9Result] = useState(null)
-  const [gad7Result, setGad7Result] = useState(null)
   const [currentEmotion, setCurrentEmotion] = useState({ emotion: 'unavailable', confidence: 0 })
   const [riskData, setRiskData] = useState(null)
   const [recommendations, setRecommendations] = useState(null)
@@ -54,17 +53,26 @@ export function AppProvider({ children }) {
   }, [])
 
   const addMessage = useCallback((msg) => {
-    setMessages((prev) => [...prev, { id: uuidv4(), timestamp: new Date().toISOString(), ...msg }])
+    const nextMessage = { id: uuidv4(), timestamp: new Date().toISOString(), ...msg }
+    setMessages((prev) => [...prev, nextMessage])
+    return nextMessage.id
+  }, [])
+
+  const updateMessage = useCallback((id, update) => {
+    setMessages(previous => previous.map(message => {
+      if (message.id !== id) return message
+      return typeof update === 'function' ? update(message) : { ...message, ...update }
+    }))
   }, [])
 
   return (
     <AppContext.Provider value={{
       sessionId, setSessionId, createNewSession,
       activePage, setActivePage, pendingChatPrompt, setPendingChatPrompt,
-      phq9Result, setPhq9Result, gad7Result, setGad7Result,
+      phq9Result, setPhq9Result,
       currentEmotion, setCurrentEmotion, riskData, setRiskData,
       recommendations, setRecommendations, trajectory, setTrajectory,
-      messages, setMessages, replaceMessages, addMessage,
+      messages, setMessages, replaceMessages, addMessage, updateMessage,
     }}>
       {children}
     </AppContext.Provider>

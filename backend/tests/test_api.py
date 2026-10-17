@@ -77,7 +77,7 @@ def test_chat_requires_auth():
 
 def test_chat_bulk_insert_rows_have_identical_keys():
     from routers.chat import ChatRequest, build_message_rows
-    request = ChatRequest(message="I have been stressed", emotion="sad", phq9_score=5, gad7_score=4)
+    request = ChatRequest(message="I have been stressed", emotion="sad", phq9_score=5, client_message_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     rows = build_message_rows(
         session_id="22222222-2222-4222-8222-222222222222",
         user_id=TEST_USER["id"], request=request, response="Thank you for sharing that.",
@@ -88,6 +88,89 @@ def test_chat_bulk_insert_rows_have_identical_keys():
     assert rows[0]["risk_score"] is None and rows[0]["latency_ms"] is None
     assert rows[1]["emotion"] is None
     assert rows[0]["role"] == "user" and rows[1]["role"] == "assistant"
+
+
+def test_chat_message_ids_are_idempotent_for_the_same_request():
+    from routers.chat import ChatRequest, build_message_rows
+    request = ChatRequest(message="I have been stressed", client_message_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+    def rows_for():
+        return build_message_rows(
+            session_id="22222222-2222-4222-8222-222222222222", user_id=TEST_USER["id"],
+            request=request, response="A supportive reply.", risk_score=0.2, latency_ms=10,
+            crisis_detected=False, rag_used=False,
+        )
+    first, second = rows_for(), rows_for()
+    assert [row["id"] for row in first] == [row["id"] for row in second]
+    assert first[0]["id"] != first[1]["id"]
+
+
+def test_chat_stream_emits_deltas_then_persisted_completion(monkeypatch):
+    import routers.chat as chat_router_module
+    import services.groq_service as groq_service
+
+    async def no_saved_reply(*args):
+        return None
+
+    async def prepared(request, current_user, started):
+        return {
+            "session_id": str(request.session_id), "crisis_detected": False,
+            "context": {}, "history": [], "profile_context": None,
+        }
+
+    async def fake_stream(*args, **kwargs):
+        yield {"type": "delta", "text": "I hear you. "}
+        yield {"type": "delta", "text": "That sounds difficult."}
+        yield {"type": "meta", "response": "I hear you. That sounds difficult.", "tools_used": []}
+
+    async def persisted(request, context, response, tools):
+        return {"session_id": str(request.session_id), "response": response, "risk": {}, "recommendations": [], "crisis_detected": False, "rag_used": False, "trajectory": {}}
+
+    monkeypatch.setattr(chat_router_module, "_get_saved_reply", no_saved_reply)
+    monkeypatch.setattr(chat_router_module, "_prepare_chat", prepared)
+    monkeypatch.setattr(chat_router_module, "_persist_chat_reply", persisted)
+    monkeypatch.setattr(groq_service, "stream_reply", fake_stream)
+    response = client.post("/api/chat/stream", json={
+        "session_id": "22222222-2222-4222-8222-222222222222",
+        "client_message_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "message": "I feel overwhelmed",
+    })
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert response.text.index('"text":"I hear you. "') < response.text.index('"type":"done"')
+    assert '"text":"That sounds difficult."' in response.text
+
+
+def test_phq9_duplicate_submission_returns_saved_result(monkeypatch):
+    import routers.assessment as assessment_router_module
+    submission_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+
+    async def conflict(*args, **kwargs):
+        raise SupabaseError(409, "duplicate key")
+
+    async def existing(table, token, params, **kwargs):
+        assert table == "assessments"
+        assert params["id"] == f"eq.{submission_id}"
+        assert params["user_id"] == f"eq.{TEST_USER['id']}"
+        return ([{"instrument": "PHQ-9", "answers": [1] * 9}], None)
+
+    monkeypatch.setattr(assessment_router_module, "insert_row", conflict)
+    monkeypatch.setattr(assessment_router_module, "select_rows", existing)
+    response = client.post("/api/assessment/phq9", json={"submission_id": submission_id, "responses": [3] * 8 + [0]})
+    assert response.status_code == 200
+    assert response.json()["score"] == 9
+    assert response.json()["crisis_flag"] is True
+
+
+def test_phq9_does_not_claim_saved_when_database_returns_no_row(monkeypatch):
+    import routers.assessment as assessment_router_module
+
+    async def no_rows(*args, **kwargs):
+        return []
+
+    monkeypatch.setattr(assessment_router_module, "insert_row", no_rows)
+    response = client.post("/api/assessment/phq9", json={"responses": [0] * 9})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Assessment could not be saved. Please try again."
 
 
 def test_risk_uses_available_signals_only():

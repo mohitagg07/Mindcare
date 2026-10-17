@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
   Send, Plus, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
-  ShieldCheck, ArrowUpRight, Wind, Moon, Brain, LoaderCircle,
-  Bookmark, X, RefreshCw, Check, Trash2,
+  ShieldCheck, ArrowUpRight, Wind, Moon, Brain, LoaderCircle, Square,
+  Bookmark, X, RefreshCw, Check, Trash2, History as HistoryIcon, Copy, CheckCheck,
 } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { sendChat, getChatHistory, getChatMemories, createChatMemory, deleteChatMemory } from '../api/client.js'
+import { api, sendChatStream, getChatHistory, getChatMemories, createChatMemory, deleteChatMemory } from '../api/client.js'
 import './ChatPhase3.css'
 
 const QUICK_STARTS = [
@@ -26,8 +27,31 @@ function formatTime(value, timeZone) {
   }
 }
 
+function formatConversationDate(value, timeZone) {
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) return 'Saved conversation'
+  try {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', ...(timeZone ? { timeZone } : {}) })
+  } catch {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+}
+
 function Message({ msg, timeZone, onRetry }) {
+  const [copyState, setCopyState] = useState('')
   const isUser = msg.role === 'user'
+
+  const copyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(msg.content)
+      setCopyState('copied')
+      window.setTimeout(() => setCopyState(''), 1800)
+    } catch {
+      setCopyState('failed')
+      window.setTimeout(() => setCopyState(''), 2400)
+    }
+  }
+
   return (
     <article className={`chat-message ${isUser ? 'from-user' : 'from-assistant'}`}>
       {!isUser && <div className="chat-avatar assistant-avatar"><Heart size={15} fill="currentColor" /></div>}
@@ -49,9 +73,12 @@ function Message({ msg, timeZone, onRetry }) {
             }}>{msg.content}</ReactMarkdown>
           )}
         </div>
+        {isUser && msg.deliveryState === 'pending' && <span className="chat-delivery-status" role="status">Sending…</span>}
+        {isUser && msg.deliveryState === 'unconfirmed' && <span className="chat-delivery-status is-error" role="status">Delivery not confirmed</span>}
         {msg.error && msg.retryText && (
           <div className="chat-retry-row"><span>The reply failed. You can retry this message.</span><button type="button" onClick={() => onRetry?.(msg)}><RefreshCw size={13} /> Try again</button></div>
         )}
+        {!isUser && !msg.error && !msg.streaming && msg.content && <div className="chat-message-actions"><button type="button" onClick={copyMessage} aria-label={copyState === 'copied' ? 'Reply copied' : copyState === 'failed' ? 'Could not copy reply' : 'Copy reply'}>{copyState === 'copied' ? <CheckCheck size={14} /> : <Copy size={14} />}{copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy unavailable' : 'Copy'}</button></div>}
         {!isUser && (msg.rag_used || msg.crisis_detected || msg.metadata?.crisis_detected) && (
           <div className="chat-message-badges">
             {(msg.rag_used || msg.metadata?.rag_used) && <span><BookOpen size={12} /> Knowledge resources used</span>}
@@ -79,15 +106,20 @@ function TypingIndicator() {
 export default function Chat() {
   const { user } = useAuth()
   const {
-    sessionId, setSessionId, createNewSession, phq9Result, gad7Result,
+    sessionId, setSessionId, createNewSession, phq9Result,
     currentEmotion, setRiskData, setRecommendations, setTrajectory,
-    messages, addMessage, replaceMessages, pendingChatPrompt, setPendingChatPrompt,
+    messages, addMessage, updateMessage, replaceMessages, pendingChatPrompt, setPendingChatPrompt,
   } = useApp()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [streamStarted, setStreamStarted] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState('')
   const [historyReload, setHistoryReload] = useState(0)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [conversationRows, setConversationRows] = useState([])
+  const [conversationListLoading, setConversationListLoading] = useState(false)
+  const [conversationListError, setConversationListError] = useState('')
   const [notice, setNotice] = useState('')
   const [memoryOpen, setMemoryOpen] = useState(false)
   const [memories, setMemories] = useState([])
@@ -103,6 +135,11 @@ export default function Chat() {
   const memoryTriggerRef = useRef(null)
   const memoryDialogRef = useRef(null)
   const interacted = useRef(false)
+  const activeRequestRef = useRef(null)
+  const pendingDraftRef = useRef(null)
+  const stickToBottomRef = useRef(true)
+  const draftsBySessionRef = useRef({})
+  const historyTriggerRef = useRef(null)
 
   useEffect(() => {
     let alive = true
@@ -133,6 +170,8 @@ export default function Chat() {
     return () => { alive = false }
   }, [sessionId, historyReload, replaceMessages])
 
+  useEffect(() => () => activeRequestRef.current?.controller.abort(), [])
+
   useEffect(() => {
     if (!memoryOpen) return
     let alive = true
@@ -145,6 +184,33 @@ export default function Chat() {
       .finally(() => { if (alive) setMemoryLoading(false) })
     return () => { alive = false }
   }, [memoryOpen, memoryReload])
+
+  useEffect(() => {
+    if (!historyOpen) return
+    let alive = true
+    setConversationListLoading(true)
+    setConversationListError('')
+    api.mySessions()
+      .then(({ data }) => {
+        if (!alive) return
+        setConversationRows(Array.isArray(data) ? data.filter(item => item.session_id && Number(item.message_count) > 0) : [])
+      })
+      .catch(error => { if (alive) setConversationListError(error.message || 'Your saved conversations could not be loaded.') })
+      .finally(() => { if (alive) setConversationListLoading(false) })
+    return () => { alive = false }
+  }, [historyOpen, historyReload])
+
+  useEffect(() => {
+    if (!historyOpen) return
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') {
+        setHistoryOpen(false)
+        historyTriggerRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [historyOpen])
 
   useEffect(() => {
     if (!memoryOpen) return
@@ -241,58 +307,93 @@ export default function Chat() {
 
   useEffect(() => {
     const area = scrollAreaRef.current
-    if (!area) return
+    if (!area || !stickToBottomRef.current) return
     // Keep scrolling scoped to the chat viewport; scrollIntoView can scroll outer
     // containers too and caused the workspace header/sidebar to visually collide.
-    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    const behavior = loading || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
     area.scrollTo({ top: area.scrollHeight, behavior })
   }, [messages, loading])
 
-  const handleSend = async (providedText, { appendUser = true } = {}) => {
+  const handleSend = async (providedText, { appendUser = true, clientMessageId, userMessageId } = {}) => {
     const text = (providedText ?? input).trim()
     if (!text || loading) return
     const keepComposerFocused = document.activeElement === inputRef.current
     interacted.current = true
     setNotice('')
+    setHistoryOpen(false)
+    const requestId = clientMessageId || (pendingDraftRef.current?.text === text ? pendingDraftRef.current.id : uuidv4())
+    pendingDraftRef.current = { text, id: requestId }
     if (appendUser) {
       setInput('')
-      addMessage({ role: 'user', content: text })
-    }
+      userMessageId = addMessage({ role: 'user', content: text, clientMessageId: requestId, deliveryState: 'pending' })
+    } else if (userMessageId) updateMessage(userMessageId, { deliveryState: 'pending' })
+    const assistantMessageId = addMessage({ role: 'assistant', content: '', streaming: true })
+    const controller = new AbortController()
+    activeRequestRef.current = { controller, text, requestId, userMessageId, assistantMessageId }
     setLoading(true)
+    setStreamStarted(false)
     try {
-      const { data } = await sendChat({
+      const { data } = await sendChatStream({
         session_id: sessionId,
+        client_message_id: requestId,
         message: text,
         phq9_score: phq9Result?.score ?? null,
         phq9_category: phq9Result?.category ?? 'Not assessed',
         phq9_crisis_flag: !!phq9Result?.crisis_flag,
-        gad7_score: gad7Result?.score ?? null,
-        gad7_category: gad7Result?.category ?? 'Not assessed',
         emotion: currentEmotion?.confidence > 0 && currentEmotion?.emotion !== 'unavailable' ? currentEmotion.emotion : null,
+      }, {
+        signal: controller.signal,
+        onDelta: delta => {
+          setStreamStarted(true)
+          updateMessage(assistantMessageId, message => ({ ...message, content: message.content + delta }))
+        },
       })
       if (data.session_id && data.session_id !== sessionId) setSessionId(data.session_id)
-      addMessage({
-        role: 'assistant', content: data.response, rag_used: data.rag_used,
-        crisis_detected: data.crisis_detected,
-      })
+      if (userMessageId) updateMessage(userMessageId, { deliveryState: 'saved' })
+      updateMessage(assistantMessageId, { streaming: false, rag_used: data.rag_used, crisis_detected: data.crisis_detected })
+      pendingDraftRef.current = null
       if (data.risk) setRiskData(data.risk)
       if (data.recommendations) setRecommendations(data.recommendations)
       if (data.trajectory) setTrajectory(data.trajectory)
     } catch (error) {
-      addMessage({ role: 'assistant', content: `I couldn’t complete that reply. ${error.message || 'Check your connection, then try again.'}`, error: true, retryText: text })
+      if (controller.signal.aborted) {
+        replaceMessages(previous => previous.filter(message => message.id !== userMessageId && message.id !== assistantMessageId))
+        setInput(text)
+        setNotice('Response stopped. Your draft is back in the composer; resend it to confirm the saved reply.')
+      } else {
+        if (userMessageId) updateMessage(userMessageId, { deliveryState: 'unconfirmed' })
+        updateMessage(assistantMessageId, {
+          content: `I couldn’t confirm that reply was saved. ${error.message || 'Check your connection, then try again.'}`,
+          streaming: false, error: true, retryText: text, clientMessageId: requestId, userMessageId,
+        })
+      }
     } finally {
+      if (activeRequestRef.current?.controller === controller) activeRequestRef.current = null
       setLoading(false)
+      setStreamStarted(false)
       if (keepComposerFocused) setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 
+  const stopGeneration = () => activeRequestRef.current?.controller.abort()
+
   const handleNewConversation = () => {
     if (loading || historyLoading) return
+    if (input.trim() && messages.length === 0) {
+      setNotice('Send or clear your draft before starting a new conversation.')
+      return
+    }
+    if (messages.some(message => message.deliveryState === 'unconfirmed' || message.error)) {
+      setNotice('Retry the unconfirmed reply before starting another conversation so your draft stays available.')
+      return
+    }
     const hasMessages = messages.some(message => message.role === 'user')
     if (hasMessages && !window.confirm('Start a new conversation? Your current chat will stay in your history.')) return
+    draftsBySessionRef.current[sessionId] = input
     createNewSession()
     interacted.current = false
     setInput('')
+    setHistoryOpen(false)
     setNotice('A new conversation is ready.')
     setHistoryError('')
   }
@@ -300,7 +401,33 @@ export default function Chat() {
   const retryMessage = (failedMessage) => {
     if (!failedMessage?.retryText || loading) return
     replaceMessages(messages.filter(message => message.id !== failedMessage.id))
-    handleSend(failedMessage.retryText, { appendUser: false })
+    handleSend(failedMessage.retryText, {
+      appendUser: false,
+      clientMessageId: failedMessage.clientMessageId,
+      userMessageId: failedMessage.userMessageId,
+    })
+  }
+
+  const selectConversation = row => {
+    if (loading || historyLoading || !row?.session_id) return
+    if (input.trim() && messages.length === 0) {
+      setNotice('Send or clear your draft before switching conversations.')
+      return
+    }
+    if (messages.some(message => message.deliveryState === 'unconfirmed' || message.error)) {
+      setNotice('Retry the unconfirmed reply before switching conversations so your draft stays available.')
+      return
+    }
+    if (row.session_id === sessionId) {
+      setHistoryOpen(false)
+      return
+    }
+    draftsBySessionRef.current[sessionId] = input
+    setInput(draftsBySessionRef.current[row.session_id] || '')
+    setSessionId(row.session_id)
+    pendingDraftRef.current = null
+    setHistoryOpen(false)
+    setNotice('Saved conversation opened.')
   }
 
   const saveMemory = async (event) => {
@@ -354,12 +481,27 @@ export default function Chat() {
         </div>
         <div className="chat-header-actions">
           <div className="chat-secure-label"><ShieldCheck size={14} /><span>Account-protected</span></div>
+          <button ref={historyTriggerRef} type="button" className="chat-history-trigger" onClick={() => setHistoryOpen(value => !value)} aria-label="Saved conversations" aria-expanded={historyOpen} aria-controls={historyOpen ? 'chat-history-panel' : undefined}><HistoryIcon size={15} /><span>History</span></button>
           <button ref={memoryTriggerRef} type="button" className="chat-memory-trigger" onClick={() => { setMemoryOpen(true); setMemoryError(''); setMemorySuccess('') }} aria-label="Manage saved memories" title="Manage saved memories"><Bookmark size={15} /><span>Memory</span></button>
           <button type="button" className="chat-icon-button chat-new-button" onClick={handleNewConversation} disabled={loading || historyLoading} aria-label="Start a new conversation" title="New conversation"><Plus size={18} /></button>
         </div>
       </header>
 
-      <div ref={scrollAreaRef} className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}>
+      {historyOpen && <section id="chat-history-panel" className="chat-history-panel" aria-label="Saved conversations">
+        <div className="chat-history-panel-heading"><div><strong>Saved conversations</strong><span>Your recent chats on this account</span></div><button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close conversation history"><X size={16} /></button></div>
+        {conversationListLoading ? <div className="chat-history-panel-state" role="status"><LoaderCircle size={15} className="spin-icon" /> Loading your history…</div>
+          : conversationListError ? <div className="chat-history-panel-state is-error" role="alert"><span>{conversationListError}</span><button type="button" onClick={() => setHistoryReload(value => value + 1)}>Retry</button></div>
+            : conversationRows.length ? <div className="chat-history-list">{conversationRows.map(row => <button key={row.session_id} type="button" className={`chat-history-item${row.session_id === sessionId ? ' is-active' : ''}`} onClick={() => selectConversation(row)} disabled={loading || historyLoading} aria-current={row.session_id === sessionId ? 'page' : undefined}>
+              <span className="chat-history-item-main"><strong>{String(row.title || 'Conversation').trim() || 'Conversation'}</strong><small>{formatConversationDate(row.started_at, user?.timezone)} · {Number(row.message_count || 0)} messages</small></span>
+              {row.session_id === sessionId && <span className="chat-history-current">Current</span>}
+            </button>)}</div>
+              : <div className="chat-history-panel-state">No saved conversations yet. Messages appear here after MindCare confirms they’re saved.</div>}
+      </section>}
+
+      <div ref={scrollAreaRef} onScroll={event => {
+        const area = event.currentTarget
+        stickToBottomRef.current = area.scrollHeight - area.scrollTop - area.clientHeight < 140
+      }} className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}>
         <div className="chat-content-column">
           {historyLoading && messages.length === 0 ? (
             <div className="chat-history-loading" role="status"><span className="chat-loading-line wide" /><span className="chat-loading-line" /><span className="chat-loading-line short" /><span className="chat-loading-caption"><LoaderCircle size={15} className="spin-icon" /> Restoring your conversation…</span></div>
@@ -384,8 +526,9 @@ export default function Chat() {
             </div>
           ) : (
             <div className="chat-message-list" role="log" aria-label="Conversation messages" aria-relevant="additions">
-              {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} onRetry={retryMessage} />)}
-              {loading && <TypingIndicator />}
+              {messages.filter(msg => !msg.streaming || msg.content).map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} onRetry={retryMessage} />)}
+              {loading && !streamStarted && <TypingIndicator />}
+              {loading && streamStarted && <span className="sr-only" role="status">MindCare is writing a response.</span>}
             </div>
           )}
         </div>
@@ -405,14 +548,12 @@ export default function Chat() {
             enterKeyHint="send"
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend() }
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); handleSend() }
             }}
             placeholder="Write what’s on your mind…"
             disabled={loading || historyLoading}
           />
-          <button type="submit" disabled={!input.trim() || loading || historyLoading} aria-label="Send message" className="chat-send-button">
-            {loading ? <LoaderCircle size={18} className="spin-icon" /> : <Send size={17} />}
-          </button>
+          {loading ? <button type="button" onClick={stopGeneration} aria-label="Stop response" title="Stop response" className="chat-send-button chat-stop-button"><Square size={15} fill="currentColor" /></button> : <button type="submit" disabled={!input.trim() || historyLoading} aria-label="Send message" className="chat-send-button"><Send size={17} /></button>}
         </form>
         <div className="chat-composer-meta">
           <span><kbd>Enter</kbd> to send <span className="meta-separator">·</span> <kbd>Shift + Enter</kbd> for a new line</span>

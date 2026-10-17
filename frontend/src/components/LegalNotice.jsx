@@ -31,7 +31,7 @@ export default function LegalNotice({ view, onClose }) {
         ) : (
           <div className="legal-dialog-copy">
             <p><strong>Support, not healthcare.</strong> MindCare provides AI-assisted reflection and is not a diagnostic tool, therapist, healthcare provider, or emergency service.</p>
-            <p><strong>Screening limits.</strong> PHQ-9 and GAD-7 are self-reflection screening questionnaires. Their results and visual-expression estimates do not establish a diagnosis or reliably determine a person's emotional state.</p>
+            <p><strong>Screening limits.</strong> The PHQ-9 is a self-reflection screening questionnaire. Its result and any visual-expression estimate do not establish a diagnosis or reliably determine a person's emotional state.</p>
             <p><strong>AI can be wrong.</strong> Responses and resources may be incomplete or inaccurate. Use your judgement and consult a qualified professional for health concerns.</p>
             <p><strong>Urgent support in India.</strong> Tele-MANAS provides nationwide mental-health support at <a href="tel:14416">14416</a>. If you are in immediate danger, contact local emergency services or someone who can help you now.</p>
             <p><strong>Development version.</strong> The app’s availability depends on its configured backend and third-party services. Do not rely on it as the only way to obtain support.</p>

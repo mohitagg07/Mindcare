@@ -238,7 +238,8 @@ DO $$ begin
   end if;
 end $$;
 
-alter table storage.objects enable row level security;
+-- Supabase manages storage.objects and enables RLS on this platform table.
+-- App projects should add bucket policies below, not change the table owner or RLS mode.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('profile-avatars', 'profile-avatars', false, 3145728, array['image/webp']::text[])
 on conflict (id) do update set public = false, file_size_limit = 3145728, allowed_mime_types = array['image/webp']::text[];

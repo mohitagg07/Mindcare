@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle, ClipboardList, RotateCcw, ShieldCheck } from 'lucide-react'
-import { getQuestions, submitPHQ9, submitGAD7 } from '../api/client'
+import { v4 as uuidv4 } from 'uuid'
+import { getQuestions, submitPHQ9 } from '../api/client'
 import { useApp } from '../context/AppContext'
 
 const FALLBACK_OPTIONS = [
@@ -80,6 +81,7 @@ function AssessmentForm({ title, questions, options, onSubmit, result, color, on
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [done, setDone] = useState(Boolean(result))
+  const submissionAttempt = useRef({ answers: '', id: uuidv4() })
   const answered = answers.filter(answer => answer !== null).length
   const allAnswered = questions.length > 0 && answered === questions.length
   const lastAnswer = title === 'PHQ-9' && step === 8 ? answers[8] : null
@@ -98,7 +100,9 @@ function AssessmentForm({ title, questions, options, onSubmit, result, color, on
     }
     setSaving(true)
     try {
-      await onSubmit(answers)
+      const answerKey = JSON.stringify(answers)
+      if (submissionAttempt.current.answers !== answerKey) submissionAttempt.current = { answers: answerKey, id: uuidv4() }
+      await onSubmit(answers, submissionAttempt.current.id)
       setDone(true)
     } catch (error) {
       setSubmitError(error.message || 'Your screening could not be saved. Please check your connection and try again.')
@@ -112,6 +116,7 @@ function AssessmentForm({ title, questions, options, onSubmit, result, color, on
     setStep(0)
     setDone(false)
     setSubmitError('')
+    submissionAttempt.current = { answers: '', id: uuidv4() }
     onReset?.()
   }
 
@@ -178,9 +183,8 @@ function AssessmentForm({ title, questions, options, onSubmit, result, color, on
 }
 
 export default function Assessment() {
-  const { setPhq9Result, setGad7Result, phq9Result, gad7Result } = useApp()
-  const [tab, setTab] = useState('phq9')
-  const [questions, setQuestions] = useState({ phq9: [], gad7: [], options: FALLBACK_OPTIONS })
+  const { setPhq9Result, phq9Result } = useApp()
+  const [questions, setQuestions] = useState({ phq9: [], options: FALLBACK_OPTIONS })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [reload, setReload] = useState(0)
@@ -191,42 +195,39 @@ export default function Assessment() {
     setLoadError('')
     getQuestions()
       .then(({ data }) => {
-        if (!Array.isArray(data?.phq9) || data.phq9.length !== 9 || !Array.isArray(data?.gad7) || data.gad7.length !== 7) {
+        if (!Array.isArray(data?.phq9) || data.phq9.length !== 9) {
           throw new Error('The screening questions are unavailable right now.')
         }
-        if (active) setQuestions({ phq9: data.phq9, gad7: data.gad7, options: Array.isArray(data.options) && data.options.length === 4 ? data.options : FALLBACK_OPTIONS })
+        if (active) setQuestions({ phq9: data.phq9, options: Array.isArray(data.options) && data.options.length === 4 ? data.options : FALLBACK_OPTIONS })
       })
       .catch(error => { if (active) setLoadError(error.message || 'The screening questions could not be loaded. Please try again.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [reload])
 
-  const tabs = [
-    { id: 'phq9', label: 'PHQ-9', detail: 'Depression symptoms', color: '#3f8060', items: questions.phq9, result: phq9Result, submit: async answers => { const { data } = await submitPHQ9(answers); setPhq9Result(data) }, reset: () => setPhq9Result(null) },
-    { id: 'gad7', label: 'GAD-7', detail: 'Anxiety symptoms', color: '#527da1', items: questions.gad7, result: gad7Result, submit: async answers => { const { data } = await submitGAD7(answers); setGad7Result(data) }, reset: () => setGad7Result(null) },
-  ]
-  const current = tabs.find(item => item.id === tab)
+  const current = {
+    label: 'PHQ-9',
+    color: '#3f8060',
+    items: questions.phq9,
+    result: phq9Result,
+    submit: async (answers, submissionId) => { const { data } = await submitPHQ9(answers, submissionId); setPhq9Result(data) },
+    reset: () => setPhq9Result(null),
+  }
 
   return (
     <main className="assessment-page">
       <div className="assessment-content">
         <header className="assessment-header">
           <span className="assessment-header-icon"><ClipboardList size={20} /></span>
-          <div><p className="assessment-kicker">A PRIVATE CHECK-IN</p><h1>Wellbeing screening</h1><p>Answer at your own pace. There are no right or wrong answers.</p></div>
+          <div><p className="assessment-kicker">A PRIVATE CHECK-IN</p><h1>Wellbeing screening</h1><p>The PHQ-9 asks about mood and interest over the past two weeks. It can support reflection, but it cannot diagnose a condition. Take your time and change any answer before you submit.</p></div>
         </header>
 
-        <div className="assessment-instrument-switch" role="group" aria-label="Choose a screening questionnaire">
-          {tabs.map(item => <button key={item.id} type="button" onClick={() => setTab(item.id)} className={tab === item.id ? 'is-active' : ''} aria-pressed={tab === item.id}>
-            <strong>{item.label}</strong><span>{item.detail}</span>{item.result && <CheckCircle size={15} aria-label="Completed" />}
-          </button>)}
-        </div>
-
         <section className="assessment-card" aria-labelledby="assessment-card-title">
-          <div className="assessment-card-heading"><div><p className="assessment-kicker">{current.label}</p><h2 id="assessment-card-title">{current.id === 'phq9' ? 'Patient Health Questionnaire' : 'Generalized Anxiety Disorder questionnaire'}</h2><p>Think about the past two weeks. You can move back to change any answer.</p></div></div>
-          {loading ? <div className="assessment-loading" role="status"><span className="assessment-spinner" />Loading the questions…</div> : loadError ? <div className="assessment-load-error" role="alert"><p>{loadError}</p><button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <AssessmentForm key={tab} title={current.label} questions={current.items} options={questions.options} onSubmit={current.submit} result={current.result} color={current.color} onReset={current.reset} />}
+          <div className="assessment-card-heading"><div><p className="assessment-kicker">{current.label}</p><h2 id="assessment-card-title">Patient Health Questionnaire</h2><p>Think about the past two weeks. You can move back to change any answer.</p></div></div>
+          {loading ? <div className="assessment-loading" role="status"><span className="assessment-spinner" />Loading the questions…</div> : loadError ? <div className="assessment-load-error" role="alert"><p>{loadError}</p><button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <AssessmentForm title={current.label} questions={current.items} options={questions.options} onSubmit={current.submit} result={current.result} color={current.color} onReset={current.reset} />}
         </section>
 
-        <p className="assessment-footer-note">These questionnaires are screening tools, not medical diagnoses. Your responses are saved privately to your account so you can review them later.</p>
+        <p className="assessment-footer-note">The PHQ-9 is a screening tool, not a medical diagnosis. Your responses are saved privately to your account so you can review your score in Insights later.</p>
       </div>
     </main>
   )

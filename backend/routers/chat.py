@@ -4,9 +4,11 @@ import time
 import uuid
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
+from middleware.rate_limit import rate_limit
 
 logger = logging.getLogger("mindcare.chat")
 router = APIRouter()
@@ -14,6 +16,7 @@ router = APIRouter()
 
 class ChatRequest(BaseModel):
     session_id: Optional[uuid.UUID] = None
+    client_message_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
     phq9_score: Optional[int] = Field(default=None, ge=0, le=27)
@@ -21,6 +24,16 @@ class ChatRequest(BaseModel):
     phq9_crisis_flag: bool = False
     gad7_score: Optional[int] = Field(default=None, ge=0, le=21)
     gad7_category: Optional[str] = Field(default="Not assessed", max_length=30)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def trim_message(cls, value):
+        if not isinstance(value, str):
+            raise ValueError("Message must be text")
+        value = value.strip()
+        if not value:
+            raise ValueError("Enter a message before sending")
+        return value
 
 
 class MemoryCreateRequest(BaseModel):
@@ -39,7 +52,8 @@ class MemoryCreateRequest(BaseModel):
 
 def build_message_rows(session_id: str, user_id: str, request: ChatRequest, response: str,
                        risk_score: float, latency_ms: int, crisis_detected: bool,
-                       rag_used: bool) -> list[dict]:
+                       rag_used: bool, risk: dict | None = None,
+                       tools_used: list[str] | None = None) -> list[dict]:
     """Return a PostgREST bulk-insert payload with an identical column set per row.
 
     PostgREST rejects bulk inserts when each JSON object has different keys. Optional
@@ -47,10 +61,16 @@ def build_message_rows(session_id: str, user_id: str, request: ChatRequest, resp
     """
     shared = {"conversation_id": session_id, "user_id": user_id}
     user_metadata = {"phq9_score": request.phq9_score, "gad7_score": request.gad7_score}
-    assistant_metadata = {"crisis_detected": crisis_detected, "rag_used": rag_used}
+    assistant_metadata = {
+        "crisis_detected": crisis_detected, "rag_used": rag_used,
+        "risk": risk, "tools_used": tools_used or [],
+    }
+    user_idempotency_key = uuid.uuid5(uuid.NAMESPACE_URL, f"mindcare:{session_id}:{request.client_message_id}:user")
+    assistant_idempotency_key = uuid.uuid5(uuid.NAMESPACE_URL, f"mindcare:{session_id}:{request.client_message_id}:assistant")
     return [
         {
             **shared,
+            "id": str(user_idempotency_key),
             "role": "user",
             "content": request.message,
             "emotion": request.emotion,
@@ -60,6 +80,7 @@ def build_message_rows(session_id: str, user_id: str, request: ChatRequest, resp
         },
         {
             **shared,
+            "id": str(assistant_idempotency_key),
             "role": "assistant",
             "content": response,
             "emotion": None,
@@ -122,135 +143,192 @@ async def remove_saved_memory(memory_id: uuid.UUID, current_user=Depends(get_cur
         raise HTTPException(status_code=503, detail="The memory could not be removed. Check the user_memories migration and retry.") from exc
 
 
-@router.post("/chat")
+def _message_id(session_id: str, request_id: uuid.UUID, role: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"mindcare:{session_id}:{request_id}:{role}"))
+
+
+async def _get_saved_reply(session_id: str, user_id: str, token: str, request: ChatRequest):
+    rows, _ = await select_rows("messages", token, {
+        "select": "content,risk_score,metadata", "id": f"eq.{_message_id(session_id, request.client_message_id, 'assistant')}",
+        "conversation_id": f"eq.{session_id}", "user_id": f"eq.{user_id}", "role": "eq.assistant", "limit": "1",
+    })
+    if not rows:
+        return None
+    row = rows[0]
+    metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+    return {
+        "session_id": session_id,
+        "response": row.get("content", ""),
+        "risk": metadata.get("risk") or {"risk_score": row.get("risk_score"), "risk_level": "unknown", "is_clinical_assessment": False},
+        "recommendations": [],
+        "crisis_detected": bool(metadata.get("crisis_detected")),
+        "rag_used": bool(metadata.get("rag_used")),
+        "agent_tools_used": metadata.get("tools_used") or [],
+        "trajectory": {},
+        "replayed": True,
+    }
+
+
+async def _prepare_chat(request: ChatRequest, current_user: dict, started: float) -> dict:
+    uid, token = current_user["id"], current_user["access_token"]
+    session_id = str(request.session_id or uuid.uuid4())
+    from services.fusion_service import compute_risk_score, check_crisis, CRISIS_RESOURCES
+    from services.trajectory_service import get_trajectory_summary
+
+    conversations, _ = await select_rows("conversations", token, {
+        "select": "id,user_id,title,phq9_score,phq9_category,gad7_score,gad7_category",
+        "id": f"eq.{session_id}", "user_id": f"eq.{uid}", "limit": "1",
+    })
+    if not conversations:
+        try:
+            await insert_row("conversations", token, {
+                "id": session_id, "user_id": uid, "title": request.message[:80].strip() or "New conversation",
+            })
+        except SupabaseError as exc:
+            if exc.status_code == 409:
+                raise HTTPException(status_code=404, detail="Session not found") from exc
+            raise
+
+    profile_context = None
+    try:
+        profile_rows, _ = await select_rows("profiles", token, {
+            "select": "display_name,username,pronouns,date_of_birth,timezone,support_style,focus_areas", "id": f"eq.{uid}", "limit": "1",
+        })
+        profile_context = profile_rows[0] if profile_rows else None
+        if profile_context is not None:
+            from services.profile_service import calculate_age
+            dob = profile_context.pop("date_of_birth", None)
+            timezone_name = profile_context.pop("timezone", None)
+            profile_context["age"] = calculate_age(dob, timezone_name=timezone_name)
+    except SupabaseError as profile_exc:
+        logger.info("Profile personalization unavailable for this request (HTTP %s)", profile_exc.status_code)
+
+    try:
+        memory_rows, _ = await select_rows("user_memories", token, {
+            "select": "content", "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "20",
+        })
+        if profile_context is None:
+            profile_context = {}
+        profile_context["saved_memories"] = [
+            {"content": row.get("content", "")}
+            for row in memory_rows
+            if isinstance(row.get("content"), str) and row.get("content", "").strip()
+        ]
+    except SupabaseError as memory_exc:
+        logger.info("Saved memories unavailable for this request (HTTP %s)", memory_exc.status_code)
+
+    history_rows, _ = await select_rows("messages", token, {
+        "select": "role,content,created_at", "conversation_id": f"eq.{session_id}",
+        "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "12",
+    })
+    history = [{"role": row["role"], "content": row["content"]} for row in reversed(history_rows)]
+    keyword_crisis, _ = check_crisis(request.message)
+    crisis_detected = keyword_crisis or request.phq9_crisis_flag
+    risk = compute_risk_score(
+        phq9_score=request.phq9_score, gad7_score=request.gad7_score,
+        emotion=request.emotion or "unavailable", text=request.message,
+    )
+    try:
+        trajectory = await get_trajectory_summary(uid, token)
+    except SupabaseError as trajectory_exc:
+        logger.info("Prior trajectory unavailable for this chat (HTTP %s)", trajectory_exc.status_code)
+        trajectory = {"trend": "unknown", "points": 0, "recent": []}
+    context = {
+        "emotion": request.emotion, "risk_level": risk["risk_level"], "risk_score": risk["risk_score"],
+        "phq9_score": request.phq9_score, "phq9_category": request.phq9_category,
+        "phq9_crisis_flag": request.phq9_crisis_flag,
+        "trajectory": trajectory,
+    }
+    crisis_response = (
+        "I'm really sorry you're experiencing this. Your safety matters. If you may act on these thoughts "
+        "or are in immediate danger, contact local emergency services now and, if possible, stay with a trusted person. "
+        "You can also reach out to a verified crisis-support service.\n\n" + CRISIS_RESOURCES
+    )
+    return {
+        "uid": uid, "token": token, "session_id": session_id, "started": started,
+        "history": history, "profile_context": profile_context, "risk": risk,
+        "crisis_detected": crisis_detected, "crisis_response": crisis_response,
+        "context": context, "trajectory_before": trajectory,
+    }
+
+
+async def _persist_chat_reply(request: ChatRequest, prepared: dict, response: str, tools_used: list[str]) -> dict:
+    from services.fusion_service import get_recommendations
+    from services.trajectory_service import update_trajectory
+
+    uid, token, session_id = prepared["uid"], prepared["token"], prepared["session_id"]
+    risk = prepared["risk"]
+    rag_used = "search_wellness_knowledge" in tools_used
+    recommendations = get_recommendations(risk["risk_level"], request.emotion or "neutral")
+    await update_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"}, {
+        "phq9_score": request.phq9_score, "phq9_category": request.phq9_category,
+        "phq9_crisis_flag": request.phq9_crisis_flag,
+        "gad7_score": request.gad7_score, "gad7_category": request.gad7_category,
+        "risk_level": risk["risk_level"], "risk_score": risk["risk_score"],
+        "trajectory_trend": prepared["trajectory_before"].get("trend"),
+    })
+    latency_ms = int((time.perf_counter() - prepared["started"]) * 1000)
+    message_rows = build_message_rows(
+        session_id=session_id, user_id=uid, request=request, response=response,
+        risk_score=risk["risk_score"], latency_ms=latency_ms,
+        crisis_detected=prepared["crisis_detected"], rag_used=rag_used,
+        risk=risk, tools_used=tools_used,
+    )
+    try:
+        inserted = await insert_row("messages", token, message_rows)
+        if not inserted:
+            raise SupabaseError(503, "The conversation was not saved")
+    except SupabaseError as exc:
+        if exc.status_code != 409:
+            raise
+        replay = await _get_saved_reply(session_id, uid, token, request)
+        if replay:
+            return replay
+        raise
+
+    # Supporting insight writes are best-effort and happen only after the
+    # user/assistant message pair is durably saved.
+    try:
+        trajectory_update = await update_trajectory(uid, token, request.message, risk["risk_score"])
+        trajectory_summary = trajectory_update["summary"]
+        trajectory_result = {"trend": trajectory_summary.get("trend"), "trigger": trajectory_update.get("trigger")}
+        await update_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"}, {
+            "trajectory_trend": trajectory_summary.get("trend"),
+        })
+    except SupabaseError as trajectory_exc:
+        logger.info("Trajectory update unavailable for this chat (HTTP %s)", trajectory_exc.status_code)
+        trajectory_result = {"trend": prepared["trajectory_before"].get("trend"), "trigger": None}
+
+    logger.info("Chat request completed latency_ms=%d", latency_ms)
+    return {
+        "session_id": session_id, "response": response, "risk": risk,
+        "recommendations": recommendations, "crisis_detected": prepared["crisis_detected"],
+        "rag_used": rag_used, "agent_tools_used": tools_used,
+        "trajectory": trajectory_result,
+    }
+
+
+@router.post("/chat", dependencies=[Depends(rate_limit("chat", 20, 60))])
 async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)):
-    uid = current_user["id"]
-    token = current_user["access_token"]
+    uid, token = current_user["id"], current_user["access_token"]
     session_id = str(req.session_id or uuid.uuid4())
+    req.session_id = uuid.UUID(session_id)
     started = time.perf_counter()
     try:
-        from services.fusion_service import compute_risk_score, get_recommendations, check_crisis, CRISIS_RESOURCES
-        from services.trajectory_service import update_trajectory
-
-        # Only select rows belonging to the authenticated user; RLS independently enforces this.
-        conversations, _ = await select_rows("conversations", token, {
-            "select": "id,user_id,title,phq9_score,phq9_category,gad7_score,gad7_category",
-            "id": f"eq.{session_id}", "user_id": f"eq.{uid}", "limit": "1",
-        })
-        existing = bool(conversations)
-        if not existing:
-            try:
-                await insert_row("conversations", token, {
-                    "id": session_id, "user_id": uid, "title": req.message[:80].strip() or "New conversation",
-                })
-            except SupabaseError as exc:
-                # A UUID collision with a different user's conversation must never be exposed.
-                if exc.status_code == 409:
-                    raise HTTPException(status_code=404, detail="Session not found") from exc
-                raise
-
-        # Load only the current user's explicit personalization preferences. This is optional:
-        # chat should remain available while a profile migration is pending or a profile row is absent.
-        profile_context = None
-        try:
-            profile_rows, _ = await select_rows("profiles", token, {
-                "select": "display_name,username,pronouns,date_of_birth,timezone,support_style,focus_areas", "id": f"eq.{uid}", "limit": "1",
-            })
-            profile_context = profile_rows[0] if profile_rows else None
-            if profile_context is not None:
-                # Do not send the raw birth date to the language model; send only a derived age.
-                from services.profile_service import calculate_age
-                dob = profile_context.pop("date_of_birth", None)
-                timezone_name = profile_context.pop("timezone", None)
-                profile_context["age"] = calculate_age(dob, timezone_name=timezone_name)
-        except SupabaseError as profile_exc:
-            logger.info("Profile personalization unavailable for this request (HTTP %s)", profile_exc.status_code)
-
-        # Only notes the user explicitly saved in Memory settings cross conversation boundaries.
-        # Missing migration or database trouble must not make ordinary chat unavailable.
-        try:
-            memory_rows, _ = await select_rows("user_memories", token, {
-                "select": "content", "user_id": f"eq.{uid}",
-                "order": "created_at.desc", "limit": "20",
-            })
-            if profile_context is None:
-                profile_context = {}
-            profile_context["saved_memories"] = [
-                {"content": row.get("content", "")}
-                for row in memory_rows
-                if isinstance(row.get("content"), str) and row.get("content", "").strip()
-            ]
-        except SupabaseError as memory_exc:
-            logger.info("Saved memories unavailable for this request (HTTP %s)", memory_exc.status_code)
-
-        # Durable conversation context; no worker-local memory is required.
-        history_rows, _ = await select_rows("messages", token, {
-            "select": "role,content,created_at", "conversation_id": f"eq.{session_id}",
-            "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "12",
-        })
-        history = [{"role": row["role"], "content": row["content"]} for row in reversed(history_rows)]
-
-        keyword_crisis, _ = check_crisis(req.message)
-        crisis_detected = keyword_crisis or req.phq9_crisis_flag
-        risk = compute_risk_score(
-            phq9_score=req.phq9_score, gad7_score=req.gad7_score,
-            emotion=req.emotion or "unavailable", text=req.message,
-        )
-        traj_update = await update_trajectory(uid, token, req.message, risk["risk_score"])
-        traj_summary = traj_update["summary"]
-        context = {
-            "emotion": req.emotion, "risk_level": risk["risk_level"], "risk_score": risk["risk_score"],
-            "phq9_score": req.phq9_score, "phq9_category": req.phq9_category,
-            "phq9_crisis_flag": req.phq9_crisis_flag,
-            "gad7_score": req.gad7_score, "gad7_category": req.gad7_category,
-            "trajectory": {**traj_summary, "delta": traj_update["delta"], "trigger": traj_update["trigger"]},
-        }
-        rag_context = None
-        tools_used: list[str] = []
-
-        # A crisis signal bypasses generative text so immediate safety guidance is never delayed by the LLM.
-        if crisis_detected:
-            response = (
-                "I'm really sorry you're experiencing this. Your safety matters. If you may act on these thoughts "
-                "or are in immediate danger, contact local emergency services now and, if possible, stay with a trusted person. "
-                "You can also reach out to a verified crisis-support service.\n\n" + CRISIS_RESOURCES
-            )
+        replay = await _get_saved_reply(session_id, uid, token, req)
+        if replay:
+            return replay
+        prepared = await _prepare_chat(req, current_user, started)
+        if prepared["crisis_detected"]:
+            response, tools_used = prepared["crisis_response"], []
         else:
-            # Only import/init the LLM path after the deterministic crisis safety gate.
             from services.groq_service import generate_reply
-            generated = await generate_reply(req.message, context=context, history=history, rag_context=rag_context, profile=profile_context)
-            response = generated["response"]
-            tools_used = generated.get("tools_used", [])
-        latency_ms = int((time.perf_counter() - started) * 1000)
-
-        recommendations = get_recommendations(risk["risk_level"], req.emotion or "neutral")
-        message_rows = build_message_rows(
-            session_id=session_id,
-            user_id=uid,
-            request=req,
-            response=response,
-            risk_score=risk["risk_score"],
-            latency_ms=latency_ms,
-            crisis_detected=crisis_detected,
-            rag_used=("search_wellness_knowledge" in tools_used or rag_context is not None),
-        )
-        await insert_row("messages", token, message_rows)
-        await update_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"}, {
-            "phq9_score": req.phq9_score, "phq9_category": req.phq9_category,
-            "phq9_crisis_flag": req.phq9_crisis_flag,
-            "gad7_score": req.gad7_score, "gad7_category": req.gad7_category,
-            "risk_level": risk["risk_level"], "risk_score": risk["risk_score"],
-            "trajectory_trend": traj_summary.get("trend"),
-        })
-
-        logger.info("Chat request completed latency_ms=%d", latency_ms)
-        return {
-            "session_id": session_id, "response": response, "risk": risk,
-            "recommendations": recommendations, "crisis_detected": crisis_detected,
-            "rag_used": "search_wellness_knowledge" in tools_used or rag_context is not None,
-            "agent_tools_used": tools_used,
-            "trajectory": {"trend": traj_summary.get("trend"), "trigger": traj_update.get("trigger")},
-        }
+            generated = await generate_reply(
+                req.message, context=prepared["context"], history=prepared["history"],
+                rag_context=None, profile=prepared["profile_context"],
+            )
+            response, tools_used = generated["response"], generated.get("tools_used", [])
+        return await _persist_chat_reply(req, prepared, response, tools_used)
     except HTTPException:
         raise
     except SupabaseError as exc:
@@ -260,6 +338,62 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
     except Exception as exc:
         logger.error("Chat request failed (%s)", type(exc).__name__)
         raise HTTPException(status_code=503, detail="MindCare could not complete this response. Please try again shortly.") from exc
+
+
+def _sse(data: dict) -> str:
+    import json
+    return f"data: {json.dumps(data, ensure_ascii=False, separators=(',', ':'))}\n\n"
+
+
+@router.post("/chat/stream", dependencies=[Depends(rate_limit("chat", 20, 60))])
+async def chat_stream_endpoint(req: ChatRequest, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    session_id = str(req.session_id or uuid.uuid4())
+    req.session_id = uuid.UUID(session_id)
+    started = time.perf_counter()
+
+    async def events():
+        try:
+            replay = await _get_saved_reply(session_id, uid, token, req)
+            if replay:
+                if replay["response"]:
+                    yield _sse({"type": "delta", "text": replay["response"]})
+                yield _sse({"type": "done", "data": replay})
+                return
+            prepared = await _prepare_chat(req, current_user, started)
+            tools_used: list[str] = []
+            if prepared["crisis_detected"]:
+                response = prepared["crisis_response"]
+                yield _sse({"type": "delta", "text": response})
+            else:
+                from services.groq_service import stream_reply
+                response = ""
+                async for item in stream_reply(
+                    req.message, context=prepared["context"], history=prepared["history"],
+                    rag_context=None, profile=prepared["profile_context"],
+                ):
+                    if item["type"] == "delta":
+                        response += item["text"]
+                        yield _sse(item)
+                    elif item["type"] == "meta":
+                        response = item["response"]
+                        tools_used = item.get("tools_used", [])
+            if not response.strip():
+                raise RuntimeError("The assistant returned an empty response")
+            result = await _persist_chat_reply(req, prepared, response, tools_used)
+            yield _sse({"type": "done", "data": result})
+        except HTTPException as exc:
+            yield _sse({"type": "error", "message": exc.detail})
+        except SupabaseError as exc:
+            logger.warning("Supabase operation failed during streamed chat (HTTP %s)", exc.status_code)
+            yield _sse({"type": "error", "message": "MindCare could not save or retrieve your conversation. Please retry."})
+        except Exception as exc:
+            logger.error("Streamed chat request failed (%s)", type(exc).__name__)
+            yield _sse({"type": "error", "message": "MindCare could not complete this response. Please try again shortly."})
+
+    return StreamingResponse(events(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no",
+    })
 
 
 @router.get("/chat/history/{session_id}")
@@ -272,7 +406,7 @@ async def get_history_endpoint(session_id: uuid.UUID, current_user=Depends(get_c
     if not owned:
         raise HTTPException(status_code=404, detail="Session not found")
     messages, _ = await select_rows("messages", token, {
-        "select": "role,content,created_at,emotion,risk_score,metadata",
+        "select": "id,role,content,created_at,emotion,risk_score,metadata",
         "conversation_id": f"eq.{session_id}", "user_id": f"eq.{uid}",
         "order": "created_at.asc", "limit": "500",
     })

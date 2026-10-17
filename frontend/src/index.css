@@ -31,6 +31,15 @@
   --blue-dim: rgba(59,110,168,0.08);
 }
 
+.app-render-error { display: grid; min-height: 100dvh; place-items: center; padding: 24px; background: #f7f6f0; }
+.app-render-error-card { width: min(500px,100%); padding: clamp(24px,5vw,42px); border: 1px solid #e2e8de; border-radius: 22px; background: #fffefa; box-shadow: 0 16px 48px rgba(38,66,46,.08); }
+.app-render-error-icon { display: grid; width: 44px; height: 44px; place-items: center; margin-bottom: 18px; border: 1px solid #ead9cd; border-radius: 14px; color: #9c6951; background: #fff5eb; }
+.app-render-error-kicker { margin: 0 0 8px; color: #89958a; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
+.app-render-error-card h1 { margin: 0; color: #304a39; font: 500 clamp(25px,5vw,34px)/1.2 'Fraunces','Lora',Georgia,serif; }
+.app-render-error-card > p:not(.app-render-error-kicker) { margin: 12px 0 22px; color: #6f8073; font-size: 13px; line-height: 1.7; }
+.app-render-error-card button { display: inline-flex; min-height: 42px; align-items: center; gap: 8px; padding: 0 14px; border: 0; border-radius: 11px; color: #fff; background: #357554; font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; }
+.app-render-error-card button:focus-visible { outline: 3px solid rgba(63,128,96,.38); outline-offset: 3px; }
+
 @layer base {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -1211,7 +1220,7 @@ button, input, textarea { font-family: inherit; }
   .chat-composer-meta { font-size: 9.5px; }
 }
 
-/* Accessible, steady step flow for the PHQ-9 and GAD-7 check-ins. */
+/* Accessible, steady step flow for the PHQ-9 check-in. */
 .assessment-page { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 30px 16px 38px; background: radial-gradient(ellipse at 90% 0%,rgba(224,239,217,.48),transparent 32%),#f7f8f3; }
 .assessment-content { width: min(760px,100%); margin: 0 auto; }
 .assessment-header { display: flex; align-items: center; gap: 14px; margin: 0 0 20px; }

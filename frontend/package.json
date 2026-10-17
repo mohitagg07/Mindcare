@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --port 5173",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/sse.test.js"
   },
   "dependencies": {
     "lucide-react": "^0.363.0",

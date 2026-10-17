@@ -29,7 +29,8 @@ on conflict (id) do update set
   file_size_limit = 3145728,
   allowed_mime_types = array['image/webp']::text[];
 
-alter table storage.objects enable row level security;
+-- Supabase manages storage.objects and enables RLS on this platform table.
+-- App projects should add bucket policies below, not change the table owner or RLS mode.
 drop policy if exists "mindcare_avatar_select_own" on storage.objects;
 create policy "mindcare_avatar_select_own" on storage.objects
   for select to authenticated

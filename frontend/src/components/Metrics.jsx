@@ -78,7 +78,7 @@ function AssessmentScoreCard({ instrument, maxScore, rows, timeZone }) {
         </ResponsiveContainer>
       </div> : <div className="insights-score-single">A trend line will appear after another completed check-in.</div>}
       <details className="insights-score-history"><summary>View saved scores</summary><ol>{[...rows].reverse().slice(0, 10).map(row => <li key={row.id || `${row.completed_at}-${row.score}`}><time dateTime={row.completed_at}>{formatDateInProfileZone(row.completed_at, timeZone, false)}</time><strong>{row.score} / {maxScore}</strong></li>)}</ol></details>
-    </> : <EmptyChart title="No screening scores yet" description="Your saved PHQ-9 or GAD-7 results will appear here when you complete a screening." />}
+    </> : <EmptyChart title="No screening scores yet" description="Your saved PHQ-9 results will appear here when you complete a screening." />}
   </article>
 }
 
@@ -118,7 +118,7 @@ export default function Metrics() {
     if (trajectoryResult.status === 'fulfilled') { setTrajectory(trajectoryResult.value.data); successful += 1 }
     if (assessmentsResult.status === 'fulfilled') {
       const history = assessmentsResult.value.data?.history
-      setAssessments(Array.isArray(history) ? history.filter(row => ['PHQ-9', 'GAD-7'].includes(row.instrument) && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
+      setAssessments(Array.isArray(history) ? history.filter(row => row.instrument === 'PHQ-9' && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
       successful += 1
     }
     if (successful === 0) {
@@ -154,7 +154,6 @@ export default function Metrics() {
     const chronological = valid.sort((a, b) => new Date(a.completed_at) - new Date(b.completed_at))
     return {
       phq9: chronological.filter(row => row.instrument === 'PHQ-9' && Number(row.max_score) === 27),
-      gad7: chronological.filter(row => row.instrument === 'GAD-7' && Number(row.max_score) === 21),
     }
   }, [assessments])
 
@@ -217,7 +216,7 @@ export default function Metrics() {
             {sessions.length ? <div className="insights-session-list">{sessions.slice(0, 5).map(session => (
               <div className="insights-session-row" key={session.session_id}>
                 <span className="insights-session-dot" />
-                <div><strong>{session.phq9_score != null || session.gad7_score != null ? 'Self-reflection session' : 'Supportive conversation'}</strong><small>{session.started_at ? new Date(session.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Saved activity'} · {session.message_count || 0} messages</small></div>
+                <div><strong>{session.phq9_score != null ? 'Self-reflection session' : 'Supportive conversation'}</strong><small>{session.started_at ? new Date(session.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Saved activity'} · {session.message_count || 0} messages</small></div>
               </div>
             ))}</div> : <EmptyChart title="No saved conversations yet" description="Your recent activity will appear here when you start a conversation." />}
             <button className="insights-inline-action insights-full-action" type="button" onClick={() => setActivePage('chat')}>Go to conversation <ChevronRight size={14} /></button>
@@ -228,8 +227,7 @@ export default function Metrics() {
           <div className="insights-section-heading"><div><span>SCREENINGS</span><h2 id="insights-assessment-heading">Your check-ins over time</h2></div><span>Scores are not diagnoses</span></div>
           {assessments.length ? <div className="insights-assessment-grid">
             <AssessmentScoreCard instrument="PHQ-9" maxScore={27} rows={assessmentRows.phq9} timeZone={user?.timezone} />
-            <AssessmentScoreCard instrument="GAD-7" maxScore={21} rows={assessmentRows.gad7} timeZone={user?.timezone} />
-          </div> : <article className="insights-chart-card"><EmptyChart title="No screening history yet" description="When you complete a PHQ-9 or GAD-7 screening, your saved scores and changes will appear here." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Start a check-in <ArrowUpRight size={14} /></button>} /></article>}
+          </div> : <article className="insights-chart-card"><EmptyChart title="No screening history yet" description="When you complete a PHQ-9 screening, your saved scores and changes will appear here." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Start a check-in <ArrowUpRight size={14} /></button>} /></article>}
           <p className="insights-chart-disclaimer">A score change is only one piece of information and may not reflect how you feel overall. The chart appears after at least two saved results for the same screening.</p>
         </section>
 
