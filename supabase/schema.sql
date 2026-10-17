@@ -140,6 +140,14 @@ end $$;
 create index if not exists messages_conversation_created_idx on public.messages(conversation_id, created_at asc);
 create index if not exists messages_user_created_idx on public.messages(user_id, created_at desc);
 
+create table if not exists public.user_memories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  content text not null check (char_length(content) between 2 and 240),
+  created_at timestamptz not null default now()
+);
+create index if not exists user_memories_owner_created_idx on public.user_memories(user_id, created_at desc);
+
 create table if not exists public.assessments (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -175,6 +183,7 @@ for each row execute procedure public.set_updated_at();
 alter table public.profiles enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
+alter table public.user_memories enable row level security;
 alter table public.assessments enable row level security;
 alter table public.trajectories enable row level security;
 
@@ -230,6 +239,13 @@ create policy "messages_insert_own" on public.messages for insert to authenticat
 drop policy if exists "messages_delete_own" on public.messages;
 create policy "messages_delete_own" on public.messages for delete to authenticated using (user_id = auth.uid() and exists (select 1 from public.conversations c where c.id = conversation_id and c.user_id = auth.uid()));
 
+drop policy if exists "user_memories_select_own" on public.user_memories;
+create policy "user_memories_select_own" on public.user_memories for select to authenticated using (user_id = auth.uid());
+drop policy if exists "user_memories_insert_own" on public.user_memories;
+create policy "user_memories_insert_own" on public.user_memories for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "user_memories_delete_own" on public.user_memories;
+create policy "user_memories_delete_own" on public.user_memories for delete to authenticated using (user_id = auth.uid());
+
 drop policy if exists "assessments_select_own" on public.assessments;
 create policy "assessments_select_own" on public.assessments for select to authenticated using (user_id = auth.uid());
 drop policy if exists "assessments_insert_own" on public.assessments;
@@ -252,6 +268,7 @@ grant select on public.profiles to anon;
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.conversations to authenticated;
 grant select, insert, update, delete on public.messages to authenticated;
+grant select, insert, delete on public.user_memories to authenticated;
 grant select, insert, delete on public.assessments to authenticated;
 grant select, insert on public.trajectories to authenticated;
 grant usage on schema public to anon, authenticated;

@@ -60,3 +60,15 @@ def test_fresh_schema_includes_dob_and_private_avatar_storage():
     assert "avatar_path text" in schema
     assert 'create policy "mindcare_avatar_select_own"' in schema
     assert 'create policy "mindcare_avatar_insert_own"' in schema
+
+
+def test_user_memories_table_is_private_and_owner_scoped():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261017_user_memories.sql")
+    assert "create table if not exists public.user_memories" in schema
+    assert "alter table public.user_memories enable row level security" in schema
+    for policy in ("user_memories_select_own", "user_memories_insert_own", "user_memories_delete_own"):
+        assert f'create policy "{policy}"' in schema
+        assert f'create policy "{policy}"' in migration
+    assert "grant select, insert, delete on public.user_memories to authenticated" in schema
+    assert "grant select, insert, delete on public.user_memories to authenticated" in migration

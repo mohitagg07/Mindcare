@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
-  Send, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
+  Send, Plus, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
   ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle,
+  Bookmark, X, RefreshCw, Check, Trash2,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { sendChat, clearSession, getChatHistory } from '../api/client.js'
+import { sendChat, getChatHistory, getChatMemories, createChatMemory, deleteChatMemory } from '../api/client.js'
+import './ChatPhase3.css'
 
 const QUICK_STARTS = [
   { icon: Wind, title: 'I feel anxious', text: "I've been feeling anxious lately", tint: 'sage' },
@@ -24,7 +26,7 @@ function formatTime(value, timeZone) {
   }
 }
 
-function Message({ msg, timeZone }) {
+function Message({ msg, timeZone, onRetry }) {
   const isUser = msg.role === 'user'
   return (
     <article className={`chat-message ${isUser ? 'from-user' : 'from-assistant'}`}>
@@ -47,6 +49,9 @@ function Message({ msg, timeZone }) {
             }}>{msg.content}</ReactMarkdown>
           )}
         </div>
+        {msg.error && msg.retryText && (
+          <div className="chat-retry-row"><span>The reply failed. You can retry this message.</span><button type="button" onClick={() => onRetry?.(msg)}><RefreshCw size={13} /> Try again</button></div>
+        )}
         {!isUser && (msg.rag_used || msg.crisis_detected || msg.metadata?.crisis_detected) && (
           <div className="chat-message-badges">
             {(msg.rag_used || msg.metadata?.rag_used) && <span><BookOpen size={12} /> Knowledge resources used</span>}
@@ -81,7 +86,18 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState('')
+  const [historyReload, setHistoryReload] = useState(0)
   const [notice, setNotice] = useState('')
+  const [memoryOpen, setMemoryOpen] = useState(false)
+  const [memories, setMemories] = useState([])
+  const [memoryLoading, setMemoryLoading] = useState(false)
+  const [memoryReload, setMemoryReload] = useState(0)
+  const [memoryText, setMemoryText] = useState('')
+  const [memorySaving, setMemorySaving] = useState(false)
+  const [memoryDeletingId, setMemoryDeletingId] = useState('')
+  const [memoryError, setMemoryError] = useState('')
+  const [memorySuccess, setMemorySuccess] = useState('')
   const scrollAreaRef = useRef(null)
   const inputRef = useRef(null)
   const interacted = useRef(false)
@@ -90,11 +106,12 @@ export default function Chat() {
     let alive = true
     interacted.current = false
     setNotice('')
+    setHistoryError('')
     replaceMessages([])
     setHistoryLoading(true)
     getChatHistory(sessionId)
       .then(({ data }) => {
-        if (!alive || interacted.current || !Array.isArray(data.history) || data.history.length === 0) return
+        if (!alive || interacted.current || !Array.isArray(data.history)) return
         const restored = data.history.map((row, index) => ({
           id: row.id || `${sessionId}-${index}`,
           role: row.role,
@@ -107,12 +124,32 @@ export default function Chat() {
         replaceMessages(restored)
       })
       .catch((error) => {
-        // A 404 means this is a new session or its prior session was removed.
-        if (alive && error.status !== 404) setNotice('Could not restore the previous conversation. You can still start a new message.')
+        // A 404 is the normal response for a fresh session with no persisted messages.
+        if (alive && error.status !== 404) setHistoryError(error.message || 'Your conversation could not be restored.')
       })
       .finally(() => { if (alive) setHistoryLoading(false) })
     return () => { alive = false }
-  }, [sessionId, replaceMessages])
+  }, [sessionId, historyReload, replaceMessages])
+
+  useEffect(() => {
+    if (!memoryOpen) return
+    let alive = true
+    setMemoryLoading(true)
+    setMemoryError('')
+    setMemories([])
+    getChatMemories()
+      .then(({ data }) => { if (alive) setMemories(Array.isArray(data.memories) ? data.memories : []) })
+      .catch((error) => { if (alive) setMemoryError(error.message || 'Saved memories could not be loaded.') })
+      .finally(() => { if (alive) setMemoryLoading(false) })
+    return () => { alive = false }
+  }, [memoryOpen, memoryReload])
+
+  useEffect(() => {
+    if (!memoryOpen) return
+    const closeOnEscape = event => { if (event.key === 'Escape') setMemoryOpen(false) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [memoryOpen])
 
   useEffect(() => {
     if (!pendingChatPrompt) return
@@ -129,13 +166,15 @@ export default function Chat() {
     area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
 
-  const handleSend = async (providedText) => {
+  const handleSend = async (providedText, { appendUser = true } = {}) => {
     const text = (providedText ?? input).trim()
     if (!text || loading) return
     interacted.current = true
     setNotice('')
-    setInput('')
-    addMessage({ role: 'user', content: text })
+    if (appendUser) {
+      setInput('')
+      addMessage({ role: 'user', content: text })
+    }
     setLoading(true)
     try {
       const { data } = await sendChat({
@@ -157,23 +196,66 @@ export default function Chat() {
       if (data.recommendations) setRecommendations(data.recommendations)
       if (data.trajectory) setTrajectory(data.trajectory)
     } catch (error) {
-      addMessage({ role: 'assistant', content: `I couldn't complete that message just now. ${error.message || 'Please check your connection and try again.'}`, error: true })
+      addMessage({ role: 'assistant', content: `I couldn’t complete that reply. ${error.message || 'Check your connection, then try again.'}`, error: true, retryText: text })
     } finally {
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 
-  const handleNewConversation = async () => {
-    if (loading) return
-    const confirmed = window.confirm('Start a new conversation? This removes the current conversation from your account history.')
-    if (!confirmed) return
-    try { await clearSession(sessionId) } catch { /* A fresh local session can still begin if no saved session exists. */ }
+  const handleNewConversation = () => {
+    if (loading || historyLoading) return
+    const hasMessages = messages.some(message => message.role === 'user')
+    if (hasMessages && !window.confirm('Start a new conversation? Your current chat will stay in your history.')) return
     createNewSession()
     interacted.current = false
     setInput('')
     setNotice('A new conversation is ready.')
+    setHistoryError('')
   }
+
+  const retryMessage = (failedMessage) => {
+    if (!failedMessage?.retryText || loading) return
+    replaceMessages(messages.filter(message => message.id !== failedMessage.id))
+    handleSend(failedMessage.retryText, { appendUser: false })
+  }
+
+  const saveMemory = async (event) => {
+    event.preventDefault()
+    const content = memoryText.trim().replace(/\s+/g, ' ')
+    if (content.length < 2 || memorySaving || memories.length >= 20) return
+    setMemoryError('')
+    setMemorySuccess('')
+    setMemorySaving(true)
+    try {
+      const { data } = await createChatMemory(content)
+      if (data.memory) setMemories(current => [data.memory, ...current].slice(0, 20))
+      setMemoryText('')
+      setMemorySuccess('Saved. MindCare can use this note in future conversations.')
+    } catch (error) {
+      setMemoryError(error.message || 'This note could not be saved. Please retry.')
+    } finally {
+      setMemorySaving(false)
+    }
+  }
+
+  const removeMemory = async (memory) => {
+    if (!memory?.id || memoryDeletingId) return
+    if (!window.confirm('Remove this saved memory? MindCare will no longer use it in future replies.')) return
+    setMemoryError('')
+    setMemorySuccess('')
+    setMemoryDeletingId(memory.id)
+    try {
+      await deleteChatMemory(memory.id)
+      setMemories(current => current.filter(item => item.id !== memory.id))
+      setMemorySuccess('Memory removed.')
+    } catch (error) {
+      setMemoryError(error.message || 'This memory could not be removed. Please retry.')
+    } finally {
+      setMemoryDeletingId('')
+    }
+  }
+
 
   const isNewChat = messages.length <= 1
 
@@ -189,13 +271,18 @@ export default function Chat() {
         </div>
         <div className="chat-header-actions">
           <div className="chat-secure-label"><ShieldCheck size={14} /><span>Account-protected</span></div>
-          <button type="button" className="chat-icon-button" onClick={handleNewConversation} disabled={loading} aria-label="Start a new conversation" title="New conversation"><Trash2 size={17} /></button>
+          <button type="button" className="chat-memory-trigger" onClick={() => { setMemoryOpen(true); setMemoryError(''); setMemorySuccess('') }} aria-label="Manage saved memories" title="Manage saved memories"><Bookmark size={15} /><span>Memory</span></button>
+          <button type="button" className="chat-icon-button chat-new-button" onClick={handleNewConversation} disabled={loading || historyLoading} aria-label="Start a new conversation" title="New conversation"><Plus size={18} /></button>
         </div>
       </header>
 
       <div ref={scrollAreaRef} className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}>
         <div className="chat-content-column">
-          {isNewChat ? (
+          {historyLoading && messages.length === 0 ? (
+            <div className="chat-history-loading" role="status"><span className="chat-loading-line wide" /><span className="chat-loading-line" /><span className="chat-loading-line short" /><span className="chat-loading-caption"><LoaderCircle size={15} className="spin-icon" /> Restoring your conversation…</span></div>
+          ) : historyError ? (
+            <div className="chat-history-error" role="alert"><span className="chat-state-icon"><AlertCircle size={19} /></span><h2>Couldn’t restore this chat</h2><p>{historyError}</p><div><button type="button" className="chat-memory-primary" onClick={() => setHistoryReload(value => value + 1)}><RefreshCw size={14} /> Try again</button><button type="button" className="chat-memory-secondary" onClick={handleNewConversation}>Start a new chat</button></div></div>
+          ) : isNewChat ? (
             <div className="chat-welcome animate-fade-up">
               <div className="chat-welcome-orb"><Heart size={28} strokeWidth={1.6} /></div>
               <p className="chat-welcome-kicker"><Sparkles size={13} /> START HERE</p>
@@ -214,7 +301,7 @@ export default function Chat() {
             </div>
           ) : (
             <div className="chat-message-list">
-              {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} />)}
+              {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} onRetry={retryMessage} />)}
               {loading && <TypingIndicator />}
             </div>
           )}
@@ -252,6 +339,41 @@ export default function Chat() {
           <span className="chat-care-note">Not a substitute for professional care</span>
         </div>
       </footer>
+
+      {memoryOpen && (
+        <div className="chat-memory-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setMemoryOpen(false) }}>
+          <section className="chat-memory-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-memory-title">
+            <header className="chat-memory-heading">
+              <div className="chat-memory-heading-icon"><Bookmark size={19} /></div>
+              <div><span>YOUR CONTROL</span><h2 id="chat-memory-title">Saved memories</h2><p>Only notes you choose to save carry into future chats.</p></div>
+              <button type="button" className="chat-memory-close" onClick={() => setMemoryOpen(false)} aria-label="Close memory manager"><X size={18} /></button>
+            </header>
+
+            <div className="chat-memory-privacy"><ShieldCheck size={16} /><p><strong>Nothing is saved automatically.</strong> These notes are sent to MindCare’s AI when you chat. Don’t save passwords, payment details, or anything you don’t want used for personalization.</p></div>
+
+            {memoryError && <div className="chat-memory-alert" role="alert"><AlertCircle size={15} /><span>{memoryError}</span><button type="button" onClick={() => setMemoryReload(value => value + 1)} title="Retry loading saved memories"><RefreshCw size={13} /></button></div>}
+            {memorySuccess && <p className="chat-memory-success" role="status"><Check size={14} />{memorySuccess}</p>}
+
+            <form className="chat-memory-form" onSubmit={saveMemory}>
+              <label htmlFor="chat-memory-note">Add a note <span>{memoryText.trim().length}/240</span></label>
+              <textarea id="chat-memory-note" value={memoryText} onChange={event => setMemoryText(event.target.value.slice(0, 240))} maxLength={240} rows={3} placeholder="For example: I prefer short, practical suggestions." disabled={memoryLoading || memorySaving || memories.length >= 20} />
+              <div className="chat-memory-form-footer"><small>{memories.length}/20 saved</small><button type="submit" className="chat-memory-primary" disabled={memoryLoading || memorySaving || memories.length >= 20 || memoryText.trim().length < 2}>{memorySaving ? <LoaderCircle size={14} className="spin-icon" /> : <Plus size={14} />}{memorySaving ? 'Saving…' : 'Save memory'}</button></div>
+            </form>
+
+            <div className="chat-memory-list-heading"><strong>Your notes</strong><span>{memories.length === 1 ? '1 memory' : `${memories.length} memories`}</span></div>
+            {memoryLoading ? (
+              <div className="chat-memory-loading" role="status"><LoaderCircle size={17} className="spin-icon" /> Loading your saved notes…</div>
+            ) : memories.length ? (
+              <div className="chat-memory-list">
+                {memories.map(memory => <article className="chat-memory-item" key={memory.id}><p>{memory.content}</p><button type="button" onClick={() => removeMemory(memory)} disabled={Boolean(memoryDeletingId)} aria-label={`Remove memory: ${memory.content}`} title="Remove memory">{memoryDeletingId === memory.id ? <LoaderCircle size={15} className="spin-icon" /> : <Trash2 size={15} />}</button></article>)}
+              </div>
+            ) : !memoryError ? (
+              <div className="chat-memory-empty"><span><Bookmark size={18} /></span><strong>No saved memories yet</strong><p>Add a small preference or detail that would help MindCare in another conversation.</p></div>
+            ) : null}
+            <footer className="chat-memory-footer"><span>You can remove a note at any time.</span><button type="button" className="chat-memory-secondary" onClick={() => setMemoryOpen(false)}>Done</button></footer>
+          </section>
+        </div>
+      )}
     </section>
   )
 }

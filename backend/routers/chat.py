@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
 
@@ -21,6 +21,20 @@ class ChatRequest(BaseModel):
     phq9_crisis_flag: bool = False
     gad7_score: Optional[int] = Field(default=None, ge=0, le=21)
     gad7_category: Optional[str] = Field(default="Not assessed", max_length=30)
+
+
+class MemoryCreateRequest(BaseModel):
+    content: str = Field(min_length=2, max_length=240)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def normalize_content(cls, value):
+        if not isinstance(value, str):
+            raise ValueError("Memory must be text")
+        value = " ".join(value.split())
+        if len(value) < 2 or not any(char.isalnum() for char in value):
+            raise ValueError("Enter a short memory with at least one letter or number")
+        return value
 
 
 def build_message_rows(session_id: str, user_id: str, request: ChatRequest, response: str,
@@ -54,6 +68,58 @@ def build_message_rows(session_id: str, user_id: str, request: ChatRequest, resp
             "metadata": assistant_metadata,
         },
     ]
+
+
+@router.get("/chat/memories")
+async def list_saved_memories(current_user=Depends(get_current_user)):
+    """Return only the signed-in user's explicitly saved memory notes."""
+    uid, token = current_user["id"], current_user["access_token"]
+    try:
+        rows, _ = await select_rows("user_memories", token, {
+            "select": "id,content,created_at", "user_id": f"eq.{uid}",
+            "order": "created_at.desc", "limit": "20",
+        })
+        return {"memories": rows, "limit": 20}
+    except SupabaseError as exc:
+        logger.warning("Saved memory list failed (%s)", exc.message)
+        raise HTTPException(status_code=503, detail="Saved memory is not configured yet. Run supabase/migrations/20261017_user_memories.sql in the Supabase SQL Editor, then retry.") from exc
+
+
+@router.post("/chat/memories", status_code=201)
+async def create_saved_memory(req: MemoryCreateRequest, current_user=Depends(get_current_user)):
+    """Persist a note only after the user explicitly submits it."""
+    uid, token = current_user["id"], current_user["access_token"]
+    try:
+        existing, _ = await select_rows("user_memories", token, {
+            "select": "id", "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "20",
+        })
+        if len(existing) >= 20:
+            raise HTTPException(status_code=409, detail="You can save up to 20 memories. Remove one before adding another.")
+        rows = await insert_row("user_memories", token, {"user_id": uid, "content": req.content})
+        if not rows:
+            raise HTTPException(status_code=503, detail="The memory could not be saved. Please retry.")
+        return {"memory": rows[0], "limit": 20}
+    except HTTPException:
+        raise
+    except SupabaseError as exc:
+        logger.warning("Saved memory creation failed (%s)", exc.message)
+        raise HTTPException(status_code=503, detail="Saved memory is not configured or could not be saved. Check the user_memories migration and try again.") from exc
+
+
+@router.delete("/chat/memories/{memory_id}")
+async def remove_saved_memory(memory_id: uuid.UUID, current_user=Depends(get_current_user)):
+    """Delete a note by both its ID and owner ID; RLS is an additional boundary."""
+    uid, token = current_user["id"], current_user["access_token"]
+    try:
+        rows = await delete_rows("user_memories", token, {"id": f"eq.{memory_id}", "user_id": f"eq.{uid}"})
+        if not rows:
+            raise HTTPException(status_code=404, detail="Saved memory not found")
+        return {"deleted": True, "id": str(memory_id)}
+    except HTTPException:
+        raise
+    except SupabaseError as exc:
+        logger.warning("Saved memory deletion failed (%s)", exc.message)
+        raise HTTPException(status_code=503, detail="The memory could not be removed. Check the user_memories migration and retry.") from exc
 
 
 @router.post("/chat")
@@ -99,6 +165,23 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
                 profile_context["age"] = calculate_age(dob, timezone_name=timezone_name)
         except SupabaseError as profile_exc:
             logger.info("Profile personalization unavailable for this request (%s)", profile_exc.message)
+
+        # Only notes the user explicitly saved in Memory settings cross conversation boundaries.
+        # Missing migration or database trouble must not make ordinary chat unavailable.
+        try:
+            memory_rows, _ = await select_rows("user_memories", token, {
+                "select": "content", "user_id": f"eq.{uid}",
+                "order": "created_at.desc", "limit": "20",
+            })
+            if profile_context is None:
+                profile_context = {}
+            profile_context["saved_memories"] = [
+                {"content": row.get("content", "")}
+                for row in memory_rows
+                if isinstance(row.get("content"), str) and row.get("content", "").strip()
+            ]
+        except SupabaseError as memory_exc:
+            logger.info("Saved memories unavailable for this request (%s)", memory_exc.message)
 
         # Durable conversation context; no worker-local memory is required.
         history_rows, _ = await select_rows("messages", token, {
