@@ -1,18 +1,18 @@
 import { useState } from 'react'
 import LegalNotice from '../components/LegalNotice'
 import {
+  ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
   ChevronDown,
   ClipboardList,
-  Feather,
   Heart,
   LifeBuoy,
   LockKeyhole,
   Menu,
   MessageCircle,
-  Sparkles,
+  ScanFace,
   X,
 } from 'lucide-react'
 import './Landing.css'
@@ -21,25 +21,25 @@ const features = [
   {
     number: '01',
     icon: MessageCircle,
-    title: 'Talk it through',
-    description: 'Start with what is actually on your mind. You do not need the perfect words or a clear answer before you begin.',
-    note: 'Open conversation',
-    tone: 'sage',
+    label: 'Open conversation',
+    title: 'Put it into words.',
+    body: 'Talk about what is going on, even if you are not sure where to begin. You can start with one sentence.',
+    tone: 'green',
   },
   {
     number: '02',
     icon: ClipboardList,
-    title: 'Reflect with structure',
-    description: 'PHQ-9 and GAD-7 self-screeners can help you review symptoms in a more structured way. Results are not a diagnosis.',
-    note: 'Optional check-ins',
-    tone: 'clay',
+    label: 'Optional self-check',
+    title: 'Make space to reflect.',
+    body: 'PHQ-9 and GAD-7 questionnaires offer a structured way to review symptoms. They are screening tools, not a diagnosis.',
+    tone: 'amber',
   },
   {
     number: '03',
-    icon: Feather,
-    title: 'Keep the choice yours',
-    description: 'An optional image-based tool estimates visible facial expression only. It cannot tell you what you truly feel or diagnose a condition.',
-    note: 'Optional visual estimate',
+    icon: ScanFace,
+    label: 'Optional visual tool',
+    title: 'Keep things in perspective.',
+    body: 'The image tool estimates a visible facial expression only. It cannot know how you feel inside or assess your mental health.',
     tone: 'blue',
   },
 ]
@@ -47,82 +47,98 @@ const features = [
 const steps = [
   {
     number: '01',
-    title: 'Bring one thing',
-    body: 'A hard day, a repeating thought, or a feeling you have not quite found words for yet.',
+    title: 'Start where you are',
+    body: 'Bring a worry, a difficult moment, or a thought you keep circling back to. You do not need to explain it perfectly.',
   },
   {
     number: '02',
-    title: 'Make room to reflect',
-    body: 'Use a conversation or a structured check-in to look at what you are experiencing, at your own pace.',
+    title: 'Explore it at your pace',
+    body: 'Use a conversation or an optional self-check to organise your thoughts without rushing toward an answer.',
   },
   {
     number: '03',
     title: 'Choose what feels useful',
-    body: 'Take away a thought, a question to explore, or a small next step that you decide is right for you.',
+    body: 'Take what helps, question what does not, and decide for yourself what you want to do next.',
   },
 ]
 
 const faqs = [
   {
     question: 'Is MindCare a therapist or a diagnostic tool?',
-    answer: 'No. MindCare offers AI-assisted conversation and self-reflection tools. It does not diagnose conditions, provide therapy, or replace a qualified mental-health professional.',
+    answer: 'No. MindCare offers AI-assisted conversation and self-reflection tools. It does not diagnose conditions or replace a qualified mental-health professional.',
   },
   {
     question: 'Do I have to use the camera?',
-    answer: 'No. The visual-expression tool is optional. A facial expression is not a reliable measure of someone’s internal emotional state, and you can use MindCare without it.',
+    answer: 'No. The visual-expression tool is optional. A facial expression is not a reliable measure of a person’s internal emotional state, and you can use MindCare without it.',
   },
   {
     question: 'Are my conversations saved?',
-    answer: 'Conversations are associated with your account so the app can provide conversation history. Do not share passwords or details you do not need to share. Review the privacy notice for more information about data handling.',
+    answer: 'Conversations are associated with your account so the app can provide conversation history. Avoid sharing passwords or details you do not need to share, and review the privacy notice for details about data handling.',
   },
   {
-    question: 'What if I need more support than an app can provide?',
-    answer: 'Consider contacting someone you trust or a qualified professional. If you may be in immediate danger, contact local emergency services. In India, Tele-MANAS can be reached at 14416.',
+    question: 'What if I need more support?',
+    answer: 'Consider reaching out to someone you trust or a qualified professional. If you may be in immediate danger, contact local emergency services. In India, Tele-MANAS is available at 14416.',
   },
 ]
 
 function Brand({ light = false }) {
   return (
-    <a className={light ? 'mc-landing-brand mc-landing-brand-light' : 'mc-landing-brand'} href="#top" aria-label="MindCare home">
-      <span className="mc-landing-brand-symbol">
+    <a className={`mc-landing-brand${light ? ' is-light' : ''}`} href="#top" aria-label="MindCare home">
+      <span className="mc-brand-mark">
         <img src="/brand/mindcare-mark.png" alt="" />
       </span>
-      <span className="mc-landing-brand-word">MindCare<span>.</span></span>
+      <span className="mc-brand-name">mindcare<span>.</span></span>
     </a>
   )
 }
 
-function ReflectionIllustration() {
+function ProductPreview() {
   return (
-    <div className="mc-hero-art" aria-label="An illustration of a thought being gently unpacked">
-      <div className="mc-art-orbit mc-art-orbit-one" />
-      <div className="mc-art-orbit mc-art-orbit-two" />
-      <div className="mc-art-caption"><span className="mc-caption-dot" /> A little space to think</div>
-      <div className="mc-art-paper mc-art-paper-back">
-        <span className="mc-paper-kicker">A NOTE TO SELF</span>
-        <span className="mc-paper-line mc-paper-line-long" />
-        <span className="mc-paper-line mc-paper-line-mid" />
-        <span className="mc-paper-line mc-paper-line-short" />
-        <span className="mc-paper-stamp">take<br />your time</span>
-      </div>
-      <div className="mc-art-paper mc-art-paper-front">
-        <div className="mc-note-topline"><span>RIGHT NOW</span><span className="mc-note-spark"><Sparkles size={14} /></span></div>
-        <p className="mc-note-question">“I have a lot on my mind. I don’t know where to start.”</p>
-        <div className="mc-note-divider" />
-        <div className="mc-note-response">
-          <span className="mc-note-heart"><Heart size={13} /></span>
-          <p>That’s okay. We can take it one piece at a time.</p>
+    <div className="mc-preview-scene" aria-label="Illustrative preview of a MindCare conversation">
+      <div className="mc-preview-caption"><span /> A look inside MindCare</div>
+      <article className="mc-product-window">
+        <header className="mc-product-topbar">
+          <div className="mc-product-mark"><Heart size={16} strokeWidth={1.8} /></div>
+          <div className="mc-product-branding">
+            <strong>MindCare</strong>
+            <span>A space to reflect</span>
+          </div>
+          <span className="mc-preview-label">Illustrative preview</span>
+        </header>
+        <div className="mc-product-context">
+          <span className="mc-product-kicker">A CONVERSATION</span>
+          <span className="mc-context-dot" />
+          <span className="mc-product-context-text">Start with one thing</span>
         </div>
-        <div className="mc-note-followup">What feels heaviest today?</div>
-      </div>
-      <div className="mc-art-side-note">
-        <span className="mc-side-note-mark"><Feather size={15} /></span>
-        <span>There is no perfect<br />way to begin.</span>
-      </div>
-      <svg className="mc-art-doodle" viewBox="0 0 150 62" fill="none" aria-hidden="true">
-        <path d="M5 48C26 4 53 4 64 28C73 49 88 55 103 32C115 13 131 8 145 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M119 8L145 15L135 35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+        <div className="mc-product-messages">
+          <div className="mc-product-date">An example exchange</div>
+          <div className="mc-product-message user-message">
+            <span className="mc-message-author">YOU</span>
+            <p>“I feel like everyone else is moving ahead and I’m stuck.”</p>
+          </div>
+          <div className="mc-product-message assistant-message">
+            <div className="mc-assistant-avatar"><Heart size={13} /></div>
+            <div>
+              <span className="mc-message-author">MINDCARE</span>
+              <p>That can be a hard feeling to sit with. What part of it has been weighing on you most?</p>
+            </div>
+          </div>
+          <div className="mc-product-prompt-label">A few ways to continue</div>
+          <div className="mc-product-prompt-list" aria-label="Illustrative conversation prompts">
+            <span>Work or studies</span>
+            <span>Comparing myself</span>
+            <span>Not sure yet</span>
+          </div>
+        </div>
+        <div className="mc-product-compose" aria-label="Illustrative message composer">
+          <span>Write a thought…</span>
+          <span className="mc-compose-send"><ArrowRight size={14} /></span>
+        </div>
+        <footer className="mc-product-footnote">
+          <LockKeyhole size={12} />
+          <span>Illustrative preview · not a real conversation</span>
+        </footer>
+      </article>
     </div>
   )
 }
@@ -130,14 +146,15 @@ function ReflectionIllustration() {
 function FeatureCard({ feature }) {
   const Icon = feature.icon
   return (
-    <article className={'mc-feature-card mc-tone-' + feature.tone}>
-      <div className="mc-feature-meta">
-        <span>{feature.number} / 03</span>
+    <article className={`mc-feature-card mc-feature-${feature.tone}`}>
+      <div className="mc-feature-topline">
+        <span className="mc-feature-number">{feature.number}</span>
         <span className="mc-feature-icon"><Icon size={19} strokeWidth={1.7} /></span>
       </div>
+      <p className="mc-feature-label">{feature.label}</p>
       <h3>{feature.title}</h3>
-      <p>{feature.description}</p>
-      <div className="mc-feature-foot"><span className="mc-feature-marker" />{feature.note}</div>
+      <p className="mc-feature-body">{feature.body}</p>
+      <span className="mc-feature-end" aria-hidden="true"><ArrowUpRight size={16} /></span>
     </article>
   )
 }
@@ -150,7 +167,6 @@ export default function Landing({ onGetStarted, onSignIn }) {
 
   return (
     <div className="mc-landing" id="top">
-      <div className="mc-grain" aria-hidden="true" />
       <header className="mc-site-header">
         <div className="mc-header-inner">
           <Brand />
@@ -161,15 +177,15 @@ export default function Landing({ onGetStarted, onSignIn }) {
             aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
             onClick={() => setMobileNavOpen(value => !value)}
           >
-            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
           </button>
-          <nav className={'mc-site-nav' + (mobileNavOpen ? ' is-open' : '')} aria-label="Main navigation">
-            <a href="#approach" onClick={closeMobileNav}>Our approach</a>
+          <nav className={`mc-site-nav${mobileNavOpen ? ' is-open' : ''}`} aria-label="Main navigation">
+            <a href="#approach" onClick={closeMobileNav}>What you can do</a>
             <a href="#how-it-works" onClick={closeMobileNav}>How it works</a>
             <a href="#care-and-privacy" onClick={closeMobileNav}>Care & privacy</a>
             <button type="button" className="mc-nav-signin" onClick={() => { closeMobileNav(); handleSignIn?.() }}>Sign in</button>
             <button type="button" className="mc-button mc-button-dark mc-nav-cta" onClick={() => { closeMobileNav(); onGetStarted?.() }}>
-              Start here <ArrowUpRight size={16} />
+              Get started <ArrowRight size={15} />
             </button>
           </nav>
         </div>
@@ -179,40 +195,40 @@ export default function Landing({ onGetStarted, onSignIn }) {
         <section className="mc-hero" aria-labelledby="mc-hero-title">
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
-              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A calmer place to begin</p>
-              <h1 id="mc-hero-title">You don’t have to make sense of <em>everything</em> at once.</h1>
-              <p className="mc-hero-lede">Some days, it is enough to start with one thing. MindCare gives you space to talk, reflect, and explore what might help next — without needing to have the answers first.</p>
+              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A little room to think</p>
+              <h1 id="mc-hero-title">Start with what’s on your <em>mind.</em></h1>
+              <p className="mc-hero-lede">Some things are easier to face when you can put them into words. MindCare gives you a place to talk, reflect, and explore what might help next — at your own pace.</p>
               <div className="mc-hero-actions">
                 <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>
-                  Start with a conversation <ArrowRight size={17} />
+                  Start a conversation <ArrowRight size={17} />
                 </button>
-                <a className="mc-text-link" href="#how-it-works">Get to know MindCare <span aria-hidden="true">↓</span></a>
+                <a className="mc-text-link" href="#how-it-works">Get to know MindCare <ArrowDownRight size={16} /></a>
               </div>
               <div className="mc-hero-note">
                 <span className="mc-note-lock"><LockKeyhole size={15} /></span>
                 <p><strong>Your pace. Your choice.</strong><br />Share only what you feel comfortable sharing.</p>
               </div>
             </div>
-            <ReflectionIllustration />
+            <ProductPreview />
           </div>
-          <div className="mc-hero-bottomline"><span>FOR THE DAYS THAT FEEL A LITTLE TOO FULL</span><span className="mc-bottomline-rule" /><span>TAKE IT ONE STEP AT A TIME</span></div>
+          <div className="mc-hero-bottomline"><span>NO PERFECT WORDS REQUIRED</span><span className="mc-bottomline-rule" /><span>ONE THING AT A TIME</span></div>
         </section>
 
         <section className="mc-intro-strip" aria-label="MindCare principles">
           <div className="mc-intro-inner">
             <div><span className="mc-intro-number">01</span><span>Start with your own words</span></div>
             <div><span className="mc-intro-number">02</span><span>Reflect at your own pace</span></div>
-            <div><span className="mc-intro-number">03</span><span>Stay in control of your choices</span></div>
+            <div><span className="mc-intro-number">03</span><span>Choose what feels useful</span></div>
           </div>
         </section>
 
         <section className="mc-section mc-approach" id="approach" aria-labelledby="mc-approach-title">
           <div className="mc-section-heading">
             <div>
-              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />What you can use</p>
-              <h2 id="mc-approach-title">Support that meets you <em>where you are.</em></h2>
+              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />Ways to begin</p>
+              <h2 id="mc-approach-title">A few tools. <em>No pressure to use them all.</em></h2>
             </div>
-            <p className="mc-section-aside">No grand promises. Just a few thoughtful ways to pause, put things into words, and reflect.</p>
+            <p className="mc-section-aside">Use what feels helpful today. Leave the rest for another time.</p>
           </div>
           <div className="mc-feature-grid">
             {features.map(feature => <FeatureCard key={feature.number} feature={feature} />)}
@@ -222,9 +238,9 @@ export default function Landing({ onGetStarted, onSignIn }) {
         <section className="mc-how-section" id="how-it-works" aria-labelledby="mc-how-title">
           <div className="mc-how-inner">
             <div className="mc-how-heading">
-              <p className="mc-eyebrow mc-eyebrow-light"><span className="mc-eyebrow-line" />A simple way in</p>
-              <h2 id="mc-how-title">You can begin <em>before</em> you know what you need.</h2>
-              <p>There is no score to chase and no perfect way to explain yourself. Start with whatever feels easiest.</p>
+              <p className="mc-eyebrow mc-eyebrow-light"><span className="mc-eyebrow-line" />How it works</p>
+              <h2 id="mc-how-title">You can begin before you know what you <em>need.</em></h2>
+              <p>No score to chase and no perfect way to explain yourself. Start with whatever feels easiest, and decide what you want to explore.</p>
               <button type="button" className="mc-button mc-button-light" onClick={onGetStarted}>
                 Begin at your pace <ArrowRight size={16} />
               </button>
@@ -245,21 +261,21 @@ export default function Landing({ onGetStarted, onSignIn }) {
         </section>
 
         <section className="mc-care-section" id="care-and-privacy" aria-labelledby="mc-care-title">
-          <div className="mc-care-stamp" aria-hidden="true"><BookOpen size={21} /><span>READ<br />WITH CARE</span></div>
+          <div className="mc-care-stamp" aria-hidden="true"><BookOpen size={20} /><span>READ<br />WITH CARE</span></div>
           <div className="mc-care-copy">
             <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A note on care & privacy</p>
-            <h2 id="mc-care-title">Your story is yours. <em>Keep the choice, too.</em></h2>
-            <p>MindCare conversations are associated with your account so you can revisit your history. Share thoughtfully, and avoid including passwords or personal details you do not need to share.</p>
-            <p>AI can misunderstand or get things wrong. MindCare is a reflection tool, not a diagnosis, therapy, or emergency service. You remain in charge of what you share and what steps you take.</p>
+            <h2 id="mc-care-title">Your story is yours. <em>So are your choices.</em></h2>
+            <p>Conversations are associated with your account so you can revisit your history. Avoid sharing passwords or personal details you do not need to share, and review the privacy notice for information about data handling.</p>
+            <p>AI can misunderstand or get things wrong. MindCare supports reflection; it is not a diagnosis, therapy, or emergency service. You remain in charge of what you share and what steps you take.</p>
             <div className="mc-care-actions">
               <button type="button" className="mc-text-link mc-text-link-button" onClick={() => setLegalView('privacy')}>Read the privacy notice <ArrowUpRight size={15} /></button>
               <button type="button" className="mc-text-link mc-text-link-button" onClick={() => setLegalView('terms')}>Read the terms <ArrowUpRight size={15} /></button>
             </div>
           </div>
           <aside className="mc-help-note">
-            <div className="mc-help-note-icon"><LifeBuoy size={20} /></div>
+            <div className="mc-help-note-icon"><LifeBuoy size={19} /></div>
             <p className="mc-help-kicker">When you need more support</p>
-            <h3>An app should never be your only source of help.</h3>
+            <h3>An app should not be your only source of help.</h3>
             <p>Consider speaking with someone you trust or a qualified professional. If you may be in immediate danger, contact local emergency services.</p>
             <a href="https://dghs.mohfw.gov.in/national-mental-health-programme.php" target="_blank" rel="noreferrer" className="mc-help-link">India: Tele-MANAS · 14416 <ArrowUpRight size={14} /></a>
           </aside>
@@ -267,8 +283,8 @@ export default function Landing({ onGetStarted, onSignIn }) {
 
         <section className="mc-faq-section" aria-labelledby="mc-faq-title">
           <div className="mc-faq-heading">
-            <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A few clear answers</p>
-            <h2 id="mc-faq-title">Before you begin.</h2>
+            <p className="mc-eyebrow"><span className="mc-eyebrow-line" />Before you begin</p>
+            <h2 id="mc-faq-title">A few clear answers.</h2>
           </div>
           <div className="mc-faq-list">
             {faqs.map(faq => (
@@ -281,16 +297,14 @@ export default function Landing({ onGetStarted, onSignIn }) {
         </section>
 
         <section className="mc-final-cta" aria-labelledby="mc-final-cta-title">
-          <div className="mc-final-ornament" aria-hidden="true">
-            <span /><span /><span /><span /><span />
-          </div>
-          <p className="mc-eyebrow mc-eyebrow-light"><span className="mc-eyebrow-line" />One thing at a time</p>
-          <h2 id="mc-final-cta-title">You can start small.</h2>
-          <p>No need to solve the whole day. Begin with the part you can put into words.</p>
+          <div className="mc-final-ornament" aria-hidden="true"><span /><span /><span /><span /><span /></div>
+          <p className="mc-eyebrow mc-eyebrow-light"><span className="mc-eyebrow-line" />Start where you are</p>
+          <h2 id="mc-final-cta-title">One thing at a time.</h2>
+          <p>You do not have to solve the whole day to take a first step.</p>
           <button type="button" className="mc-button mc-button-paper" onClick={onGetStarted}>
             Start with one thought <ArrowRight size={16} />
           </button>
-          <span className="mc-final-small">MindCare offers AI-assisted reflection. It is not a diagnostic or emergency service.</span>
+          <span className="mc-final-small">AI-assisted reflection · Not a diagnostic or emergency service</span>
         </section>
       </main>
 
@@ -303,7 +317,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
           <div className="mc-footer-links">
             <div>
               <span className="mc-footer-heading">Explore</span>
-              <a href="#approach">What you can use</a>
+              <a href="#approach">Ways to begin</a>
               <a href="#how-it-works">How it works</a>
               <button type="button" onClick={onGetStarted}>Get started</button>
             </div>
@@ -311,13 +325,13 @@ export default function Landing({ onGetStarted, onSignIn }) {
               <span className="mc-footer-heading">Information</span>
               <button type="button" onClick={() => setLegalView('privacy')}>Privacy notice</button>
               <button type="button" onClick={() => setLegalView('terms')}>Terms of use</button>
-              <a href="https://github.com/mohitagg07" target="_blank" rel="noreferrer">Project on GitHub <ArrowUpRight size={12} /></a>
+              <a href="https://github.com/mohitagg07/Mindcare" target="_blank" rel="noreferrer">Project on GitHub <ArrowUpRight size={12} /></a>
             </div>
           </div>
         </div>
         <div className="mc-footer-bottom">
           <span>© {new Date().getFullYear()} MindCare</span>
-          <span>Made thoughtfully. Still learning, like all of us.</span>
+          <span>Built thoughtfully. Use what helps; leave what doesn’t.</span>
         </div>
       </footer>
 
