@@ -92,51 +92,126 @@ function Brand({ light = false }) {
   )
 }
 
+const previewScenarios = [
+  {
+    id: 'work',
+    label: 'Work & study',
+    user: 'I keep worrying that I’m falling behind.',
+    response: 'That is a tiring thought to carry. What part feels most urgent today?',
+    followups: ['Too much to do', 'Fear of falling behind', 'Not sure yet'],
+  },
+  {
+    id: 'compare',
+    label: 'Comparing myself',
+    user: 'Everyone else seems to be moving forward.',
+    response: 'It can be hard when other people’s timelines become the measure for your own. What are you comparing most?',
+    followups: ['Career progress', 'Expectations from others', 'Not sure yet'],
+  },
+  {
+    id: 'overwhelmed',
+    label: 'Feeling overwhelmed',
+    user: 'Everything feels like a lot right now.',
+    response: 'We do not have to untangle everything at once. Is there one thing taking up the most space today?',
+    followups: ['One specific problem', 'Too many things', 'I can’t tell yet'],
+  },
+  {
+    id: 'unsure',
+    label: 'Not sure yet',
+    user: 'I don’t really know how to explain how I feel.',
+    response: 'That is an okay place to start. We can begin with how the last few days have felt, without needing a label.',
+    followups: ['The last few days', 'One moment', 'I’d rather just start'],
+  },
+]
+
 function ProductPreview() {
+  const [activeId, setActiveId] = useState('compare')
+  const [activeFollowup, setActiveFollowup] = useState(null)
+  const scenario = previewScenarios.find(item => item.id === activeId) || previewScenarios[1]
+  const activeIndex = previewScenarios.findIndex(item => item.id === scenario.id)
+
+  function chooseScenario(id) {
+    setActiveId(id)
+    setActiveFollowup(null)
+  }
+
   return (
-    <div className="mc-preview-scene" aria-label="Illustrative preview of a MindCare conversation">
-      <div className="mc-preview-caption"><span /> A look inside MindCare</div>
+    <div className="mc-preview-scene" aria-label="Interactive sample conversation. Choose a topic to change the example.">
+      <div className="mc-preview-caption"><span className="mc-preview-caption-mark"><MessageCircle size={14} /></span><span>Try a starting point</span><span className="mc-caption-hint">A small interactive example</span></div>
       <article className="mc-product-window">
         <header className="mc-product-topbar">
-          <div className="mc-product-mark"><Heart size={16} strokeWidth={1.8} /></div>
+          <span className="mc-product-mark"><img src="/brand/mindcare-mark.png" alt="" /></span>
           <div className="mc-product-branding">
             <strong>MindCare</strong>
             <span>A space to reflect</span>
           </div>
-          <span className="mc-preview-label">Illustrative preview</span>
+          <span className="mc-preview-label"><span className="mc-preview-label-dot" /> SAMPLE</span>
         </header>
+
         <div className="mc-product-context">
-          <span className="mc-product-kicker">A CONVERSATION</span>
+          <span className="mc-product-kicker">START WHERE YOU ARE</span>
           <span className="mc-context-dot" />
-          <span className="mc-product-context-text">Start with one thing</span>
+          <span className="mc-product-context-text">Choose what feels closest</span>
         </div>
-        <div className="mc-product-messages">
-          <div className="mc-product-date">An example exchange</div>
-          <div className="mc-product-message user-message">
-            <span className="mc-message-author">YOU</span>
-            <p>“I feel like everyone else is moving ahead and I’m stuck.”</p>
+
+        <div className="mc-preview-interaction">
+          <div className="mc-preview-choice-heading">
+            <span>What’s on your mind?</span>
+            <span>{String(activeIndex + 1).padStart(2, '0')} <i>/</i> 04</span>
           </div>
-          <div className="mc-product-message assistant-message">
-            <div className="mc-assistant-avatar"><Heart size={13} /></div>
-            <div>
-              <span className="mc-message-author">MINDCARE</span>
-              <p>That can be a hard feeling to sit with. What part of it has been weighing on you most?</p>
+          <div className="mc-product-prompt-list" role="group" aria-label="Choose an example topic">
+            {previewScenarios.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                className={'mc-preview-choice' + (item.id === activeId ? ' is-active' : '')}
+                aria-pressed={item.id === activeId}
+                onClick={() => chooseScenario(item.id)}
+              >
+                <span className="mc-choice-number">0{index + 1}</span>
+                <span>{item.label}</span>
+                <span className="mc-choice-check" aria-hidden="true">{item.id === activeId ? '✓' : '↗'}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mc-preview-exchange" aria-live="polite" aria-atomic="true">
+            <div className="mc-product-message user-message" key={scenario.id + '-user'}>
+              <span className="mc-message-author">YOU MIGHT SAY</span>
+              <p>“{scenario.user}”</p>
+            </div>
+            <div className="mc-product-message assistant-message" key={scenario.id + '-assistant'}>
+              <span className="mc-assistant-avatar"><Heart size={13} strokeWidth={1.8} /></span>
+              <div className="mc-preview-response-copy">
+                <span className="mc-message-author">A POSSIBLE RESPONSE</span>
+                <p>{scenario.response}</p>
+              </div>
             </div>
           </div>
-          <div className="mc-product-prompt-label">A few ways to continue</div>
-          <div className="mc-product-prompt-list" aria-label="Illustrative conversation prompts">
-            <span>Work or studies</span>
-            <span>Comparing myself</span>
-            <span>Not sure yet</span>
+
+          <div className="mc-preview-followups">
+            <span className="mc-product-prompt-label">You could explore…</span>
+            <div className="mc-preview-followup-list">
+              {scenario.followups.map((followup, index) => (
+                <button
+                  key={followup}
+                  type="button"
+                  className={'mc-preview-followup' + (activeFollowup === followup ? ' is-selected' : '')}
+                  aria-pressed={activeFollowup === followup}
+                  onClick={() => setActiveFollowup(followup)}
+                >
+                  {followup}
+                </button>
+              ))}
+            </div>
+            {activeFollowup && (
+              <p className="mc-preview-followup-note">A possible next step to explore: <strong>{activeFollowup.toLowerCase()}</strong>. In MindCare, your own conversation starts after you sign in.</p>
+            )}
           </div>
         </div>
-        <div className="mc-product-compose" aria-label="Illustrative message composer">
-          <span>Write a thought…</span>
-          <span className="mc-compose-send"><ArrowRight size={14} /></span>
-        </div>
+
         <footer className="mc-product-footnote">
-          <LockKeyhole size={12} />
-          <span>Illustrative preview · not a real conversation</span>
+          <span className="mc-footnote-lock"><LockKeyhole size={12} /></span>
+          <span>Sample only. Nothing is sent or saved from this preview.</span>
         </footer>
       </article>
     </div>
