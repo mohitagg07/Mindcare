@@ -164,3 +164,25 @@ def test_assessment_history_returns_only_summary_fields(monkeypatch):
     assert "answers" not in history[0]
     assert "user_id" not in history[0]
 
+
+def test_recent_conversations_include_the_saved_title(monkeypatch):
+    import routers.metrics as metrics_router_module
+    session_id = "22222222-2222-4222-8222-222222222222"
+
+    async def fake_select(table, token, params, **kwargs):
+        if table == "conversations":
+            assert "title" in params["select"]
+            return ([{
+                "id": session_id,
+                "title": "I've been feeling anxious lately",
+                "created_at": "2026-10-12T12:00:00Z",
+            }], None)
+        assert table == "messages"
+        return ([{"conversation_id": session_id}, {"conversation_id": session_id}], None)
+
+    monkeypatch.setattr(metrics_router_module, "select_rows", fake_select)
+    response = client.get("/api/metrics/my-sessions")
+    assert response.status_code == 200
+    assert response.json()[0]["title"] == "I've been feeling anxious lately"
+    assert response.json()[0]["message_count"] == 2
+

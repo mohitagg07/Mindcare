@@ -61,7 +61,7 @@ async def model_performance(current_user=Depends(get_current_user)):
 async def my_sessions(current_user=Depends(get_current_user)):
     uid, token = current_user["id"], current_user["access_token"]
     sessions, _ = await select_rows("conversations", token, {
-        "select": "id,created_at,phq9_score,phq9_category,gad7_score,risk_level,risk_score,trajectory_trend",
+        "select": "id,title,created_at,phq9_score,phq9_category,gad7_score,risk_level,risk_score,trajectory_trend",
         "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "20",
     })
     if not sessions:
@@ -76,7 +76,7 @@ async def my_sessions(current_user=Depends(get_current_user)):
     results = []
     for item in sessions:
         results.append({
-            "session_id": item["id"], "started_at": item.get("created_at"),
+            "session_id": item["id"], "title": item.get("title"), "started_at": item.get("created_at"),
             "phq9_score": item.get("phq9_score"), "phq9_category": item.get("phq9_category"),
             "gad7_score": item.get("gad7_score"), "risk_level": item.get("risk_level"),
             "risk_score": item.get("risk_score"), "trajectory_trend": item.get("trajectory_trend"),

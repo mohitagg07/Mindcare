@@ -67,7 +67,10 @@ async function request(path, options = {}, alreadyRetried = false) {
   const contentType = res.headers.get('content-type') || ''
   const json = contentType.includes('application/json') ? await res.json() : null
   if (!res.ok) {
-    const error = new Error(json?.detail || json?.message || `Request failed (${res.status})`)
+    const detail = Array.isArray(json?.detail)
+      ? json.detail.map(item => item?.msg).filter(Boolean).join(' ')
+      : json?.detail
+    const error = new Error(detail || json?.message || `Request failed (${res.status})`)
     error.status = res.status
     throw error
   }
@@ -90,6 +93,7 @@ export const getMyProfile  = ()      => request('/api/auth/profile')
 export const updateMyProfile = (body) => request('/api/auth/profile', { method:'PATCH', body:JSON.stringify(body) })
 export const uploadMyAvatar = (file) => { const body = new FormData(); body.append('file', file); return request('/api/auth/profile/avatar', { method: 'POST', body }) }
 export const deleteMyAvatar = () => request('/api/auth/profile/avatar', { method: 'DELETE' })
+export const deleteMyAccount = () => request('/api/auth/profile/account', { method: 'DELETE', body: JSON.stringify({ confirmation: 'DELETE' }) })
 
 export const api = {
   metricsOverview: () => request('/api/metrics/overview'),

@@ -50,6 +50,21 @@ def test_profile_update_rejects_blank_timezone():
         ProfileUpdateRequest(timezone="   ")
 
 
+def test_profile_update_normalizes_and_validates_username():
+    assert ProfileUpdateRequest(username="  New_Handle ").username == "new_handle"
+    with pytest.raises(ValidationError):
+        ProfileUpdateRequest(username="x!")
+    with pytest.raises(ValidationError):
+        ProfileUpdateRequest(username=None)
+
+
+def test_account_deletion_requires_explicit_confirmation():
+    from routers.auth import DeleteAccountRequest
+    assert DeleteAccountRequest(confirmation="DELETE").confirmation == "DELETE"
+    with pytest.raises(ValidationError):
+        DeleteAccountRequest(confirmation="delete")
+
+
 def test_groq_system_prompt_uses_selected_style_and_focus_areas():
     prompt = build_system({}, {
         "display_name": "Anika",

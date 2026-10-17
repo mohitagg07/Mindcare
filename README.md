@@ -2,7 +2,7 @@
 
 ## Personal profile and response preferences
 
-For an existing Supabase project, run `supabase/migrations/20261013_personal_profile.sql`, `supabase/migrations/20261013_profile_permissions.sql`, and `supabase/migrations/20261013_dob_avatar_storage.sql` in the Supabase SQL Editor. The second migration explicitly grants least-privilege profile permissions. The third adds optional date of birth and a private `profile-avatars` Storage bucket with owner-only object policies. The API calculates age from date of birth and sends only the derived age—not the raw date—to Groq; all of these fields are optional. Profile reads and writes use the signed-in user's access token and existing profile row-level security policy. The preferred response style and selected focus areas are passed to the Groq system instructions as optional preferences; they are not diagnoses.
+For an existing Supabase project, apply the files in `supabase/migrations/` in filename order. The profile migrations add editable profile fields and owner-only private avatar storage. `20261017_user_memories.sql` adds user-scoped saved memories, `20261017_assessment_integrity.sql` enforces PHQ-9/GAD-7 answer counts and score consistency, and `20261017_z_data_permissions.sql` reapplies least-privilege table grants after all user tables exist. The API calculates age from date of birth and sends only the derived age—not the raw date—to Groq. Profile reads and writes use the signed-in user's access token and RLS.
 
 
 MindCare is a mental-wellbeing support application built with React + Vite, FastAPI, Groq inference, and Supabase (PostgreSQL + Supabase Auth).
@@ -20,9 +20,11 @@ MindCare is a mental-wellbeing support application built with React + Vite, Fast
 - **Retrieval:** lightweight PDF text extraction and keyword retrieval using pypdf
 - **Tests:** pytest; integration tests requiring external credentials are intentionally not run against production data
 
-No MongoDB driver or MongoDB fallback is included. The backend uses caller access tokens for PostgREST calls; it does not use or require a Supabase `service_role` key.
+No MongoDB driver or MongoDB fallback is included. Normal data operations use caller access tokens for PostgREST and Storage, so RLS remains active. A Supabase service-role key is optional and used only by the server-side account deletion endpoint; it is never sent to the browser.
 
 ## Brand, profile and personalization
+
+The profile editor supports username changes, a preferred display name, pronouns, time zone, preferences, avatar upload/removal, and permanent account deletion. Permanent deletion uses the Supabase Auth admin API on the server after removing the user's private avatar; Supabase cascades the user's application rows through their auth-user foreign keys.
 
 The supplied “MindCare — A Calmer You, Everyday” artwork is cropped into a compact mark and a horizontal lockup under `frontend/public/brand/` and used on the landing/auth shell, workspace sidebar, loading screen, and favicon. The Profile screen supports a display name, optional DOB with computed age, optional pronouns, timezone, response style, focus areas, and profile photo upload/removal. Avatar uploads are re-encoded to WebP to strip image metadata and stored in a private bucket at an owner-scoped path. The chatbot receives the saved display name/username, optional pronouns, calculated age (never the raw DOB), response style, and selected focus areas. It never receives a profile photo.
 
@@ -58,7 +60,7 @@ Mindcare-main/
 
 ### 1. Configure Supabase
 
-1. Create a Supabase project. For a **new** project, open SQL Editor and run all of `supabase/schema.sql`. For the existing MindCare project, run the three migrations in the Personal profile section at the top of this README; do not rerun the fresh-install schema blindly.
+1. Create a Supabase project. For a **new** project, open SQL Editor and run all of `supabase/schema.sql`. For the existing MindCare project, apply each file under `supabase/migrations/` in filename order; do not rerun the fresh-install schema blindly.
 3. In Project Settings → API, copy the project URL and publishable/anon key.
 4. In **Authentication → URL Configuration**, set **Site URL** to `http://localhost:5173` during local development and add `http://localhost:5173/**` to the Redirect URLs allowlist. Remove any stale `http://localhost:3000` entry as the Site URL unless you actually serve the app on port 3000.
 5. In **Authentication → Providers → Email**, keep email confirmation enabled if you want verified accounts. The app sends confirmation links to `/auth/callback`, provides a resend-confirmation flow for expired links, and supports password reset/update.
@@ -95,6 +97,7 @@ Set these values in `backend/.env`:
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY` (or Supabase publishable key supported by your project)
+- `SUPABASE_SERVICE_ROLE_KEY` (optional; server-side only, required to enable permanent account deletion)
 - `GROQ_API_KEY`
 - `ALLOWED_ORIGINS` to your exact frontend origin
 
@@ -121,9 +124,9 @@ Set `VITE_API_URL=http://localhost:8000` in `frontend/.env`. Open the Vite URL, 
 
 ## Deployment
 
-For Render, create the service from `render.yaml` and set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `GROQ_API_KEY` in its environment. Set `ALLOWED_ORIGINS` to the exact Vercel URL. Do not set `DATABASE_URL`, `MONGO_URL`, or `DB_NAME`; MongoDB has been removed from this version.
+For Render, create the service from `render.yaml` and set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `GROQ_API_KEY` in its environment. Set `SUPABASE_SERVICE_ROLE_KEY` only if you want to enable account deletion; keep it server-side and never add it to a `VITE_*` variable. Set `ALLOWED_ORIGINS` to the exact Vercel URL. Do not set `DATABASE_URL`, `MONGO_URL`, or `DB_NAME`; MongoDB has been removed from this version.
 
-For Vercel, set `VITE_API_URL` to the deployed FastAPI URL. Never put Groq credentials or a Supabase service-role/secret key in any `VITE_*` variable. This version does not require the service-role key.
+For Vercel, set `VITE_API_URL` to the deployed FastAPI URL. Never put Groq credentials or a Supabase service-role/secret key in any `VITE_*` variable.
 
 ## Performance choices
 

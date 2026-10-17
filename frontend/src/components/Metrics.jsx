@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import {
   AreaChart, Area, CartesianGrid, ReferenceLine, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
+  LineChart, Line, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -51,6 +51,44 @@ function EmptyChart({ title, description, action }) {
   )
 }
 
+function AssessmentScoreCard({ instrument, maxScore, rows, timeZone }) {
+  const latest = rows[rows.length - 1]
+  const previous = rows.length > 1 ? rows[rows.length - 2] : null
+  const change = previous ? Number(latest.score) - Number(previous.score) : null
+  const chartRows = rows.map(row => ({
+    score: Number(row.score),
+    date: formatDateInProfileZone(row.completed_at, timeZone, false),
+    shortDate: formatAssessmentDate(row.completed_at, timeZone),
+  }))
+
+  return <article className="insights-chart-card insights-assessment-card">
+    <div className="insights-card-heading"><div><span className="insights-card-icon is-lilac"><Activity size={16} /></span><div><h3>{instrument} screening</h3><p>Saved score · out of {maxScore}</p></div></div></div>
+    {latest ? <>
+      <div className="insights-score-summary"><strong>{latest.score}<span>/{maxScore}</span></strong><div><span>Latest check-in</span><small>{formatDateInProfileZone(latest.completed_at, timeZone, false)}</small></div></div>
+      {previous ? <p className="insights-score-change">{change === 0 ? 'Same score as' : `${Math.abs(change)} ${change < 0 ? 'fewer' : 'more'} points than`} the previous check-in</p> : <p className="insights-score-change">One check-in saved. A later check-in is needed before a change can be shown.</p>}
+      {rows.length > 1 ? <div className="insights-score-chart" role="img" aria-label={`${instrument} screening scores across ${rows.length} saved check-ins`}>
+        <ResponsiveContainer width="100%" height={190}>
+          <LineChart data={chartRows} margin={{ top: 12, right: 12, bottom: 2, left: -18 }}>
+            <CartesianGrid stroke="#e9eee5" strokeDasharray="4 5" vertical={false} />
+            <XAxis dataKey="shortDate" tick={{ fill: '#849286', fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={18} />
+            <YAxis domain={[0, maxScore]} ticks={[0, Math.round(maxScore / 3), Math.round(maxScore * 2 / 3), maxScore]} tick={{ fill: '#849286', fontSize: 9 }} axisLine={false} tickLine={false} />
+            <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ''} formatter={value => [`${value} of ${maxScore}`, 'Score']} contentStyle={{ border: '1px solid #e1e9df', borderRadius: 12, background: '#fffefa', fontSize: 11 }} />
+            <Line type="linear" dataKey="score" stroke="#6183a1" strokeWidth={2.5} dot={{ r: 3.5, fill: '#6183a1', stroke: '#fffefa', strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div> : <div className="insights-score-single">A trend line will appear after another completed check-in.</div>}
+      <details className="insights-score-history"><summary>View saved scores</summary><ol>{[...rows].reverse().slice(0, 10).map(row => <li key={row.id || `${row.completed_at}-${row.score}`}><time dateTime={row.completed_at}>{formatDateInProfileZone(row.completed_at, timeZone, false)}</time><strong>{row.score} / {maxScore}</strong></li>)}</ol></details>
+    </> : <EmptyChart title="No screening scores yet" description="Your saved PHQ-9 or GAD-7 results will appear here when you complete a screening." />}
+  </article>
+}
+
+function formatAssessmentDate(value, timeZone) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  try { return date.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone }) }
+  catch { return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) }
+}
+
 export default function Metrics() {
   const { user } = useAuth()
   const { setActivePage } = useApp()
@@ -59,6 +97,7 @@ export default function Metrics() {
   const [risks, setRisks] = useState([])
   const [sessions, setSessions] = useState([])
   const [trajectory, setTrajectory] = useState(null)
+  const [assessments, setAssessments] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -68,15 +107,20 @@ export default function Metrics() {
     if (silent) setRefreshing(true); else setLoading(true)
     setError('')
     const results = await Promise.allSettled([
-      api.metricsOverview(), api.emotionDist(), api.riskDist(), api.mySessions(), api.trajectory(),
+      api.metricsOverview(), api.emotionDist(), api.riskDist(), api.mySessions(), api.trajectory(), api.assessmentHistory(),
     ])
-    const [overviewResult, emotionResult, riskResult, sessionsResult, trajectoryResult] = results
+    const [overviewResult, emotionResult, riskResult, sessionsResult, trajectoryResult, assessmentsResult] = results
     let successful = 0
     if (overviewResult.status === 'fulfilled') { setOverview(overviewResult.value.data); successful += 1 }
     if (emotionResult.status === 'fulfilled') { setEmotions(Array.isArray(emotionResult.value.data) ? emotionResult.value.data : []); successful += 1 }
     if (riskResult.status === 'fulfilled') { setRisks(Array.isArray(riskResult.value.data) ? riskResult.value.data : []); successful += 1 }
     if (sessionsResult.status === 'fulfilled') { setSessions(Array.isArray(sessionsResult.value.data) ? sessionsResult.value.data : []); successful += 1 }
     if (trajectoryResult.status === 'fulfilled') { setTrajectory(trajectoryResult.value.data); successful += 1 }
+    if (assessmentsResult.status === 'fulfilled') {
+      const history = assessmentsResult.value.data?.history
+      setAssessments(Array.isArray(history) ? history.filter(row => ['PHQ-9', 'GAD-7'].includes(row.instrument) && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
+      successful += 1
+    }
     if (successful === 0) {
       setError('Your personal insights could not be loaded. Check your connection and try again.')
     } else if (successful < results.length) {
@@ -104,7 +148,15 @@ export default function Metrics() {
   const firstName = String(user?.display_name || '').trim().split(/\s+/)[0] || ''
   const trend = trajectory?.trend || 'unknown'
   const TrendIcon = trend === 'improving' ? TrendingUp : trend === 'deteriorating' ? TrendingDown : Minus
-  const hasPersonalData = Number(overview?.total_sessions || 0) > 0 || Number(overview?.total_messages || 0) > 0
+  const hasPersonalData = Number(overview?.total_sessions || 0) > 0 || Number(overview?.total_messages || 0) > 0 || assessments.length > 0
+  const assessmentRows = useMemo(() => {
+    const valid = assessments.filter(row => Number.isFinite(new Date(row.completed_at).getTime()) && Number(row.score) >= 0 && Number(row.score) <= Number(row.max_score))
+    const chronological = valid.sort((a, b) => new Date(a.completed_at) - new Date(b.completed_at))
+    return {
+      phq9: chronological.filter(row => row.instrument === 'PHQ-9' && Number(row.max_score) === 27),
+      gad7: chronological.filter(row => row.instrument === 'GAD-7' && Number(row.max_score) === 21),
+    }
+  }, [assessments])
 
   if (loading) return (
     <div className="insights-page"><div className="insights-loading"><span className="insights-spinner" /><p>Bringing your insights together…</p></div></div>
@@ -170,6 +222,15 @@ export default function Metrics() {
             ))}</div> : <EmptyChart title="No saved conversations yet" description="Your recent activity will appear here when you start a conversation." />}
             <button className="insights-inline-action insights-full-action" type="button" onClick={() => setActivePage('chat')}>Go to conversation <ChevronRight size={14} /></button>
           </article>
+        </section>
+
+        <section className="insights-assessment-section" aria-labelledby="insights-assessment-heading">
+          <div className="insights-section-heading"><div><span>SCREENINGS</span><h2 id="insights-assessment-heading">Your check-ins over time</h2></div><span>Scores are not diagnoses</span></div>
+          {assessments.length ? <div className="insights-assessment-grid">
+            <AssessmentScoreCard instrument="PHQ-9" maxScore={27} rows={assessmentRows.phq9} timeZone={user?.timezone} />
+            <AssessmentScoreCard instrument="GAD-7" maxScore={21} rows={assessmentRows.gad7} timeZone={user?.timezone} />
+          </div> : <article className="insights-chart-card"><EmptyChart title="No screening history yet" description="When you complete a PHQ-9 or GAD-7 screening, your saved scores and changes will appear here." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Start a check-in <ArrowUpRight size={14} /></button>} /></article>}
+          <p className="insights-chart-disclaimer">A score change is only one piece of information and may not reflect how you feel overall. The chart appears after at least two saved results for the same screening.</p>
         </section>
 
         <section className="insights-distribution-grid">

@@ -18,12 +18,7 @@ CRISIS_KEYWORDS = [
 ]
 
 CRISIS_RESOURCES = """
-🆘 CRISIS RESOURCES — You are not alone:
-• iCall (India): 9152987821
-• Vandrevala Foundation: 1860-2662-345
-• AASRA: 9820466627
-• Crisis Text Line: Text HOME to 741741
-• Befrienders: www.befrienders.org
+If you might act on these thoughts or are in immediate danger, contact your local emergency number or go to the nearest emergency department now. If you can, tell someone you trust and stay near them while you get support. For a phone, text, or chat service in your country, use Find A Helpline: https://findahelpline.com/.
 """
 
 
@@ -99,63 +94,19 @@ def compute_risk_score(
 
 
 def get_recommendations(risk_level: str, emotion: str) -> dict:
-    exercises = []
+    exercises = [
+        "If it feels comfortable, slow your breathing for a few moments. You can stop at any time.",
+        "Look around and name a few things you can see, hear, and feel where you are.",
+        "Consider telling someone you trust what today has been like.",
+    ]
     resources = []
-    message = ""
+    message = "These are optional ideas, not a reading of how you are doing. Keep what feels useful and leave the rest."
 
-    if risk_level == "HIGH":
-        exercises = [
-            "4-7-8 Breathing: Inhale for 4 sec → Hold 7 sec → Exhale 8 sec. Repeat 4×.",
-            "5-4-3-2-1 Grounding: Name 5 things you see, 4 you hear, 3 you touch, 2 you smell, 1 you taste.",
-            "Safe Space Visualization: Close eyes, vividly imagine a place you feel completely safe and calm.",
-            "Self-compassion break: Place hand on heart, say 'This is a moment of pain. I deserve kindness.'",
-        ]
+    if risk_level in {"HIGH", "MODERATE"}:
         resources = [
-            {"name": "iCall (India)",          "contact": "9152987821",         "type": "phone"},
-            {"name": "Vandrevala Foundation",   "contact": "1860-2662-345",      "type": "phone"},
-            {"name": "AASRA",                   "contact": "9820466627",         "type": "phone"},
-            {"name": "Crisis Text Line",        "contact": "Text HOME to 741741","type": "text"},
+            {"name": "Find a support line by country", "contact": "https://findahelpline.com/", "type": "directory"},
+            {"name": "Professional support", "contact": "A qualified mental health professional", "type": "care"},
         ]
-        message = "You're going through an intensely difficult time. Your feelings are valid. Please reach out to a mental health professional or crisis line — you deserve support right now."
-
-    elif risk_level == "MODERATE":
-        exercises = [
-            "Box Breathing: Inhale 4s → Hold 4s → Exhale 4s → Hold 4s. Repeat 5 cycles.",
-            "Progressive Muscle Relaxation: Tense each muscle group 5 seconds, release. Feet → head.",
-            "Gratitude + Challenge Journal: Write 3 gratitudes and 1 challenge you navigated today.",
-            "Mindful Walk: 10-minute walk focusing entirely on sensory experience — no phone.",
-            "STOP Technique: Stop, Take a breath, Observe your feelings, Proceed with awareness.",
-        ]
-        resources = [
-            {"name": "Wysa App",    "contact": "wysa.io",          "type": "app"},
-            {"name": "iCall",       "contact": "9152987821",        "type": "phone"},
-            {"name": "Headspace",   "contact": "headspace.com",     "type": "app"},
-            {"name": "Woebot",      "contact": "woebot.io",         "type": "app"},
-        ]
-        message = "You're experiencing moderate distress. These exercises genuinely help. Consider speaking with a therapist — even a few sessions can make a big difference."
-
-    elif risk_level == "LOW":
-        exercises = [
-            "Morning meditation: 5 minutes with Headspace or Calm app.",
-            "Gratitude journaling: Write 3 specific good things before bed.",
-            "Physical movement: Even 15 minutes of walking improves mood by ~20%.",
-            "Social connection: Reach out to one person you care about today.",
-        ]
-        resources = [
-            {"name": "Headspace",    "contact": "headspace.com", "type": "app"},
-            {"name": "Calm App",     "contact": "calm.com",      "type": "app"},
-        ]
-        message = "You're managing well. Staying proactive with self-care is the best prevention. Keep checking in with yourself."
-
-    else:  # MINIMAL
-        exercises = [
-            "Continue whatever is working for you — you're doing well!",
-            "Try a new hobby or creative outlet this week.",
-            "Practice 5 minutes of mindfulness daily to build resilience.",
-        ]
-        resources = [
-            {"name": "Calm App", "contact": "calm.com", "type": "app"},
-        ]
-        message = "You're in a good place. Keep nurturing your mental wellness as a daily practice."
+        message = "This activity indicator is experimental and cannot assess your safety. If you might hurt yourself or are in immediate danger, contact local emergency services or go to the nearest emergency department."
 
     return {"exercises": exercises, "resources": resources, "message": message}

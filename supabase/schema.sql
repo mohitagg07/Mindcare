@@ -159,6 +159,40 @@ create table if not exists public.assessments (
 );
 create index if not exists assessments_user_completed_idx on public.assessments(user_id, completed_at desc);
 
+-- Keep persisted scores consistent with the answer array received by the API.
+create or replace function public.assessment_answers_match_score(p_answers jsonb, p_instrument text, p_score integer)
+returns boolean language plpgsql immutable strict set search_path = pg_catalog as $$
+declare
+  expected_count integer;
+  answer jsonb;
+  computed_score integer := 0;
+begin
+  expected_count := case p_instrument when 'PHQ-9' then 9 when 'GAD-7' then 7 else null end;
+  if expected_count is null or jsonb_typeof(p_answers) <> 'array' or jsonb_array_length(p_answers) <> expected_count then
+    return false;
+  end if;
+  for answer in select value from jsonb_array_elements(p_answers) loop
+    if jsonb_typeof(answer) <> 'number' or answer not in ('0'::jsonb, '1'::jsonb, '2'::jsonb, '3'::jsonb) then
+      return false;
+    end if;
+    computed_score := computed_score + (answer #>> '{}')::integer;
+  end loop;
+  return computed_score = p_score;
+end;
+$$;
+
+DO $$ begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.assessments'::regclass and conname = 'assessments_score_within_max_check') then
+    alter table public.assessments add constraint assessments_score_within_max_check check (score <= max_score);
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.assessments'::regclass and conname = 'assessments_instrument_max_check') then
+    alter table public.assessments add constraint assessments_instrument_max_check check ((instrument = 'PHQ-9' and max_score = 27) or (instrument = 'GAD-7' and max_score = 21));
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.assessments'::regclass and conname = 'assessments_answers_match_score_check') then
+    alter table public.assessments add constraint assessments_answers_match_score_check check (public.assessment_answers_match_score(answers, instrument, score));
+  end if;
+end $$;
+
 create table if not exists public.trajectories (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -261,13 +295,15 @@ create policy "trajectories_insert_own" on public.trajectories for insert to aut
 -- Remove a previous platform-wide aggregate that is no longer used by personal insights.
 drop function if exists public.global_user_count();
 
--- PostgREST needs table privileges in addition to RLS policies.
--- The anon SELECT grant lets the unauthenticated health probe verify schema reachability;
--- RLS returns no profile rows to anon. Signed-in users can manage only their own profile.
+-- PostgREST needs table privileges in addition to RLS policies. Remove any older or
+-- default broad grants first, then add only the operations used by this application.
+revoke all on public.profiles, public.conversations, public.messages, public.user_memories, public.assessments, public.trajectories from anon, authenticated;
+-- The anon SELECT grant only lets the unauthenticated health probe verify reachability;
+-- profile RLS has no anon policy, so the probe cannot read profile rows.
 grant select on public.profiles to anon;
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.conversations to authenticated;
-grant select, insert, update, delete on public.messages to authenticated;
+grant select, insert, delete on public.messages to authenticated;
 grant select, insert, delete on public.user_memories to authenticated;
 grant select, insert, delete on public.assessments to authenticated;
 grant select, insert on public.trajectories to authenticated;

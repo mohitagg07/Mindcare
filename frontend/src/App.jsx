@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppProvider, useApp } from './context/AppContext'
 import AuthGate from './components/AuthGate'
 import Landing from './pages/Landing'
 import Sidebar from './components/Sidebar'
-import Chat from './components/Chat'
-import Assessment from './components/Assessment'
-import EmotionDetector from './components/EmotionDetector'
-import Dashboard from './components/Dashboard'
-import Metrics from './components/Metrics'
-import Profile from './components/Profile'
 import IdentityOnboarding from './components/IdentityOnboarding'
 import { getMyProfile } from './api/client'
 import { AlertCircle, Menu, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react'
+
+const Chat = lazy(() => import('./components/Chat'))
+const Assessment = lazy(() => import('./components/Assessment'))
+const EmotionDetector = lazy(() => import('./components/EmotionDetector'))
+const Dashboard = lazy(() => import('./components/Dashboard'))
+const Metrics = lazy(() => import('./components/Metrics'))
+const Profile = lazy(() => import('./components/Profile'))
 
 const pageMeta = {
   dashboard: { eyebrow: 'HOME', title: 'A little room for you' },
@@ -145,7 +146,7 @@ function AuthenticatedApp() {
             <button className={`mc-topbar-avatar mc-avatar-${user?.avatar_tone || 'sage'}${activePage === 'profile' ? ' is-active' : ''}${user?.avatar_url ? ' has-photo' : ''}`} type="button" title="Open your profile" aria-label="Open your profile" onClick={() => navigate('profile')}>{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</button>
           </div>
         </header>
-        <div className="mc-page-frame" key={activePage}><PageComponent /></div>
+        <div className="mc-page-frame" key={activePage}><Suspense fallback={<div className="mc-page-loading" role="status"><span className="mc-loader" />Opening your space…</div>}><PageComponent /></Suspense></div>
         <div className="mc-bottom-note"><Sparkles size={12} /> Gentle support, not a diagnosis or a substitute for professional care.</div>
       </main>
     </div>

@@ -8,7 +8,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from middleware.rate_limit import rate_limit
 
 from auth.dependencies import get_current_user, oauth2_scheme
-from db.supabase import (FRONTEND_URL, SupabaseError, SUPABASE_URL, auth_signup, auth_login, auth_refresh, auth_logout, auth_resend_signup, auth_recover, auth_update_password, auth_oauth_url, select_rows, insert_row, update_rows, storage_upload, storage_signed_url, storage_delete)
+from db.supabase import (FRONTEND_URL, SupabaseError, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, auth_signup, auth_login, auth_refresh, auth_logout, auth_resend_signup, auth_recover, auth_update_password, auth_oauth_url, select_rows, insert_row, update_rows, storage_upload, storage_signed_url, storage_delete)
 from services.profile_service import calculate_age
 
 logger = logging.getLogger("mindcare.auth")
@@ -59,6 +59,7 @@ PROFILE_SELECT = "id,username,display_name,pronouns,date_of_birth,timezone,suppo
 
 class ProfileUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    username: str | None = Field(default=None, min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_]+$")
     display_name: str | None = Field(default=None, max_length=60)
     pronouns: str | None = Field(default=None, max_length=40)
     date_of_birth: date | None = None
@@ -66,6 +67,18 @@ class ProfileUpdateRequest(BaseModel):
     support_style: str | None = Field(default=None, max_length=20)
     focus_areas: list[str] | None = Field(default=None, max_length=6)
     avatar_tone: str | None = Field(default=None, max_length=20)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, value):
+        if value is None:
+            raise ValueError("Username cannot be blank")
+        if not isinstance(value, str):
+            raise ValueError("Username must be text")
+        value = value.strip().lower()
+        if not 3 <= len(value) <= 30 or not all(char.isascii() and (char.isalnum() or char == "_") for char in value):
+            raise ValueError("Username must be 3–30 letters, numbers, or underscores")
+        return value
 
     @field_validator("display_name", mode="before")
     @classmethod
@@ -144,6 +157,8 @@ class ProfileUpdateRequest(BaseModel):
 
 def _profile_error(exc: SupabaseError) -> HTTPException:
     lowered = exc.message.lower()
+    if "username" in lowered and ("duplicate" in lowered or "unique" in lowered or "already" in lowered):
+        return HTTPException(status_code=409, detail="That username is already in use. Choose another handle.")
     profile_columns = ("display_name", "pronouns", "date_of_birth", "avatar_path", "timezone", "support_style", "focus_areas", "avatar_tone")
     if "schema cache" in lowered or ("column" in lowered and any(name in lowered for name in profile_columns)):
         return HTTPException(
@@ -340,6 +355,7 @@ async def _profile_response(profile: dict, current_user: dict) -> dict:
     result = dict(profile)
     result["email"] = current_user.get("email")
     result["account_created_at"] = current_user.get("created_at")
+    result["account_deletion_enabled"] = bool(SUPABASE_SERVICE_ROLE_KEY)
     result["age"] = calculate_age(result.get("date_of_birth"), timezone_name=result.get("timezone"))
     result["avatar_url"] = None
     avatar_path = result.get("avatar_path")
@@ -474,6 +490,42 @@ async def delete_profile_avatar(current_user=Depends(get_current_user)):
             logger.warning("Profile photo deletion was blocked by Storage permissions/configuration: %s", exc.message)
             raise HTTPException(status_code=503, detail="Profile photo storage is not ready. Check the profile-avatars bucket and owner policies from supabase/migrations/20261013_dob_avatar_storage.sql.") from exc
         raise _profile_error(exc) from exc
+
+
+class DeleteAccountRequest(BaseModel):
+    confirmation: str = Field(min_length=6, max_length=6)
+
+    @field_validator("confirmation")
+    @classmethod
+    def require_explicit_confirmation(cls, value: str) -> str:
+        if value != "DELETE":
+            raise ValueError("Type DELETE to confirm account removal")
+        return value
+
+
+@router.delete("/profile/account", dependencies=[Depends(rate_limit("profile_account_delete", 3, 300))])
+async def delete_account(req: DeleteAccountRequest, current_user=Depends(get_current_user)):
+    """Permanently delete the signed-in account and its cascading application data."""
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(status_code=503, detail="Account deletion is not configured on this server. Contact the MindCare administrator.")
+    try:
+        profile = await _ensure_profile(current_user)
+        avatar_path = profile.get("avatar_path")
+        if avatar_path:
+            await storage_delete("profile-avatars", avatar_path, current_user["access_token"])
+            cleared = await update_rows("profiles", current_user["access_token"], {"id": f"eq.{current_user['id']}"}, {"avatar_path": None})
+            if not cleared:
+                raise SupabaseError(503, "Could not clear the private avatar reference")
+        from db.supabase import auth_admin_delete_user
+        await auth_admin_delete_user(current_user["id"])
+        return {"message": "Your account and its saved MindCare data have been deleted."}
+    except SupabaseError as exc:
+        if exc.status_code in (401, 403):
+            raise HTTPException(status_code=401, detail="Please sign in again before deleting your account.") from exc
+        if exc.status_code == 503 and "service role" in exc.message.lower():
+            raise HTTPException(status_code=503, detail="Account deletion is not configured on this server. Contact the MindCare administrator.") from exc
+        logger.warning("Account deletion failed for the current user (HTTP %s)", exc.status_code)
+        raise HTTPException(status_code=503, detail="Your account could not be deleted. Please try again or contact the MindCare administrator.") from exc
 
 
 @router.post("/logout")

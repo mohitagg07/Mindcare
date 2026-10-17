@@ -16,6 +16,7 @@ logger = logging.getLogger("mindcare.supabase")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").strip().rstrip("/")
 _TIMEOUT = httpx.Timeout(connect=4.0, read=15.0, write=10.0, pool=4.0)
 _LIMITS = httpx.Limits(max_connections=80, max_keepalive_connections=20, keepalive_expiry=30.0)
@@ -185,6 +186,18 @@ async def auth_get_user(access_token: str) -> dict:
 
 async def auth_logout(access_token: str) -> None:
     await _request("POST", f"{SUPABASE_URL}/auth/v1/logout", headers=_base_headers(access_token))
+
+
+async def auth_admin_delete_user(user_id: str) -> None:
+    """Permanently delete one already-authenticated user's Supabase Auth record."""
+    require_config()
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        raise SupabaseError(503, "Supabase service role key is not configured for account deletion.")
+    secret = SUPABASE_SERVICE_ROLE_KEY
+    await _request(
+        "DELETE", f"{SUPABASE_URL}/auth/v1/admin/users/{quote(user_id, safe='')}",
+        headers={"apikey": secret, "Authorization": f"Bearer {secret}", "Accept": "application/json"},
+    )
 
 
 async def probe_database() -> bool:

@@ -4,7 +4,7 @@ import {
   ShieldCheck, Palette, BookOpen, Compass, Sun, MessageCircle, CheckCircle2,
   Save, RefreshCw, Info, Camera, Trash2, CalendarDays,
 } from 'lucide-react'
-import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar } from '../api/client'
+import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar, deleteMyAccount } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
 const SUPPORT_STYLES = [
@@ -24,7 +24,7 @@ const FOCUS_AREAS = [
   { id: 'other', title: 'Something else', detail: 'A focus that is personal to you' },
 ]
 
-const TIMEZONES = [
+const COMMON_TIMEZONES = [
   ['Asia/Kolkata', 'India Standard Time · Kolkata'],
   ['Asia/Dubai', 'Gulf Standard Time · Dubai'],
   ['Europe/London', 'United Kingdom · London'],
@@ -33,6 +33,9 @@ const TIMEZONES = [
   ['America/Los_Angeles', 'Pacific Time · Los Angeles'],
   ['UTC', 'Coordinated Universal Time · UTC'],
 ]
+const TIMEZONES = typeof Intl.supportedValuesOf === 'function'
+  ? ['UTC', ...Intl.supportedValuesOf('timeZone')].filter((value, index, list) => list.indexOf(value) === index).sort((a, b) => a === 'UTC' ? -1 : b === 'UTC' ? 1 : a.localeCompare(b))
+  : COMMON_TIMEZONES.map(([value]) => value)
 
 const TONES = [
   { id: 'sage', label: 'Sage', color: '#8db9a0', ink: '#244a3b' },
@@ -43,6 +46,7 @@ const TONES = [
 
 function initialForm(user) {
   return {
+    username: user?.username || '',
     display_name: user?.display_name || '',
     pronouns: user?.pronouns || '',
     date_of_birth: user?.date_of_birth || '',
@@ -77,13 +81,17 @@ function ageFromDate(value) {
 }
 
 export default function Profile() {
-  const { user, syncProfile } = useAuth()
+  const { user, syncProfile, logout } = useAuth()
   const [form, setForm] = useState(() => initialForm(user))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [avatarBusy, setAvatarBusy] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteText, setDeleteText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [accountDeletionAvailable, setAccountDeletionAvailable] = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -92,6 +100,7 @@ export default function Profile() {
       .then(({ data }) => {
         if (!active) return
         setForm(initialForm({ ...user, ...data }))
+        setAccountDeletionAvailable(Boolean(data?.account_deletion_enabled))
         syncProfile?.(data)
       })
       .catch((err) => { if (active) setError(err.message || 'Your profile could not be loaded right now.') })
@@ -107,10 +116,12 @@ export default function Profile() {
     return Math.round(checks.filter(Boolean).length / checks.length * 100)
   }, [form])
   const avatarTone = TONES.find(tone => tone.id === form.avatar_tone) || TONES[0]
+  const timezoneOptions = TIMEZONES.includes(form.timezone) ? TIMEZONES : [form.timezone, ...TIMEZONES]
 
   const setField = (key, value) => {
     setForm(current => ({ ...current, [key]: value }))
     setSuccess('')
+    setError('')
   }
 
   const toggleFocus = (id) => {
@@ -131,9 +142,15 @@ export default function Profile() {
       setError('A preferred name is required. Enter a name or nickname before saving your profile.')
       return
     }
+    const username = form.username.trim().toLowerCase()
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+      setError('Choose a username with 3–30 letters, numbers, or underscores.')
+      return
+    }
     setSaving(true)
     try {
       const payload = {
+        username,
         display_name: preferredName,
         pronouns: form.pronouns.trim() || null,
         date_of_birth: form.date_of_birth || null,
@@ -199,6 +216,23 @@ export default function Profile() {
 
   const reset = () => { setForm(initialForm(user)); setError(''); setSuccess('') }
 
+  const deleteAccount = async (event) => {
+    event?.preventDefault()
+    if (deleteText !== 'DELETE') return
+    setError('')
+    setDeleting(true)
+    try {
+      await deleteMyAccount()
+      await logout()
+    } catch (err) {
+      setError(err.message || 'Your account could not be deleted. Please try again.')
+      setDeleteOpen(false)
+      setDeleteText('')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="profile-page">
       <div className="profile-content">
@@ -218,14 +252,14 @@ export default function Profile() {
         {error && <div className="profile-alert is-error" role="alert"><Info size={17} /><span>{error}</span></div>}
         {success && <div className="profile-alert is-success" role="status"><CheckCircle2 size={17} /><span>{success}</span></div>}
 
-        <form onSubmit={save} className="profile-form">
+        <form onSubmit={save} className="profile-form" noValidate>
           <section className="profile-identity-card">
             <div className="profile-avatar-column">
               <div className={`profile-avatar profile-avatar-${avatarTone.id}${form.avatar_url ? ' has-photo' : ''}`} style={{ '--profile-avatar-bg': avatarTone.color, '--profile-avatar-ink': avatarTone.ink }}>
                 {form.avatar_url ? <img src={form.avatar_url} alt={`${displayLabel}'s profile`} /> : <span>{initialsFor(displayLabel)}</span>}
                 <i aria-hidden="true"><Heart size={13} fill="currentColor" /></i>
               </div>
-              <input ref={fileInputRef} className="profile-file-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar} />
+              <input ref={fileInputRef} className="profile-file-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar} aria-label="Choose a JPG, PNG, or WebP profile photo" />
               <button type="button" className="profile-photo-button" onClick={() => fileInputRef.current?.click()} disabled={avatarBusy}>
                 {avatarBusy ? <LoaderCircle size={14} className="profile-spinning" /> : <Camera size={14} />}{form.avatar_url ? 'Change photo' : 'Add photo'}
               </button>
@@ -250,11 +284,11 @@ export default function Profile() {
               <div className="profile-panel-heading"><span className="profile-panel-icon"><UserRound size={17} /></span><div><h3>The basics</h3><p>Only what you choose to share.</p></div></div>
               <div className="profile-fields-grid">
                 <label className="profile-field profile-field-span"><span>What should we call you?</span><input value={form.display_name} maxLength={60} required aria-required="true" onChange={e => setField('display_name', e.target.value)} placeholder="Your preferred name" autoComplete="nickname" /><small>Required. A first name or nickname is fine.</small></label>
-                <label className="profile-field"><span>Username</span><div className="profile-input-with-icon"><AtSign size={15} /><input value={user?.username || ''} readOnly aria-readonly="true" /></div><small>Your account handle can't be changed here.</small></label>
+                <label className="profile-field"><span>Username</span><div className="profile-input-with-icon"><AtSign size={15} /><input value={form.username} minLength={3} maxLength={30} pattern="[A-Za-z0-9_]{3,30}" onChange={e => setField('username', e.target.value)} autoComplete="username" aria-describedby="profile-username-help" /></div><small id="profile-username-help">3–30 letters, numbers, or underscores. Your handle is unique.</small></label>
                 <label className="profile-field"><span>Account email</span><div className="profile-input-with-icon"><Mail size={15} /><input value={user?.email || ''} readOnly aria-readonly="true" /></div><small>Managed by Supabase Auth.</small></label>
                 <label className="profile-field profile-field-span"><span>Pronouns <em>· optional</em></span><input value={form.pronouns} maxLength={40} onChange={e => setField('pronouns', e.target.value)} placeholder="e.g. she/her, he/him, they/them" autoComplete="off" /><small>Leave this blank if you'd rather not share it.</small></label>
                 <label className="profile-field profile-field-span"><span><CalendarDays size={14} /> Date of birth <em>· optional</em></span><input type="date" value={form.date_of_birth} max={localTodayIso()} min="1900-01-01" onChange={e => setField('date_of_birth', e.target.value)} autoComplete="bday" /><small>{form.date_of_birth ? `Age calculated automatically: ${ageFromDate(form.date_of_birth) ?? '—'} years. Only age is shared with AI; your date of birth is not.` : 'Used only to calculate your age. The date itself is not shared with the AI.'}</small></label>
-                <label className="profile-field profile-field-span"><span><Clock3 size={14} /> Time zone</span><select value={form.timezone} onChange={e => setField('timezone', e.target.value)}>{TIMEZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><small>Used to display times for your saved activity.</small></label>
+                <label className="profile-field profile-field-span"><span><Clock3 size={14} /> Time zone</span><select value={form.timezone} onChange={e => setField('timezone', e.target.value)}>{timezoneOptions.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select><small>Used to display times for your saved activity.</small></label>
               </div>
             </section>
 
@@ -286,6 +320,17 @@ export default function Profile() {
           </section>
 
           <section className="profile-privacy-banner"><span><ShieldCheck size={18} /></span><div><strong>Your space stays personal.</strong><p>Only share what feels useful. MindCare supports reflection; it does not diagnose or replace professional care.</p></div></section>
+
+          <section className="profile-danger-zone" aria-labelledby="profile-delete-heading">
+            <div><h3 id="profile-delete-heading">Delete your account</h3><p>This permanently removes your profile, private photo, conversations, saved memories, assessments, and insights.</p></div>
+            {!accountDeletionAvailable ? <p className="profile-deletion-unavailable" role="status">Permanent deletion is not enabled on this server yet. Please contact the MindCare administrator.</p> : !deleteOpen ? <button type="button" className="profile-delete-button" onClick={() => { setDeleteOpen(true); setDeleteText(''); setError('') }}>Delete account</button> : (
+              <div className="profile-delete-confirm">
+                <label htmlFor="profile-delete-confirmation">Type <strong>DELETE</strong> to confirm. This cannot be undone.</label>
+                <input id="profile-delete-confirmation" value={deleteText} onChange={event => setDeleteText(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') deleteAccount(event) }} autoComplete="off" autoCapitalize="characters" spellCheck="false" />
+                <div><button type="button" className="profile-reset-button" onClick={() => { setDeleteOpen(false); setDeleteText('') }} disabled={deleting}>Cancel</button><button type="button" className="profile-delete-button" onClick={deleteAccount} disabled={deleting || deleteText !== 'DELETE'}>{deleting ? 'Deleting…' : 'Permanently delete'}</button></div>
+              </div>
+            )}
+          </section>
 
           <div className="profile-savebar"><div><span className="profile-save-dot" /><span>Unsaved changes stay here until you save.</span></div><div className="profile-save-actions"><button type="button" className="profile-reset-button" onClick={reset} disabled={saving}><RefreshCw size={14} /> Reset</button><button className="profile-save-button" type="submit" disabled={saving || loading}>{saving ? <><LoaderCircle size={15} className="profile-spinning" /> Saving…</> : <><Save size={15} /> Save my profile</>}</button></div></div>
           {loading && <div className="profile-loading-note"><LoaderCircle size={15} className="profile-spinning" /> Loading your saved preferences…</div>}

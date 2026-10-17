@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
   Send, Plus, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
-  ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle,
+  ShieldCheck, ArrowUpRight, Wind, Moon, Brain, LoaderCircle,
   Bookmark, X, RefreshCw, Check, Trash2,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
@@ -155,20 +155,71 @@ export default function Chat() {
     if (!pendingChatPrompt) return
     setInput(pendingChatPrompt)
     setPendingChatPrompt('')
-    window.setTimeout(() => inputRef.current?.focus(), 80)
   }, [pendingChatPrompt, setPendingChatPrompt])
+
+  useEffect(() => {
+    const textarea = inputRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`
+  }, [input])
+
+  useEffect(() => {
+    const shell = scrollAreaRef.current?.closest('.mc-app-shell')
+    const viewport = window.visualViewport
+    if (!shell || !viewport) return
+
+    const updateForKeyboard = () => {
+      const focusedElement = document.activeElement
+      const editing = focusedElement instanceof HTMLElement
+        && shell.contains(focusedElement)
+        && focusedElement.matches('input, textarea, [contenteditable="true"]')
+      const keyboardVisible = editing && window.innerHeight - viewport.height > 120
+
+      if (keyboardVisible) {
+        shell.classList.add('is-chat-keyboard-open')
+        shell.style.setProperty('--mc-chat-viewport-height', `${viewport.height}px`)
+        shell.style.setProperty('--mc-chat-viewport-top', `${viewport.offsetTop}px`)
+      } else {
+        shell.classList.remove('is-chat-keyboard-open')
+        shell.style.removeProperty('--mc-chat-viewport-height')
+        shell.style.removeProperty('--mc-chat-viewport-top')
+      }
+    }
+    const updateAfterFocus = () => window.requestAnimationFrame(updateForKeyboard)
+
+    window.addEventListener('resize', updateForKeyboard)
+    viewport.addEventListener('resize', updateForKeyboard)
+    viewport.addEventListener('scroll', updateForKeyboard)
+    shell.addEventListener('focusin', updateAfterFocus)
+    shell.addEventListener('focusout', updateAfterFocus)
+    updateForKeyboard()
+
+    return () => {
+      window.removeEventListener('resize', updateForKeyboard)
+      viewport.removeEventListener('resize', updateForKeyboard)
+      viewport.removeEventListener('scroll', updateForKeyboard)
+      shell.removeEventListener('focusin', updateAfterFocus)
+      shell.removeEventListener('focusout', updateAfterFocus)
+      shell.classList.remove('is-chat-keyboard-open')
+      shell.style.removeProperty('--mc-chat-viewport-height')
+      shell.style.removeProperty('--mc-chat-viewport-top')
+    }
+  }, [])
 
   useEffect(() => {
     const area = scrollAreaRef.current
     if (!area) return
     // Keep scrolling scoped to the chat viewport; scrollIntoView can scroll outer
     // containers too and caused the workspace header/sidebar to visually collide.
-    area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    area.scrollTo({ top: area.scrollHeight, behavior })
   }, [messages, loading])
 
   const handleSend = async (providedText, { appendUser = true } = {}) => {
     const text = (providedText ?? input).trim()
     if (!text || loading) return
+    const keepComposerFocused = document.activeElement === inputRef.current
     interacted.current = true
     setNotice('')
     if (appendUser) {
@@ -199,7 +250,7 @@ export default function Chat() {
       addMessage({ role: 'assistant', content: `I couldn’t complete that reply. ${error.message || 'Check your connection, then try again.'}`, error: true, retryText: text })
     } finally {
       setLoading(false)
-      setTimeout(() => inputRef.current?.focus(), 50)
+      if (keepComposerFocused) setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 
@@ -257,7 +308,7 @@ export default function Chat() {
   }
 
 
-  const isNewChat = messages.length <= 1
+  const isNewChat = messages.length === 0
 
   return (
     <section className="chat-workspace" aria-label="Chat with MindCare">
@@ -300,7 +351,7 @@ export default function Chat() {
               <div className="chat-welcome-note"><ShieldCheck size={15} /><span>Your chat is associated with your account. Avoid sharing passwords or information you don't need to share.</span></div>
             </div>
           ) : (
-            <div className="chat-message-list">
+            <div className="chat-message-list" role="log" aria-label="Conversation messages" aria-relevant="additions">
               {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} onRetry={retryMessage} />)}
               {loading && <TypingIndicator />}
             </div>
@@ -319,11 +370,8 @@ export default function Chat() {
             value={input}
             rows={1}
             maxLength={2000}
-            onChange={(event) => {
-              setInput(event.target.value)
-              event.target.style.height = 'auto'
-              event.target.style.height = `${Math.min(event.target.scrollHeight, 140)}px`
-            }}
+            enterKeyHint="send"
+            onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend() }
             }}

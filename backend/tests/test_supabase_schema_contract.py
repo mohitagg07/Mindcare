@@ -27,12 +27,13 @@ def test_legacy_platform_wide_user_count_rpc_is_not_created():
 
 def test_all_user_data_tables_have_row_level_security_enabled():
     schema = read_sql("supabase/schema.sql")
-    for table in ("profiles", "conversations", "messages", "assessments", "trajectories"):
+    for table in ("profiles", "conversations", "messages", "user_memories", "assessments", "trajectories"):
         assert f"alter table public.{table} enable row level security" in schema
     for policy in (
         "profile_select_own", "profile_insert_own", "profile_update_own",
         "conversations_select_own", "conversations_insert_own", "conversations_update_own", "conversations_delete_own",
         "messages_select_own", "messages_insert_own", "messages_delete_own",
+        "user_memories_select_own", "user_memories_insert_own", "user_memories_delete_own",
         "assessments_select_own", "assessments_insert_own", "assessments_delete_own",
         "trajectories_select_own", "trajectories_insert_own",
     ):
@@ -72,3 +73,33 @@ def test_user_memories_table_is_private_and_owner_scoped():
         assert f'create policy "{policy}"' in migration
     assert "grant select, insert, delete on public.user_memories to authenticated" in schema
     assert "grant select, insert, delete on public.user_memories to authenticated" in migration
+
+
+def test_assessment_schema_matches_both_screening_contracts():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261017_assessment_integrity.sql")
+    for source in (schema, migration):
+        assert "assessments_instrument_max_check" in source
+        assert "assessments_score_within_max_check" in source
+        assert "assessments_answers_match_score_check" in source
+        assert "jsonb_array_length(p_answers) <> expected_count" in source
+        assert "computed_score = p_score" in source
+
+
+def test_table_grants_are_explicit_and_minimal():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261017_z_data_permissions.sql")
+    expected = (
+        "grant select on public.profiles to anon",
+        "grant select, insert, update on public.profiles to authenticated",
+        "grant select, insert, update, delete on public.conversations to authenticated",
+        "grant select, insert, delete on public.messages to authenticated",
+        "grant select, insert, delete on public.user_memories to authenticated",
+        "grant select, insert, delete on public.assessments to authenticated",
+        "grant select, insert on public.trajectories to authenticated",
+    )
+    for source in (schema, migration):
+        assert "revoke all on public.profiles, public.conversations, public.messages, public.user_memories, public.assessments, public.trajectories from anon, authenticated" in source
+        for grant in expected:
+            assert grant in source
+    assert "grant select, insert, update, delete on public.messages to authenticated" not in schema

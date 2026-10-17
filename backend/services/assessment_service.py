@@ -33,15 +33,15 @@ def score_phq9(responses: list) -> dict:
     crisis_flag = int(responses[8]) >= 1  # Q9 = self-harm thoughts
 
     if total <= 4:
-        cat, color, desc = "Minimal", "#22c55e", "Minimal or no depression"
+        cat, color, desc = "Minimal", "#22c55e", "Score falls in the minimal PHQ-9 symptom range"
     elif total <= 9:
-        cat, color, desc = "Mild", "#84cc16", "Mild depression symptoms"
+        cat, color, desc = "Mild", "#84cc16", "Score falls in the mild PHQ-9 symptom range"
     elif total <= 14:
-        cat, color, desc = "Moderate", "#f59e0b", "Moderate depression"
+        cat, color, desc = "Moderate", "#f59e0b", "Score falls in the moderate PHQ-9 symptom range"
     elif total <= 19:
-        cat, color, desc = "Moderately Severe", "#f97316", "Moderately severe depression"
+        cat, color, desc = "Moderately Severe", "#f97316", "Score falls in the moderately severe PHQ-9 symptom range"
     else:
-        cat, color, desc = "Severe", "#ef4444", "Severe depression — professional help strongly recommended"
+        cat, color, desc = "Severe", "#ef4444", "Score falls in the severe PHQ-9 symptom range"
 
     return {
         "score": total,
@@ -58,13 +58,13 @@ def score_gad7(responses: list) -> dict:
     total = sum(int(r) for r in responses)
 
     if total <= 4:
-        cat, color, desc = "Minimal", "#22c55e", "Minimal anxiety"
+        cat, color, desc = "Minimal", "#22c55e", "Score falls in the minimal GAD-7 symptom range"
     elif total <= 9:
-        cat, color, desc = "Mild", "#84cc16", "Mild anxiety symptoms"
+        cat, color, desc = "Mild", "#84cc16", "Score falls in the mild GAD-7 symptom range"
     elif total <= 14:
-        cat, color, desc = "Moderate", "#f59e0b", "Moderate anxiety"
+        cat, color, desc = "Moderate", "#f59e0b", "Score falls in the moderate GAD-7 symptom range"
     else:
-        cat, color, desc = "Severe", "#ef4444", "Severe anxiety — professional help recommended"
+        cat, color, desc = "Severe", "#ef4444", "Score falls in the severe GAD-7 symptom range"
 
     return {
         "score": total,

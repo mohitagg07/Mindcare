@@ -1,12 +1,12 @@
 from typing import Annotated
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator
 from fastapi import Depends
 from auth.dependencies import get_current_user
 from db.supabase import insert_row, select_rows, SupabaseError
 
 router = APIRouter()
-Answer = Annotated[int, Field(ge=0, le=3)]
+Answer = Annotated[StrictInt, Field(ge=0, le=3)]
 
 class PHQ9Request(BaseModel):
     responses: list[Answer]
