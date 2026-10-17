@@ -12,6 +12,7 @@ import {
   Smile,
   Sun,
   UserRound,
+  Waves,
   X,
 } from 'lucide-react'
 import { api, getAssessmentHistory } from '../api/client'
