@@ -83,11 +83,11 @@ const faqs = [
 
 function Brand({ light = false }) {
   return (
-    <a className={light ? 'mc-brand mc-brand-light' : 'mc-brand'} href="#top" aria-label="MindCare home">
-      <span className="mc-brand-symbol">
+    <a className={light ? 'mc-landing-brand mc-landing-brand-light' : 'mc-landing-brand'} href="#top" aria-label="MindCare home">
+      <span className="mc-landing-brand-symbol">
         <img src="/brand/mindcare-mark.png" alt="" />
       </span>
-      <span className="mc-brand-word">MindCare<span>.</span></span>
+      <span className="mc-landing-brand-word">MindCare<span>.</span></span>
     </a>
   )
 }
