@@ -7,6 +7,8 @@ import {
   BookOpen,
   ChevronDown,
   ClipboardList,
+  Compass,
+  Footprints,
   Heart,
   LifeBuoy,
   LockKeyhole,
@@ -47,18 +49,36 @@ const features = [
 const steps = [
   {
     number: '01',
-    title: 'Start where you are',
-    body: 'Bring a worry, a difficult moment, or a thought you keep circling back to. You do not need to explain it perfectly.',
+    icon: MessageCircle,
+    label: 'Start with the messy bit',
+    title: 'Say it your way.',
+    summary: 'You do not need to know where to begin.',
+    body: 'Bring a worry, a moment that stuck with you, or a thought you keep circling back to. A perfect explanation is not the entry fee.',
+    example: 'I keep replaying a conversation from today.',
+    question: 'What part of that moment keeps coming back to you?',
+    tone: 'sage',
   },
   {
     number: '02',
-    title: 'Explore it at your pace',
-    body: 'Use a conversation or an optional self-check to organise your thoughts without rushing toward an answer.',
+    icon: Compass,
+    label: 'Find the thread',
+    title: 'Make a little sense of it.',
+    summary: 'Explore it without jumping to a verdict.',
+    body: 'Take a closer look at what happened, what matters to you, and what you wish someone understood. You can correct anything that does not feel right.',
+    example: 'I think what upset me was feeling dismissed.',
+    question: 'Does that feel close, or is there another part we should understand?',
+    tone: 'clay',
   },
   {
     number: '03',
-    title: 'Choose what feels useful',
-    body: 'Take what helps, question what does not, and decide for yourself what you want to do next.',
+    icon: Footprints,
+    label: 'Choose the next bit',
+    title: 'Keep the next step small.',
+    summary: 'You decide what feels useful from here.',
+    body: 'You might want to reflect a little longer, try a grounding exercise, make a practical plan, or prepare to talk to someone. You stay in control of the choice.',
+    example: 'I do not need to fix everything tonight. I need to work out one thing I can do tomorrow.',
+    question: 'Would a pause, a practical plan, or help talking to someone be most useful right now?',
+    tone: 'blue',
   },
 ]
 
@@ -237,6 +257,9 @@ function FeatureCard({ feature }) {
 export default function Landing({ onGetStarted, onSignIn }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [legalView, setLegalView] = useState('')
+  const [activeJourneyStep, setActiveJourneyStep] = useState(0)
+  const currentJourneyStep = steps[activeJourneyStep] || steps[0]
+  const CurrentJourneyIcon = currentJourneyStep.icon
   const handleSignIn = onSignIn || onGetStarted
   const closeMobileNav = () => setMobileNavOpen(false)
 
@@ -313,24 +336,81 @@ export default function Landing({ onGetStarted, onSignIn }) {
         <section className="mc-how-section" id="how-it-works" aria-labelledby="mc-how-title">
           <div className="mc-how-inner">
             <div className="mc-how-heading">
-              <p className="mc-eyebrow mc-eyebrow-light"><span className="mc-eyebrow-line" />How it works</p>
-              <h2 id="mc-how-title">You can begin before you know what you <em>need.</em></h2>
-              <p>No score to chase and no perfect way to explain yourself. Start with whatever feels easiest, and decide what you want to explore.</p>
+              <p className="mc-eyebrow mc-eyebrow-light"><span className="mc-eyebrow-line" />A small, human process</p>
+              <h2 id="mc-how-title">We can take it <em>one piece at a time.</em></h2>
+              <p>No perfect explanation. No pressure to solve your whole day. Explore how a conversation can move from getting it out, to finding a little clarity, to choosing what feels useful next.</p>
+              <div className="mc-how-reassurance">
+                <span className="mc-how-reassurance-icon"><LockKeyhole size={15} /></span>
+                <span><strong>You stay in charge.</strong><br />Skip a step, change your mind, or take a pause.</span>
+              </div>
               <button type="button" className="mc-button mc-button-light" onClick={onGetStarted}>
-                Begin at your pace <ArrowRight size={16} />
+                Start with a conversation <ArrowRight size={16} />
               </button>
             </div>
-            <div className="mc-steps" role="list" aria-label="How MindCare works">
-              {steps.map((step, index) => (
-                <article className="mc-step" key={step.number} role="listitem">
-                  <span className="mc-step-number">{step.number}</span>
-                  <div className="mc-step-copy">
-                    <h3>{step.title}</h3>
-                    <p>{step.body}</p>
+
+            <div className="mc-journey-explorer">
+              <div className="mc-journey-topline">
+                <span><span className="mc-journey-live-dot" /> HOW A CONVERSATION CAN UNFOLD</span>
+                <span className="mc-journey-counter">{currentJourneyStep.number}<i> / 03</i></span>
+              </div>
+
+              <div className="mc-journey-cards" role="group" aria-label="Choose a step to explore">
+                {steps.map((step, index) => {
+                  const Icon = step.icon
+                  const isActive = index === activeJourneyStep
+                  return (
+                    <button
+                      key={step.number}
+                      id={`mc-journey-tab-${index}`}
+                      type="button"
+                      className={`mc-journey-card mc-journey-${step.tone}${isActive ? ' is-active' : ''}`}
+                      aria-pressed={isActive}
+                      onClick={() => setActiveJourneyStep(index)}
+                    >
+                      <span className="mc-journey-card-top"><span className="mc-journey-number">{step.number}</span><Icon size={17} strokeWidth={1.7} /></span>
+                      <span className="mc-journey-card-title">{step.title}</span>
+                      <span className="mc-journey-card-summary">{step.summary}</span>
+                      <span className="mc-journey-card-indicator" aria-hidden="true"><ArrowDownRight size={15} /></span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div
+                className="mc-journey-panel"
+                id="mc-journey-panel"
+                role="region"
+                aria-label={`Step details: ${currentJourneyStep.title}`}
+                aria-live="polite"
+              >
+                <div className="mc-journey-panel-content" key={activeJourneyStep}>
+                  <div className="mc-journey-panel-heading">
+                    <span className={`mc-journey-panel-icon mc-journey-${currentJourneyStep.tone}`}>
+                      <CurrentJourneyIcon size={18} strokeWidth={1.7} />
+                    </span>
+                    <div>
+                      <span className="mc-journey-panel-kicker">{currentJourneyStep.label}</span>
+                      <h3>{currentJourneyStep.title}</h3>
+                    </div>
                   </div>
-                  {index < steps.length - 1 && <span className="mc-step-connector" aria-hidden="true" />}
-                </article>
-              ))}
+                  <p className="mc-journey-panel-body">{currentJourneyStep.body}</p>
+                  <div className="mc-journey-example">
+                    <span className="mc-journey-example-label">IT MIGHT SOUND LIKE</span>
+                    <p>“{currentJourneyStep.example}”</p>
+                  </div>
+                  <div className="mc-journey-question">
+                    <span className="mc-journey-question-mark"><MessageCircle size={14} /></span>
+                    <div><span>A question to gently open things up</span><p>{currentJourneyStep.question}</p></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mc-journey-footer">
+                <div className="mc-journey-progress" aria-label={`Step ${activeJourneyStep + 1} of 3`}>
+                  {steps.map((step, index) => <span key={step.number} className={index <= activeJourneyStep ? 'is-filled' : ''} />)}
+                </div>
+                <span>Explore the steps in any order</span>
+              </div>
             </div>
           </div>
         </section>
