@@ -1,39 +1,102 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ArrowRight, ArrowUpRight, BookOpen, Check, ChevronRight, ClipboardCheck,
-  Heart, Leaf, MessageCircle, ShieldCheck, Sparkles, Sun, Waves, X,
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Check,
+  ChevronRight,
+  ClipboardCheck,
+  Cloud,
+  Meh,
+  MessageCircle,
+  RotateCcw,
+  ShieldCheck,
+  Smile,
+  Sun,
+  Waves,
+  X,
 } from 'lucide-react'
 import { api, getAssessmentHistory } from '../api/client'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import './Dashboard.css'
 
 const MOODS = [
-  { id: 'good', label: 'Good', face: '☀️', hint: 'Keep this feeling close.', prompt: "I'm feeling pretty good today. Help me understand what's going well and how I can keep it going." },
-  { id: 'okay', label: 'Okay', face: '🙂', hint: 'Okay is a place to start.', prompt: "I'm feeling okay, but I'd like to check in with myself for a moment." },
-  { id: 'tense', label: 'Tense', face: '😬', hint: 'Let’s make things feel smaller.', prompt: "I'm feeling tense right now. Can you help me slow down and work out what's weighing on me?" },
-  { id: 'low', label: 'Low', face: '🌧️', hint: 'You don’t have to solve it all.', prompt: "I've been feeling low. I'd like a gentle conversation to work out what I need right now." },
-  { id: 'overwhelmed', label: 'A lot', face: '🌊', hint: 'One thing at a time.', prompt: "I'm feeling overwhelmed. Can you help me focus on one manageable next step?" },
+  {
+    id: 'good',
+    label: 'Good',
+    Icon: Sun,
+    prompt: "I'm feeling pretty good today. Help me understand what's going well and how I can keep it going.",
+    reply: 'It might be worth noticing what is helping today.',
+  },
+  {
+    id: 'okay',
+    label: 'Okay',
+    Icon: Smile,
+    prompt: "I'm feeling okay, but I'd like to check in with myself for a moment.",
+    reply: 'You don’t need to feel a certain way to check in.',
+  },
+  {
+    id: 'tense',
+    label: 'Tense',
+    Icon: Meh,
+    prompt: "I'm feeling tense right now. Can you help me slow down and work out what's weighing on me?",
+    reply: 'We can take it one thing at a time.',
+  },
+  {
+    id: 'low',
+    label: 'Low',
+    Icon: Cloud,
+    prompt: "I've been feeling low. I'd like a gentle conversation to work out what I need right now.",
+    reply: 'You don’t have to figure everything out right now.',
+  },
+  {
+    id: 'overwhelmed',
+    label: 'Overwhelmed',
+    Icon: Waves,
+    prompt: "I'm feeling overwhelmed. Can you help me focus on one manageable next step?",
+    reply: 'Let’s start with just one thing.',
+  },
 ]
 
-const TOUR_STEPS = [
-  { icon: MessageCircle, kicker: '01 / TALK', title: 'Let it out.', body: 'A conversation can start with just one sentence.', tint: 'mint' },
-  { icon: ClipboardCheck, kicker: '02 / CHECK IN', title: 'Notice how you feel.', body: 'Optional reflections help you put things into perspective.', tint: 'peach' },
-  { icon: ShieldCheck, kicker: '03 / YOUR SPACE', title: 'You stay in control.', body: 'Choose what to share, what to save, and what to revisit.', tint: 'lavender' },
-]
-
-function safeDate(value, timezone, options) {
+function safeDate(value, timezone, options = {}) {
   if (!value) return 'Recently'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'Recently'
-  try { return date.toLocaleDateString(undefined, { ...options, ...(timezone ? { timeZone: timezone } : {}) }) }
-  catch { return date.toLocaleDateString(undefined, options) }
+  try {
+    return date.toLocaleDateString(undefined, {
+      ...options,
+      ...(timezone ? { timeZone: timezone } : {}),
+    })
+  } catch {
+    return date.toLocaleDateString(undefined, options)
+  }
 }
 
 function greeting(timezone) {
-  const hour = (() => { try { return Number(new Intl.DateTimeFormat('en', { hour: '2-digit', hourCycle: 'h23', timeZone: timezone || undefined }).format(new Date())) } catch { return new Date().getHours() } })()
+  const hour = (() => {
+    try {
+      return Number(new Intl.DateTimeFormat('en', {
+        hour: '2-digit',
+        hourCycle: 'h23',
+        timeZone: timezone || undefined,
+      }).format(new Date()))
+    } catch {
+      return new Date().getHours()
+    }
+  })()
+
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'
+}
+
+function activityTitle(item) {
+  if (item.kind === 'assessment') {
+    const instrument = String(item.instrument || 'Self-check').toUpperCase()
+    return `${instrument} check-in`
+  }
+  return item.title || 'Conversation'
 }
 
 export default function Dashboard() {
@@ -42,173 +105,228 @@ export default function Dashboard() {
   const [sessions, setSessions] = useState([])
   const [assessments, setAssessments] = useState([])
   const [activityLoading, setActivityLoading] = useState(true)
+  const [activityErrors, setActivityErrors] = useState({ sessions: false, assessments: false })
+  const [reloadKey, setReloadKey] = useState(0)
   const [mood, setMood] = useState(null)
-  const [tourOpen, setTourOpen] = useState(false)
-  const [tourStep, setTourStep] = useState(0)
-  const tz = user?.timezone || 'Asia/Kolkata'
-  const firstName = String(user?.display_name || '').trim().split(/\s+/)[0] || ''
-  const initials = (user?.display_name || user?.username || user?.email || 'U').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+
+  const timezone = user?.timezone || 'Asia/Kolkata'
+  const firstName = String(user?.display_name || user?.username || '').trim().split(/\s+/)[0]
+  const today = safeDate(new Date(), timezone, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 
   useEffect(() => {
     let alive = true
-    Promise.allSettled([api.mySessions(), getAssessmentHistory()]).then(([sessionResult, assessmentResult]) => {
-      if (!alive) return
-      if (sessionResult.status === 'fulfilled' && Array.isArray(sessionResult.value.data)) setSessions(sessionResult.value.data)
-      if (assessmentResult.status === 'fulfilled' && Array.isArray(assessmentResult.value.data?.history)) setAssessments(assessmentResult.value.data.history)
-    }).finally(() => { if (alive) setActivityLoading(false) })
+    setActivityLoading(true)
+
+    Promise.allSettled([api.mySessions(), getAssessmentHistory()])
+      .then(([sessionResult, assessmentResult]) => {
+        if (!alive) return
+
+        const sessionsOk = sessionResult.status === 'fulfilled' && Array.isArray(sessionResult.value?.data)
+        const assessmentsOk = assessmentResult.status === 'fulfilled' && Array.isArray(assessmentResult.value?.data?.history)
+
+        setSessions(sessionsOk ? sessionResult.value.data : [])
+        setAssessments(assessmentsOk ? assessmentResult.value.data.history : [])
+        setActivityErrors({ sessions: !sessionsOk, assessments: !assessmentsOk })
+      })
+      .finally(() => {
+        if (alive) setActivityLoading(false)
+      })
+
     return () => { alive = false }
-  }, [])
+  }, [reloadKey])
 
-  useEffect(() => {
-    if (!user?.id || activityLoading) return
-    const key = `mindcare-tour-seen-${user.id}`
-    const hasHistory = sessions.length > 0 || assessments.length > 0
-    try { setTourOpen(!hasHistory && !localStorage.getItem(key)) } catch { setTourOpen(false) }
-  }, [user?.id, activityLoading, sessions.length, assessments.length])
+  const recent = useMemo(() => {
+    const items = [
+      ...sessions.map(item => ({
+        kind: 'chat',
+        id: item.session_id,
+        title: item.title || 'Conversation',
+        date: item.started_at || item.created_at,
+        detail: `${item.message_count || 0} ${Number(item.message_count || 0) === 1 ? 'message' : 'messages'}`,
+        session: item,
+      })),
+      ...assessments.map(item => ({
+        kind: 'assessment',
+        id: item.id,
+        instrument: item.instrument,
+        date: item.completed_at || item.created_at,
+        detail: 'Completed check-in',
+        item,
+      })),
+    ]
 
-  const finishTour = () => {
-    try { if (user?.id) localStorage.setItem(`mindcare-tour-seen-${user.id}`, '1') } catch { /* storage may be disabled */ }
-    setTourOpen(false)
-  }
+    return items
+      .filter(item => item.id || item.date)
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 3)
+  }, [sessions, assessments])
+
+  const selectedMood = MOODS.find(item => item.id === mood)
+  const allActivityRequestsFailed = activityErrors.sessions && activityErrors.assessments
+  const someActivityRequestFailed = activityErrors.sessions || activityErrors.assessments
 
   const startChat = (prompt = '') => {
     if (prompt) setPendingChatPrompt?.(prompt)
     setActivePage('chat')
   }
 
-  const resume = (session) => {
+  const resume = session => {
     if (session?.session_id) setSessionId?.(session.session_id)
     setActivePage('chat')
   }
 
-  const recent = useMemo(() => {
-    const items = [
-      ...sessions.map(item => ({ kind: 'chat', id: item.session_id, title: item.title || 'Conversation', date: item.started_at || item.created_at, detail: `${item.message_count || 0} messages`, session: item })),
-      ...assessments.map(item => ({ kind: 'assessment', id: item.id, title: `${item.instrument || 'Self-check'} check-in`, date: item.completed_at, detail: 'Reflection saved', item })),
-    ]
-    return items.filter(item => item.date || item.id).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 3)
-  }, [sessions, assessments])
-
-  const selectedMood = MOODS.find(item => item.id === mood)
-  const tour = TOUR_STEPS[tourStep]
-  const TourIcon = tour.icon
-
   return (
-    <div className="home-page">
-      <div className="home-content">
-        <header className="home-greeting-row">
-          <div>
-            <div className="home-date"><span className="home-date-dot" /> {safeDate(new Date(), tz, { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}</div>
-            <h1>{greeting(tz)}{firstName ? `, ${firstName}` : ''}<span className="home-greeting-period">.</span></h1>
-            <p>What would help, right now?</p>
-          </div>
-          <button type="button" className="home-profile-shortcut" onClick={() => setActivePage('profile')} aria-label="Open profile">
-            <span className={`home-avatar mc-avatar-${user?.avatar_tone || 'sage'}${user?.avatar_url ? ' has-photo' : ''}`}>{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</span>
-            <span className="home-profile-shortcut-copy"><strong>Your space</strong><small>Personalized for you</small></span>
-            <ChevronRight size={16} />
-          </button>
+    <main className="mcd-page">
+      <div className="mcd-content">
+        <header className="mcd-heading">
+          <p className="mcd-date">{today}</p>
+          <h1>{greeting(timezone)}{firstName ? `, ${firstName}` : ''}<span>.</span></h1>
+          <p className="mcd-subtitle">Take a moment for yourself. Start wherever you are.</p>
         </header>
 
-        {!String(user?.display_name || '').trim() && (
-          <section className="home-personalize-card" aria-label="Personalize your space">
-            <span className="home-personalize-mark"><Sparkles size={18} /></span>
-            <div className="home-personalize-copy"><strong>Make this space yours</strong><span>Add the name you prefer, your birthday if useful, and a photo. MindCare can then address you more naturally.</span></div>
-            <button type="button" onClick={() => setActivePage('profile')}>Set up profile <ArrowRight size={15} /></button>
-          </section>
-        )}
-
-        <section className="home-hero">
-          <div className="home-hero-copy">
-            <span className="home-hero-kicker"><Sparkles size={13} /> A MOMENT FOR YOU</span>
-            <h2>Come as<br /><em>you are.</em></h2>
-            <p>No perfect words needed.</p>
-            <div className="home-hero-actions">
-              <button type="button" className="home-primary" onClick={() => startChat()}><MessageCircle size={17} /> Talk it out <ArrowUpRight size={15} /></button>
-              <button type="button" className="home-quiet-action" onClick={() => setActivePage('assessment')}>Check in <ArrowRight size={15} /></button>
+        <div className="mcd-top-grid">
+          <section className="mcd-start-card" aria-labelledby="mcd-start-title">
+            <p className="mcd-eyebrow">START HERE</p>
+            <h2 id="mcd-start-title">What’s on your mind?</h2>
+            <p className="mcd-start-copy">You don’t need the right words. A thought, a feeling, or even “I’m not sure” is enough.</p>
+            <div className="mcd-start-actions">
+              <button type="button" className="mcd-button-primary" onClick={() => startChat()}>
+                <MessageCircle size={17} strokeWidth={1.9} />
+                Start a conversation
+                <ArrowUpRight size={15} />
+              </button>
+              <button type="button" className="mcd-button-text" onClick={() => setActivePage('assessment')}>
+                Take a check-in <ArrowRight size={15} />
+              </button>
             </div>
-          </div>
-          <div className="home-visual" aria-hidden="true">
-            <div className="home-visual-glow" />
-            <div className="home-visual-orbit orbit-a" />
-            <div className="home-visual-orbit orbit-b" />
-            <div className="home-visual-orbit orbit-c" />
-            <div className="home-visual-center"><Heart size={34} strokeWidth={1.5} /></div>
-            <div className="home-floating-note note-top"><span className="home-note-icon"><Sun size={14} /></span><span><b>A little pause</b><small>is enough to begin</small></span></div>
-            <div className="home-floating-note note-bottom"><span className="home-note-dot" /><span><b>Your pace</b><small>always</small></span></div>
-          </div>
-          <div className="home-hero-grain" />
-        </section>
+          </section>
 
-        <section className="home-checkin-section" aria-labelledby="home-mood-title">
-          <div className="home-section-head">
-            <div><span className="home-overline">QUICK CHECK-IN</span><h3 id="home-mood-title">How are you arriving?</h3></div>
-            <span className="home-section-aside">Just for this moment</span>
+          <section className="mcd-activity-card" aria-labelledby="mcd-activity-title">
+            <div className="mcd-card-heading">
+              <div>
+                <p className="mcd-eyebrow">YOUR SPACE</p>
+                <h2 id="mcd-activity-title">Recent activity</h2>
+              </div>
+              {recent.length > 0 && !activityLoading && (
+                <button type="button" className="mcd-icon-link" onClick={() => setActivePage('metrics')} aria-label="View all activity" title="View all activity">
+                  <ArrowUpRight size={17} />
+                </button>
+              )}
+            </div>
+
+            {activityLoading ? (
+              <div className="mcd-activity-skeleton" role="status" aria-label="Loading recent activity">
+                <span /><span /><span />
+              </div>
+            ) : allActivityRequestsFailed ? (
+              <div className="mcd-activity-message" role="alert">
+                <p>We couldn’t load your activity just now.</p>
+                <button type="button" onClick={() => setReloadKey(key => key + 1)}><RotateCcw size={14} /> Try again</button>
+              </div>
+            ) : recent.length > 0 ? (
+              <div className="mcd-activity-list">
+                {recent.slice(0, 3).map(item => (
+                  <button
+                    type="button"
+                    className="mcd-activity-row"
+                    key={`${item.kind}-${item.id || item.date}`}
+                    onClick={() => item.kind === 'chat' ? resume(item.session) : setActivePage('metrics')}
+                  >
+                    <span className={`mcd-activity-type ${item.kind === 'assessment' ? 'is-checkin' : ''}`}>
+                      {item.kind === 'chat' ? <MessageCircle size={16} /> : <BookOpen size={16} />}
+                    </span>
+                    <span className="mcd-activity-copy">
+                      <strong>{activityTitle(item)}</strong>
+                      <small>{item.detail}</small>
+                    </span>
+                    <time>{safeDate(item.date, timezone, { month: 'short', day: 'numeric' })}</time>
+                    <ChevronRight className="mcd-activity-chevron" size={15} />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mcd-activity-empty">
+                <p className="mcd-empty-title">Nothing to pick up yet.</p>
+                <p>Your conversations and completed check-ins will show up here.</p>
+                <button type="button" onClick={() => startChat()}>Start your first conversation <ArrowRight size={14} /></button>
+              </div>
+            )}
+
+            {!activityLoading && someActivityRequestFailed && !allActivityRequestsFailed && (
+              <p className="mcd-partial-warning" role="status">Some activity couldn’t be loaded. <button type="button" onClick={() => setReloadKey(key => key + 1)}>Retry</button></p>
+            )}
+          </section>
+        </div>
+
+        <section className="mcd-checkin" aria-labelledby="mcd-checkin-title">
+          <div className="mcd-checkin-heading">
+            <div>
+              <p className="mcd-eyebrow">A SMALL CHECK-IN</p>
+              <h2 id="mcd-checkin-title">How are you feeling today?</h2>
+            </div>
+            <span className="mcd-not-saved">Just for this moment</span>
           </div>
-          <div className="home-mood-row">
-            {MOODS.map(item => (
-              <button key={item.id} type="button" onClick={() => setMood(item.id)} className={`home-mood-option${mood === item.id ? ' is-selected' : ''}`} aria-pressed={mood === item.id}>
-                <span className="home-mood-face" aria-hidden="true">{item.face}</span><span>{item.label}</span>{mood === item.id && <Check size={13} className="home-mood-check" />}
+          <div className="mcd-mood-options" role="group" aria-label="Choose how you feel">
+            {MOODS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                className={`mcd-mood-option${mood === id ? ' is-selected' : ''}`}
+                onClick={() => setMood(id)}
+                aria-pressed={mood === id}
+              >
+                <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+                <span>{label}</span>
+                {mood === id && <Check className="mcd-mood-check" size={13} aria-hidden="true" />}
               </button>
             ))}
           </div>
           {selectedMood && (
-            <div className="home-mood-followup" role="status">
-              <div><strong>{selectedMood.hint}</strong><span>Not saved — just a conversation starter.</span></div>
-              <button type="button" onClick={() => startChat(selectedMood.prompt)}>Put it into words <ArrowRight size={15} /></button>
-              <button type="button" className="home-mood-dismiss" aria-label="Clear mood selection" onClick={() => setMood(null)}><X size={14} /></button>
+            <div className="mcd-mood-followup" role="status">
+              <div className="mcd-mood-followup-copy">
+                <strong>{selectedMood.reply}</strong>
+                <span>Your selection isn’t saved. It only helps shape the conversation.</span>
+              </div>
+              <button type="button" className="mcd-followup-action" onClick={() => startChat(selectedMood.prompt)}>
+                Talk about it <ArrowRight size={15} />
+              </button>
+              <button type="button" className="mcd-clear-mood" onClick={() => setMood(null)} aria-label="Clear selected feeling"><X size={15} /></button>
             </div>
           )}
         </section>
 
-        <section className="home-tools-section">
-          <div className="home-section-head"><div><span className="home-overline">YOUR NEXT STEP</span><h3>Choose what feels right.</h3></div></div>
-          <div className="home-tools-grid">
-            <button type="button" className="home-tool-card home-tool-talk" onClick={() => startChat()}>
-              <span className="home-tool-art"><MessageCircle size={22} /></span><span className="home-tool-name">Talk</span><span className="home-tool-description">Untangle a thought</span><ArrowUpRight className="home-tool-arrow" size={17} />
+        <section className="mcd-other-ways" aria-labelledby="mcd-other-title">
+          <div className="mcd-other-heading">
+            <div>
+              <p className="mcd-eyebrow">WHEN YOU NEED SOMETHING DIFFERENT</p>
+              <h2 id="mcd-other-title">Other ways to check in</h2>
+            </div>
+          </div>
+          <div className="mcd-other-grid">
+            <button type="button" className="mcd-other-card" onClick={() => setActivePage('assessment')}>
+              <span className="mcd-other-icon mcd-other-icon-check"><ClipboardCheck size={19} /></span>
+              <span className="mcd-other-copy"><strong>Structured check-in</strong><small>Optional PHQ-9 and GAD-7 questionnaires</small></span>
+              <ArrowUpRight className="mcd-other-arrow" size={16} />
             </button>
-            <button type="button" className="home-tool-card home-tool-check" onClick={() => setActivePage('assessment')}>
-              <span className="home-tool-art"><ClipboardCheck size={22} /></span><span className="home-tool-name">Check in</span><span className="home-tool-description">PHQ-9 · GAD-7</span><ArrowUpRight className="home-tool-arrow" size={17} />
-            </button>
-            <button type="button" className="home-tool-card home-tool-reflect" onClick={() => setActivePage('emotion')}>
-              <span className="home-tool-art"><Waves size={22} /></span><span className="home-tool-name">Reflect</span><span className="home-tool-description">Take a quiet pause</span><ArrowUpRight className="home-tool-arrow" size={17} />
+            <button type="button" className="mcd-other-card" onClick={() => setActivePage('emotion')}>
+              <span className="mcd-other-icon mcd-other-icon-reflect"><Waves size={19} /></span>
+              <span className="mcd-other-copy"><strong>Pause and reflect</strong><small>An optional reflection tool, at your pace</small></span>
+              <ArrowUpRight className="mcd-other-arrow" size={16} />
             </button>
           </div>
         </section>
 
-        <section className="home-recent-section">
-          <div className="home-section-head"><div><span className="home-overline">YOUR SPACE</span><h3>Pick up where you left off.</h3></div><button type="button" className="home-text-link" onClick={() => setActivePage('metrics')}>View insights <ArrowRight size={14} /></button></div>
-          {recent.length > 0 ? (
-            <div className="home-recent-list">
-              {recent.map(item => (
-                <button type="button" className="home-recent-item" key={`${item.kind}-${item.id}`} onClick={() => item.kind === 'chat' ? resume(item.session) : setActivePage('metrics')}>
-                  <span className={`home-recent-icon ${item.kind === 'assessment' ? 'is-assessment' : ''}`}>{item.kind === 'chat' ? <MessageCircle size={17} /> : <BookOpen size={17} />}</span>
-                  <span className="home-recent-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
-                  <time>{safeDate(item.date, tz, { month: 'short', day: 'numeric' })}</time><ChevronRight size={16} className="home-recent-chevron" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <button type="button" className="home-first-step" onClick={() => startChat()}>
-              <span className="home-first-step-icon"><Leaf size={19} /></span><span><strong>Your story starts here.</strong><small>{activityLoading ? 'Getting your space ready…' : 'Your recent activity will appear here.'}</small></span><ArrowUpRight size={17} />
-            </button>
-          )}
-        </section>
-
-        <div className="home-footnote"><ShieldCheck size={14} /><span>Private to your account</span><i /> <span>Support, not diagnosis</span><button type="button" onClick={() => { setTourStep(0); setTourOpen(true) }}>How it works</button></div>
+        <footer className="mcd-footer">
+          <ShieldCheck size={14} aria-hidden="true" />
+          <span>Your space is personal.</span>
+          <span className="mcd-footer-divider" aria-hidden="true" />
+          <span>MindCare offers support, not diagnosis.</span>
+        </footer>
       </div>
-
-      {tourOpen && (
-        <div className="home-tour-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) finishTour() }}>
-          <section className="home-tour-modal" role="dialog" aria-modal="true" aria-labelledby="home-tour-title">
-            <button type="button" className="home-tour-close" onClick={finishTour} aria-label="Close introduction"><X size={17} /></button>
-            <div className={`home-tour-icon tint-${tour.tint}`}><TourIcon size={25} /></div>
-            <div className="home-tour-step">A QUICK TOUR <span>{tourStep + 1} / {TOUR_STEPS.length}</span></div>
-            <h2 id="home-tour-title">{tour.title}</h2><p>{tour.body}</p>
-            <div className="home-tour-progress">{TOUR_STEPS.map((step, index) => <span key={step.kicker} className={index <= tourStep ? 'is-filled' : ''} />)}</div>
-            <div className="home-tour-actions"><button type="button" className="home-tour-skip" onClick={finishTour}>Skip</button><button type="button" className="home-primary" onClick={() => tourStep < TOUR_STEPS.length - 1 ? setTourStep(step => step + 1) : finishTour()}>{tourStep < TOUR_STEPS.length - 1 ? 'Next' : 'Let’s begin'} <ArrowRight size={15} /></button></div>
-          </section>
-        </div>
-      )}
-    </div>
+    </main>
   )
 }

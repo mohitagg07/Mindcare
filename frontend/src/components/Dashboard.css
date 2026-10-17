@@ -1,0 +1,341 @@
+/* MindCare Dashboard — quiet, utility-led layout. Styles are scoped to .mcd-* */
+.mcd-page {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: #f7f8f3;
+  color: #233c31;
+  scrollbar-gutter: stable;
+}
+
+.mcd-content {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: clamp(22px, 2.5vw, 34px) clamp(17px, 2.8vw, 36px) 27px;
+}
+
+.mcd-heading { margin-bottom: 23px; }
+.mcd-date {
+  margin: 0 0 8px;
+  color: #7f8f82;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .15px;
+}
+.mcd-heading h1 {
+  margin: 0;
+  color: #244337;
+  font: 500 clamp(29px, 2.6vw, 38px)/1.12 'Fraunces', 'Lora', Georgia, serif;
+  letter-spacing: -.9px;
+}
+.mcd-heading h1 span { color: #c58f60; }
+.mcd-subtitle {
+  margin: 8px 0 0;
+  color: #74847a;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mcd-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(320px, .94fr);
+  align-items: stretch;
+  gap: 16px;
+}
+.mcd-start-card,
+.mcd-activity-card,
+.mcd-checkin {
+  min-width: 0;
+  border: 1px solid #e1e7dc;
+  border-radius: 17px;
+  background: #fffefa;
+}
+.mcd-start-card {
+  display: flex;
+  min-height: 236px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(21px, 2vw, 29px);
+  background: #f0f5eb;
+}
+.mcd-eyebrow {
+  margin: 0;
+  color: #78917c;
+  font-size: 9px;
+  font-weight: 750;
+  line-height: 1.4;
+  letter-spacing: 1.05px;
+}
+.mcd-start-card h2 {
+  margin: 17px 0 0;
+  color: #294638;
+  font: 500 clamp(26px, 2.3vw, 32px)/1.13 'Fraunces', 'Lora', Georgia, serif;
+  letter-spacing: -.6px;
+}
+.mcd-start-copy {
+  max-width: 390px;
+  margin: 11px 0 22px;
+  color: #708175;
+  font-size: 12px;
+  line-height: 1.75;
+}
+.mcd-start-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 17px;
+  margin-top: auto;
+}
+.mcd-button-primary {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 15px;
+  border: 1px solid #3f7858;
+  border-radius: 10px;
+  color: #fffefa;
+  background: #397854;
+  box-shadow: 0 2px 3px rgba(33, 75, 49, .08);
+  font: 650 11px/1 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.mcd-button-primary:hover { border-color: #285e40; background: #2f6a49; transform: translateY(-1px); }
+.mcd-button-primary:active { transform: translateY(0); }
+.mcd-button-text,
+.mcd-followup-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 0;
+  border: 0;
+  color: #477257;
+  background: transparent;
+  font: 650 11px/1.4 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+.mcd-button-text:hover,
+.mcd-followup-action:hover { color: #234e36; }
+
+.mcd-activity-card { padding: 20px 19px 14px; }
+.mcd-card-heading,
+.mcd-checkin-heading,
+.mcd-other-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mcd-card-heading h2,
+.mcd-checkin-heading h2,
+.mcd-other-heading h2 {
+  margin: 6px 0 0;
+  color: #294538;
+  font: 500 21px/1.2 'Fraunces', 'Lora', Georgia, serif;
+  letter-spacing: -.3px;
+}
+.mcd-icon-link {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #e4e9df;
+  border-radius: 10px;
+  color: #63856c;
+  background: #fff;
+  cursor: pointer;
+}
+.mcd-icon-link:hover { border-color: #c8d9c8; background: #f2f7ef; }
+.mcd-activity-list { margin-top: 13px; }
+.mcd-activity-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid #edf0e9;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.mcd-activity-row:hover .mcd-activity-copy strong { color: #397854; }
+.mcd-activity-type {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid #dce8d9;
+  border-radius: 10px;
+  color: #50815b;
+  background: #f0f6ec;
+}
+.mcd-activity-type.is-checkin { border-color: #dfe6eb; color: #67849b; background: #f1f5f8; }
+.mcd-activity-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
+.mcd-activity-copy strong {
+  overflow: hidden;
+  color: #3a5143;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcd-activity-copy small { color: #8b978d; font-size: 10px; }
+.mcd-activity-row time { flex: 0 0 auto; color: #89968b; font-size: 10px; white-space: nowrap; }
+.mcd-activity-chevron { flex: 0 0 auto; color: #a2afa3; }
+.mcd-activity-empty { padding: 19px 1px 13px; border-top: 1px solid #edf0e9; }
+.mcd-empty-title { margin: 0; color: #435d4b; font: 500 16px/1.25 'Fraunces', 'Lora', Georgia, serif; }
+.mcd-activity-empty > p:nth-child(2) { max-width: 275px; margin: 7px 0 12px; color: #89958b; font-size: 11px; line-height: 1.65; }
+.mcd-activity-empty > button,
+.mcd-activity-message > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border: 0;
+  color: #427456;
+  background: transparent;
+  font: 650 10px 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+.mcd-activity-empty > button:hover,
+.mcd-activity-message > button:hover { color: #234d35; }
+.mcd-activity-message { padding: 20px 0 13px; border-top: 1px solid #edf0e9; }
+.mcd-activity-message p { margin: 0 0 8px; color: #7d8a80; font-size: 11px; line-height: 1.6; }
+.mcd-activity-skeleton { display: grid; gap: 15px; padding: 19px 0 12px; }
+.mcd-activity-skeleton span { display: block; height: 13px; border-radius: 5px; background: linear-gradient(90deg, #eef1e9 25%, #f7f8f3 45%, #eef1e9 65%); background-size: 250% 100%; animation: mcd-shimmer 1.25s ease-in-out infinite; }
+.mcd-activity-skeleton span:nth-child(2) { width: 85%; }
+.mcd-activity-skeleton span:nth-child(3) { width: 72%; }
+.mcd-partial-warning { margin: 8px 0 0; color: #8e806a; font-size: 10px; line-height: 1.6; }
+.mcd-partial-warning button { padding: 0; border: 0; color: #477257; background: transparent; font: inherit; font-weight: 700; cursor: pointer; }
+
+.mcd-checkin { margin-top: 17px; padding: 20px 21px; }
+.mcd-checkin-heading { margin-bottom: 15px; }
+.mcd-checkin-heading h2 { font-size: 22px; }
+.mcd-not-saved { color: #98a195; font-size: 10px; white-space: nowrap; }
+.mcd-mood-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+.mcd-mood-option {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 57px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #e5e9e0;
+  border-radius: 11px;
+  color: #617367;
+  background: #fff;
+  font: 600 11px 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+.mcd-mood-option > svg:first-child { flex: 0 0 auto; color: #78947d; }
+.mcd-mood-option:hover { border-color: #b8d0b8; background: #f8faf5; }
+.mcd-mood-option.is-selected { border-color: #74a681; color: #315f42; background: #edf5e9; box-shadow: inset 0 0 0 1px rgba(88, 139, 97, .08); }
+.mcd-mood-option.is-selected > svg:first-child { color: #41784f; }
+.mcd-mood-check { position: absolute; top: 5px; right: 5px; color: #4c855b; }
+.mcd-mood-followup { display: flex; align-items: center; gap: 12px; margin-top: 13px; padding: 12px 13px; border: 1px solid #e1e9dc; border-radius: 11px; background: #f8faf5; }
+.mcd-mood-followup-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
+.mcd-mood-followup-copy strong { color: #3e5d47; font-size: 11px; font-weight: 650; }
+.mcd-mood-followup-copy span { color: #8a978b; font-size: 10px; line-height: 1.5; }
+.mcd-followup-action { flex: 0 0 auto; }
+.mcd-clear-mood { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; border: 1px solid #e1e8de; border-radius: 8px; color: #7c8d80; background: #fff; cursor: pointer; }
+.mcd-clear-mood:hover { color: #355c42; border-color: #bfd4bd; }
+
+.mcd-other-ways { margin-top: 24px; }
+.mcd-other-heading h2 { margin-top: 5px; font-size: 22px; }
+.mcd-other-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 13px; }
+.mcd-other-card {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8de;
+  border-radius: 13px;
+  color: inherit;
+  background: #fffefa;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
+}
+.mcd-other-card:hover { border-color: #c2d6c1; background: #fff; }
+.mcd-other-icon { display: grid; width: 39px; height: 39px; flex: 0 0 39px; place-items: center; border: 1px solid #dce8d9; border-radius: 11px; color: #4e8159; background: #eff6eb; }
+.mcd-other-icon-reflect { border-color: #e6deeb; color: #8a719d; background: #f5f0f7; }
+.mcd-other-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
+.mcd-other-copy strong { color: #3d5545; font-size: 11px; font-weight: 650; }
+.mcd-other-copy small { color: #879388; font-size: 10px; line-height: 1.5; }
+.mcd-other-arrow { flex: 0 0 auto; color: #8ea191; }
+
+.mcd-footer { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 24px; color: #929d92; font-size: 10px; line-height: 1.5; }
+.mcd-footer > svg { color: #72967b; }
+.mcd-footer-divider { width: 3px; height: 3px; border-radius: 50%; background: #c0c9bc; }
+.mcd-page button:focus-visible { outline: 3px solid rgba(71, 128, 87, .3); outline-offset: 3px; }
+
+@keyframes mcd-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+@media (max-width: 1020px) {
+  .mcd-content { padding-right: 22px; padding-left: 22px; }
+  .mcd-top-grid { grid-template-columns: minmax(0, 1fr) minmax(290px, .95fr); gap: 12px; }
+  .mcd-start-card { padding: 22px; }
+  .mcd-start-actions { gap: 12px; }
+  .mcd-activity-card { padding-right: 15px; padding-left: 15px; }
+  .mcd-mood-options { gap: 7px; }
+  .mcd-mood-option { gap: 7px; padding-right: 7px; padding-left: 7px; }
+}
+
+@media (max-width: 760px) {
+  .mcd-content { padding: 20px 17px 25px; }
+  .mcd-heading { margin-bottom: 18px; }
+  .mcd-heading h1 { font-size: 29px; }
+  .mcd-subtitle { max-width: 330px; font-size: 12px; }
+  .mcd-top-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .mcd-start-card { min-height: 0; padding: 20px; }
+  .mcd-start-card h2 { margin-top: 13px; font-size: 27px; }
+  .mcd-start-copy { margin: 8px 0 17px; }
+  .mcd-activity-card { padding: 17px 16px 12px; }
+  .mcd-card-heading h2 { font-size: 20px; }
+  .mcd-checkin { margin-top: 13px; padding: 17px 15px; }
+  .mcd-checkin-heading { align-items: flex-start; }
+  .mcd-checkin-heading h2 { max-width: 245px; font-size: 20px; }
+  .mcd-not-saved { max-width: 94px; padding-top: 13px; text-align: right; white-space: normal; }
+  .mcd-mood-options { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .mcd-mood-option { min-height: 65px; flex-direction: column; gap: 6px; padding: 9px 2px; border-radius: 10px; font-size: 10px; }
+  .mcd-mood-option > svg:first-child { width: 17px; height: 17px; }
+  .mcd-mood-check { top: 3px; right: 3px; width: 11px; height: 11px; }
+  .mcd-mood-followup { align-items: flex-start; flex-wrap: wrap; gap: 7px; }
+  .mcd-mood-followup-copy { flex-basis: calc(100% - 37px); }
+  .mcd-followup-action { order: 3; width: 100%; justify-content: center; padding: 10px; border: 1px solid #d9e4d7; border-radius: 9px; background: #fff; }
+  .mcd-clear-mood { margin-left: auto; }
+  .mcd-other-ways { margin-top: 21px; }
+  .mcd-other-heading h2 { font-size: 21px; }
+  .mcd-other-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 11px; }
+  .mcd-other-card { padding: 12px; }
+  .mcd-footer { gap: 6px; margin-top: 20px; font-size: 9px; text-align: center; }
+}
+
+@media (max-width: 370px) {
+  .mcd-content { padding-right: 12px; padding-left: 12px; }
+  .mcd-heading h1 { font-size: 26px; }
+  .mcd-button-primary { gap: 7px; padding: 0 11px; font-size: 10px; }
+  .mcd-start-actions { gap: 10px; }
+  .mcd-mood-option { font-size: 9px; }
+  .mcd-activity-row { gap: 7px; }
+  .mcd-activity-row time { font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mcd-activity-skeleton span { animation: none; }
+  .mcd-button-primary,.mcd-mood-option,.mcd-other-card { transition: none; }
+}
