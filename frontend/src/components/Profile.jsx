@@ -126,10 +126,15 @@ export default function Profile() {
     event.preventDefault()
     setError('')
     setSuccess('')
+    const preferredName = form.display_name.trim().replace(/\s+/g, ' ')
+    if (!preferredName || !/[\p{L}\p{N}]/u.test(preferredName)) {
+      setError('A preferred name is required. Enter a name or nickname before saving your profile.')
+      return
+    }
     setSaving(true)
     try {
       const payload = {
-        display_name: form.display_name.trim() || null,
+        display_name: preferredName,
         pronouns: form.pronouns.trim() || null,
         date_of_birth: form.date_of_birth || null,
         timezone: form.timezone,
@@ -244,7 +249,7 @@ export default function Profile() {
             <section className="profile-panel">
               <div className="profile-panel-heading"><span className="profile-panel-icon"><UserRound size={17} /></span><div><h3>The basics</h3><p>Only what you choose to share.</p></div></div>
               <div className="profile-fields-grid">
-                <label className="profile-field profile-field-span"><span>What should we call you?</span><input value={form.display_name} maxLength={60} onChange={e => setField('display_name', e.target.value)} placeholder={user?.username || 'Your preferred name'} autoComplete="nickname" /><small>This name can be used naturally in supportive replies.</small></label>
+                <label className="profile-field profile-field-span"><span>What should we call you?</span><input value={form.display_name} maxLength={60} required aria-required="true" onChange={e => setField('display_name', e.target.value)} placeholder="Your preferred name" autoComplete="nickname" /><small>Required. A first name or nickname is fine.</small></label>
                 <label className="profile-field"><span>Username</span><div className="profile-input-with-icon"><AtSign size={15} /><input value={user?.username || ''} readOnly aria-readonly="true" /></div><small>Your account handle can't be changed here.</small></label>
                 <label className="profile-field"><span>Account email</span><div className="profile-input-with-icon"><Mail size={15} /><input value={user?.email || ''} readOnly aria-readonly="true" /></div><small>Managed by Supabase Auth.</small></label>
                 <label className="profile-field profile-field-span"><span>Pronouns <em>· optional</em></span><input value={form.pronouns} maxLength={40} onChange={e => setField('pronouns', e.target.value)} placeholder="e.g. she/her, he/him, they/them" autoComplete="off" /><small>Leave this blank if you'd rather not share it.</small></label>

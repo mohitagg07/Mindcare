@@ -12,7 +12,7 @@ import Metrics from './components/Metrics'
 import Profile from './components/Profile'
 import IdentityOnboarding from './components/IdentityOnboarding'
 import { getMyProfile } from './api/client'
-import { Menu, Sparkles } from 'lucide-react'
+import { AlertCircle, Menu, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react'
 
 const pageMeta = {
   dashboard: { eyebrow: 'HOME', title: 'A little room for you' },
@@ -63,14 +63,16 @@ function Workspace() {
 }
 
 function AuthenticatedApp() {
-  const { user, syncProfile } = useAuth()
+  const { user, syncProfile, logout } = useAuth()
   const { activePage, setActivePage } = useApp()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [identityState, setIdentityState] = useState('loading')
   const [identityProfile, setIdentityProfile] = useState(null)
+  const [identityRetry, setIdentityRetry] = useState(0)
 
   useEffect(() => {
     let active = true
+    setIdentityState('loading')
     getMyProfile()
       .then(({ data }) => {
         if (!active) return
@@ -78,37 +80,47 @@ function AuthenticatedApp() {
         setIdentityProfile(currentProfile)
         syncProfile?.(currentProfile)
         const hasPreferredName = Boolean(String(currentProfile.display_name || '').trim())
-        let skippedOnThisDevice = false
-        try {
-          skippedOnThisDevice = Boolean(user?.id && localStorage.getItem(`mindcare:identity-setup-skipped:${user.id}`) === '1')
-        } catch { /* Storage may be disabled; onboarding remains available. */ }
-        setIdentityState(hasPreferredName || skippedOnThisDevice ? 'ready' : 'setup')
+        setIdentityState(hasPreferredName ? 'ready' : 'setup')
       })
       .catch(() => {
-        // Let users into the app if profile loading is temporarily unavailable. The dashboard
-        // will show a small setup prompt instead of blocking access to support.
-        if (active) setIdentityState('unavailable')
+        // Identity is required before entering the workspace. Never silently bypass onboarding
+        // when the profile API is unavailable; offer retry and sign-out instead.
+        if (active) setIdentityState('error')
       })
     return () => { active = false }
-    // syncProfile is a merge helper recreated by AuthContext; this effect is scoped to account/retry.
+    // syncProfile is a merge helper recreated by AuthContext; retry changes only when requested.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, identityRetry])
 
   const completeIdentitySetup = (savedProfile) => {
     setIdentityProfile(savedProfile || {})
     syncProfile?.(savedProfile || {})
-    try { if (user?.id) localStorage.removeItem(`mindcare:identity-setup-skipped:${user.id}`) } catch { /* Storage may be disabled. */ }
-    setIdentityState('ready')
-  }
-
-  const skipIdentitySetup = () => {
-    try { if (user?.id) localStorage.setItem(`mindcare:identity-setup-skipped:${user.id}`, '1') } catch { /* Storage may be disabled. */ }
     setIdentityState('ready')
   }
 
   if (identityState === 'loading') return <LoadingScreen />
+  if (identityState === 'error') {
+    return (
+      <main className="mc-identity-page">
+        <div className="mc-identity-botanical" aria-hidden="true" />
+        <header className="mc-identity-brandbar">
+          <div className="mc-identity-brand"><img src="/brand/mindcare-mark.png" alt="" /><span className="mc-identity-wordmark">mindcare<span>.</span><small>A CALMER YOU, EVERYDAY</small></span></div>
+          <div className="mc-identity-private"><ShieldCheck size={15} /> Private by default</div>
+        </header>
+        <div className="mc-identity-load-error"><section>
+          <span className="error-mark"><AlertCircle size={21} /></span>
+          <h1>Couldn’t load your profile</h1>
+          <p>We need to check your saved name before opening your space. Check your connection and try again.</p>
+          <div className="error-actions">
+            <button type="button" className="primary" onClick={() => setIdentityRetry(value => value + 1)}><RefreshCw size={14} /> Try again</button>
+            <button type="button" onClick={logout}>Sign out</button>
+          </div>
+        </section></div>
+      </main>
+    )
+  }
   if (identityState === 'setup') {
-    return <IdentityOnboarding profile={identityProfile || user} onComplete={completeIdentitySetup} onSkip={skipIdentitySetup} />
+    return <IdentityOnboarding profile={identityProfile || user} onComplete={completeIdentitySetup} />
   }
 
   const pages = { chat: Chat, assessment: Assessment, emotion: EmotionDetector, dashboard: Dashboard, metrics: Metrics, profile: Profile }

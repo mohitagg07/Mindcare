@@ -20,6 +20,16 @@ def test_profile_update_trims_and_deduplicates_preferences():
     assert profile.focus_areas == ["stress", "sleep"]
 
 
+
+def test_profile_update_rejects_blank_preferred_name():
+    with pytest.raises(ValidationError):
+        ProfileUpdateRequest(display_name="   ")
+
+
+def test_profile_update_rejects_null_preferred_name_when_explicitly_patched():
+    with pytest.raises(ValidationError):
+        ProfileUpdateRequest(display_name=None)
+
 def test_profile_update_rejects_unknown_support_style():
     with pytest.raises(ValidationError):
         ProfileUpdateRequest(support_style="diagnostic")

@@ -67,16 +67,30 @@ class ProfileUpdateRequest(BaseModel):
     focus_areas: list[str] | None = Field(default=None, max_length=6)
     avatar_tone: str | None = Field(default=None, max_length=20)
 
-    @field_validator("display_name", "pronouns", mode="before")
+    @field_validator("display_name", mode="before")
     @classmethod
-    def trim_profile_text(cls, value):
+    def validate_display_name(cls, value):
+        # If this field is explicitly patched, it must remain a usable preferred name.
+        # Omitted fields are still allowed for partial profile updates.
+        if value is None:
+            raise ValueError("Preferred name is required")
+        if not isinstance(value, str):
+            raise ValueError("Preferred name must be text")
+        value = " ".join(value.split())
+        if not value or not any(character.isalnum() for character in value):
+            raise ValueError("Enter a preferred name or nickname")
+        if len(value) > 60:
+            raise ValueError("Preferred name must be 60 characters or fewer")
+        return value
+
+    @field_validator("pronouns", mode="before")
+    @classmethod
+    def trim_pronouns(cls, value):
         if value is None:
             return None
         if not isinstance(value, str):
-            raise ValueError("This profile field must be text")
-        # Normalize whitespace so a display name cannot inject new system-prompt lines.
-        value = " ".join(value.split())
-        return value or None
+            raise ValueError("Pronouns must be text")
+        return " ".join(value.split()) or None
 
     @field_validator("date_of_birth")
     @classmethod
