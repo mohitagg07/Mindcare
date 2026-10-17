@@ -106,6 +106,8 @@ def build_system(context: dict | None, profile: dict | None = None) -> str:
         f"- Pronouns (optional user-provided preference): {json.dumps(' '.join(pronouns.split())[:40], ensure_ascii=True)}." if isinstance(pronouns, str) and pronouns.strip() else "- No pronouns supplied.",
         f"- Response style: {style_instructions.get(style, style_instructions['gentle'])}",
         f"- User-selected focus areas: {', '.join(safe_areas)}. Refer to these only when relevant; do not assume the user is currently struggling with all of them." if safe_areas else "- No focus areas selected; follow the current message rather than assuming a topic.",
+        "If a preferred name is saved, use it naturally when greeting or addressing the person, but do not repeat it in every reply. If no preferred name is saved, do not treat the account username as their real name.",
+        "The saved profile preferences are supplied on each chat request, so they can personalize replies across conversations. Conversation history is limited to the current conversation; do not claim to remember details from other chats unless they are included in the saved profile or current request.",
         "When asked what you know about the user, summarize only these supplied profile facts and what they have said in this conversation. Do not imply access to information outside their account data and conversation.",
     ]
     return base + "\n\n" + "\n".join(personalization)

@@ -37,6 +37,23 @@
   font-size: 13px;
   line-height: 1.55;
 }
+.mcd-setup-nudge {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #e1e8dc;
+  border-radius: 13px;
+  background: rgba(255,255,252,.85);
+}
+.mcd-setup-nudge-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; color: #477b58; background: #edf5e8; }
+.mcd-setup-nudge > div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.mcd-setup-nudge strong { color: #3c5b46; font-size: 10.5px; font-weight: 750; }
+.mcd-setup-nudge p { margin: 0; color: #89968c; font-size: 10px; line-height: 1.5; }
+.mcd-setup-nudge > button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #dce6d9; border-radius: 9px; color: #447454; background: #fff; font: 700 10px 'DM Sans',sans-serif; cursor: pointer; }
+.mcd-setup-nudge > button:hover { border-color: #b6cfb5; background: #f5f9f1; }
 
 .mcd-top-grid {
   display: grid;
@@ -123,8 +140,7 @@
 
 .mcd-activity-card { padding: 20px 19px 14px; }
 .mcd-card-heading,
-.mcd-checkin-heading,
-.mcd-other-heading {
+.mcd-checkin-heading {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -132,8 +148,7 @@
   gap: 12px;
 }
 .mcd-card-heading h2,
-.mcd-checkin-heading h2,
-.mcd-other-heading h2 {
+.mcd-checkin-heading h2 {
   margin: 6px 0 0;
   color: #294538;
   font: 500 21px/1.2 'Fraunces', 'Lora', Georgia, serif;
@@ -253,34 +268,6 @@
 .mcd-clear-mood { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; border: 1px solid #e1e8de; border-radius: 8px; color: #7c8d80; background: #fff; cursor: pointer; }
 .mcd-clear-mood:hover { color: #355c42; border-color: #bfd4bd; }
 
-.mcd-other-ways { margin-top: 24px; }
-.mcd-other-heading h2 { margin-top: 5px; font-size: 22px; }
-.mcd-other-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 13px; }
-.mcd-other-card {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #e2e8de;
-  border-radius: 13px;
-  color: inherit;
-  background: #fffefa;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color .16s ease, background .16s ease;
-}
-.mcd-other-card:hover { border-color: #c2d6c1; background: #fff; }
-.mcd-other-icon { display: grid; width: 39px; height: 39px; flex: 0 0 39px; place-items: center; border: 1px solid #dce8d9; border-radius: 11px; color: #4e8159; background: #eff6eb; }
-.mcd-other-icon-reflect { border-color: #e6deeb; color: #8a719d; background: #f5f0f7; }
-.mcd-other-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
-.mcd-other-copy strong { color: #3d5545; font-size: 11px; font-weight: 650; }
-.mcd-other-copy small { color: #879388; font-size: 10px; line-height: 1.5; }
-.mcd-other-arrow { flex: 0 0 auto; color: #8ea191; }
-
-.mcd-footer { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 24px; color: #929d92; font-size: 10px; line-height: 1.5; }
-.mcd-footer > svg { color: #72967b; }
-.mcd-footer-divider { width: 3px; height: 3px; border-radius: 50%; background: #c0c9bc; }
 .mcd-page button:focus-visible { outline: 3px solid rgba(71, 128, 87, .3); outline-offset: 3px; }
 
 @keyframes mcd-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
@@ -300,6 +287,9 @@
   .mcd-heading { margin-bottom: 18px; }
   .mcd-heading h1 { font-size: 29px; }
   .mcd-subtitle { max-width: 330px; font-size: 12px; }
+  .mcd-setup-nudge { align-items: flex-start; flex-wrap: wrap; gap: 9px; padding: 11px; }
+  .mcd-setup-nudge > div { flex-basis: calc(100% - 46px); }
+  .mcd-setup-nudge > button { width: 100%; justify-content: center; }
   .mcd-top-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .mcd-start-card { min-height: 0; padding: 20px; }
   .mcd-start-card h2 { margin-top: 13px; font-size: 27px; }
@@ -318,11 +308,6 @@
   .mcd-mood-followup-copy { flex-basis: calc(100% - 37px); }
   .mcd-followup-action { order: 3; width: 100%; justify-content: center; padding: 10px; border: 1px solid #d9e4d7; border-radius: 9px; background: #fff; }
   .mcd-clear-mood { margin-left: auto; }
-  .mcd-other-ways { margin-top: 21px; }
-  .mcd-other-heading h2 { font-size: 21px; }
-  .mcd-other-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 11px; }
-  .mcd-other-card { padding: 12px; }
-  .mcd-footer { gap: 6px; margin-top: 20px; font-size: 9px; text-align: center; }
 }
 
 @media (max-width: 370px) {
@@ -337,5 +322,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mcd-activity-skeleton span { animation: none; }
-  .mcd-button-primary,.mcd-mood-option,.mcd-other-card { transition: none; }
+  .mcd-button-primary,.mcd-mood-option { transition: none; }
 }

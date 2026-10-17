@@ -199,8 +199,8 @@ export default function Chat() {
             <div className="chat-welcome animate-fade-up">
               <div className="chat-welcome-orb"><Heart size={28} strokeWidth={1.6} /></div>
               <p className="chat-welcome-kicker"><Sparkles size={13} /> START HERE</p>
-              <h2>Start anywhere.<br /><em>One thing at a time.</em></h2>
-              <p className="chat-welcome-copy">You can start with a thought, a feeling, or a question.</p>
+              <h2>{String(user?.display_name || '').trim() ? <>Hi, {String(user.display_name).trim().split(/\s+/)[0]}.<br /></> : <>Start anywhere.<br /></>}<em>One thing at a time.</em></h2>
+              <p className="chat-welcome-copy">{String(user?.display_name || '').trim() ? 'Your saved preferences come with you. Start with whatever is on your mind today.' : 'You can start with a thought, a feeling, or a question.'}</p>
               <div className="chat-prompt-grid">
                 {QUICK_STARTS.map(({ icon: Icon, title, text, tint }) => (
                   <button key={title} type="button" className={`chat-prompt-card tint-${tint}`} onClick={() => handleSend(text)} disabled={loading || historyLoading}>

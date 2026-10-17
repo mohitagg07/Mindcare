@@ -5,15 +5,13 @@ import {
   BookOpen,
   Check,
   ChevronRight,
-  ClipboardCheck,
   Cloud,
   Meh,
   MessageCircle,
   RotateCcw,
-  ShieldCheck,
   Smile,
   Sun,
-  Waves,
+  UserRound,
   X,
 } from 'lucide-react'
 import { api, getAssessmentHistory } from '../api/client'
@@ -110,7 +108,7 @@ export default function Dashboard() {
   const [mood, setMood] = useState(null)
 
   const timezone = user?.timezone || 'Asia/Kolkata'
-  const firstName = String(user?.display_name || user?.username || '').trim().split(/\s+/)[0]
+  const firstName = String(user?.display_name || '').trim().split(/\s+/)[0]
   const today = safeDate(new Date(), timezone, {
     weekday: 'long',
     month: 'long',
@@ -188,6 +186,14 @@ export default function Dashboard() {
           <p className="mcd-subtitle">Take a moment for yourself. Start wherever you are.</p>
         </header>
 
+        {!String(user?.display_name || '').trim() && (
+          <section className="mcd-setup-nudge" aria-label="Personalize your account">
+            <span className="mcd-setup-nudge-icon"><UserRound size={16} /></span>
+            <div><strong>Make this space feel like yours.</strong><p>Choose a preferred name and how you like to be supported.</p></div>
+            <button type="button" onClick={() => setActivePage('profile')}>Personalize <ArrowRight size={14} /></button>
+          </section>
+        )}
+
         <div className="mcd-top-grid">
           <section className="mcd-start-card" aria-labelledby="mcd-start-title">
             <p className="mcd-eyebrow">START HERE</p>
@@ -208,7 +214,6 @@ export default function Dashboard() {
           <section className="mcd-activity-card" aria-labelledby="mcd-activity-title">
             <div className="mcd-card-heading">
               <div>
-                <p className="mcd-eyebrow">YOUR SPACE</p>
                 <h2 id="mcd-activity-title">Recent activity</h2>
               </div>
               {recent.length > 0 && !activityLoading && (
@@ -299,33 +304,6 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section className="mcd-other-ways" aria-labelledby="mcd-other-title">
-          <div className="mcd-other-heading">
-            <div>
-              <p className="mcd-eyebrow">WHEN YOU NEED SOMETHING DIFFERENT</p>
-              <h2 id="mcd-other-title">Other ways to check in</h2>
-            </div>
-          </div>
-          <div className="mcd-other-grid">
-            <button type="button" className="mcd-other-card" onClick={() => setActivePage('assessment')}>
-              <span className="mcd-other-icon mcd-other-icon-check"><ClipboardCheck size={19} /></span>
-              <span className="mcd-other-copy"><strong>Structured check-in</strong><small>Optional PHQ-9 and GAD-7 questionnaires</small></span>
-              <ArrowUpRight className="mcd-other-arrow" size={16} />
-            </button>
-            <button type="button" className="mcd-other-card" onClick={() => setActivePage('emotion')}>
-              <span className="mcd-other-icon mcd-other-icon-reflect"><Waves size={19} /></span>
-              <span className="mcd-other-copy"><strong>Pause and reflect</strong><small>An optional reflection tool, at your pace</small></span>
-              <ArrowUpRight className="mcd-other-arrow" size={16} />
-            </button>
-          </div>
-        </section>
-
-        <footer className="mcd-footer">
-          <ShieldCheck size={14} aria-hidden="true" />
-          <span>Your space is personal.</span>
-          <span className="mcd-footer-divider" aria-hidden="true" />
-          <span>MindCare offers support, not diagnosis.</span>
-        </footer>
       </div>
     </main>
   )

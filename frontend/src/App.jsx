@@ -10,10 +10,12 @@ import EmotionDetector from './components/EmotionDetector'
 import Dashboard from './components/Dashboard'
 import Metrics from './components/Metrics'
 import Profile from './components/Profile'
-import { Menu, ShieldCheck, Sparkles } from 'lucide-react'
+import IdentityOnboarding from './components/IdentityOnboarding'
+import { getMyProfile } from './api/client'
+import { Menu, Sparkles } from 'lucide-react'
 
 const pageMeta = {
-  dashboard: { eyebrow: 'YOUR SPACE', title: 'A little room for you' },
+  dashboard: { eyebrow: 'HOME', title: 'A little room for you' },
   chat: { eyebrow: 'TALK', title: 'Start wherever you are' },
   assessment: { eyebrow: 'CHECK IN', title: 'Take a moment' },
   emotion: { eyebrow: 'REFLECT', title: 'Pause and notice' },
@@ -61,9 +63,54 @@ function Workspace() {
 }
 
 function AuthenticatedApp() {
-  const { user } = useAuth()
+  const { user, syncProfile } = useAuth()
   const { activePage, setActivePage } = useApp()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [identityState, setIdentityState] = useState('loading')
+  const [identityProfile, setIdentityProfile] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    getMyProfile()
+      .then(({ data }) => {
+        if (!active) return
+        const currentProfile = data || {}
+        setIdentityProfile(currentProfile)
+        syncProfile?.(currentProfile)
+        const hasPreferredName = Boolean(String(currentProfile.display_name || '').trim())
+        let skippedOnThisDevice = false
+        try {
+          skippedOnThisDevice = Boolean(user?.id && localStorage.getItem(`mindcare:identity-setup-skipped:${user.id}`) === '1')
+        } catch { /* Storage may be disabled; onboarding remains available. */ }
+        setIdentityState(hasPreferredName || skippedOnThisDevice ? 'ready' : 'setup')
+      })
+      .catch(() => {
+        // Let users into the app if profile loading is temporarily unavailable. The dashboard
+        // will show a small setup prompt instead of blocking access to support.
+        if (active) setIdentityState('unavailable')
+      })
+    return () => { active = false }
+    // syncProfile is a merge helper recreated by AuthContext; this effect is scoped to account/retry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  const completeIdentitySetup = (savedProfile) => {
+    setIdentityProfile(savedProfile || {})
+    syncProfile?.(savedProfile || {})
+    try { if (user?.id) localStorage.removeItem(`mindcare:identity-setup-skipped:${user.id}`) } catch { /* Storage may be disabled. */ }
+    setIdentityState('ready')
+  }
+
+  const skipIdentitySetup = () => {
+    try { if (user?.id) localStorage.setItem(`mindcare:identity-setup-skipped:${user.id}`, '1') } catch { /* Storage may be disabled. */ }
+    setIdentityState('ready')
+  }
+
+  if (identityState === 'loading') return <LoadingScreen />
+  if (identityState === 'setup') {
+    return <IdentityOnboarding profile={identityProfile || user} onComplete={completeIdentitySetup} onSkip={skipIdentitySetup} />
+  }
+
   const pages = { chat: Chat, assessment: Assessment, emotion: EmotionDetector, dashboard: Dashboard, metrics: Metrics, profile: Profile }
   const PageComponent = pages[activePage] || Dashboard
   const meta = pageMeta[activePage] || pageMeta.dashboard
@@ -83,7 +130,6 @@ function AuthenticatedApp() {
             <div className="mc-topbar-heading"><span>{meta.eyebrow}</span><strong>{meta.title}</strong></div>
           </div>
           <div className="mc-topbar-actions">
-            <span className="mc-private-pill"><ShieldCheck size={14} /> Private space</span>
             <button className={`mc-topbar-avatar mc-avatar-${user?.avatar_tone || 'sage'}${activePage === 'profile' ? ' is-active' : ''}${user?.avatar_url ? ' has-photo' : ''}`} type="button" title="Open your profile" aria-label="Open your profile" onClick={() => navigate('profile')}>{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</button>
           </div>
         </header>

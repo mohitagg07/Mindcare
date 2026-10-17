@@ -170,6 +170,18 @@ def test_groq_prompt_can_answer_name_question_from_handle_without_claiming_it_is
     assert "Never claim the handle is their real name" in prompt
 
 
+def test_groq_prompt_uses_preferred_name_and_sets_clear_memory_boundaries():
+    prompt = build_system({}, {
+        "display_name": "Mohit",
+        "username": "mohit_agg7",
+        "support_style": "gentle",
+        "focus_areas": ["focus"],
+    })
+    assert "use it naturally when greeting or addressing the person" in prompt
+    assert "saved profile preferences are supplied on each chat request" in prompt
+    assert "Conversation history is limited to the current conversation" in prompt
+
+
 def test_groq_prompt_uses_saved_identity_but_not_raw_birth_date():
     prompt = build_system({}, {
         "display_name": "Mohit", "username": "mohit_agg7", "age": 22,
