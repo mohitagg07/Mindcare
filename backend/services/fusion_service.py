@@ -1,43 +1,65 @@
+"""Safety cue handling and general support helpers for MindCare.
+
+IMPORTANT:
+- No composite clinical risk score is produced by this module.
+- PHQ-9/GAD-7 screening totals must be interpreted separately.
+- Facial-expression estimates and general sentiment are not used to score or triage a person.
+- Keyword cues are a fail-safe prompt to offer a direct safety check, not a classifier,
+  diagnosis, or proof that a person is safe when no cue is found.
+"""
+from __future__ import annotations
+
+import re
 from typing import Tuple
 
-EMOTION_RISK_MAP = {
-    "angry":    0.65,
-    "disgust":  0.55,
-    "fear":     0.80,
-    "happy":    0.05,
-    "neutral":  0.25,
-    "sad":      0.85,
-    "surprise": 0.30,
-}
+# Keep these cues direct and reasonably specific. Broad phrases such as "worthless",
+# "no point", or "can't go on" should prompt empathetic clarification in the LLM path,
+# not automatically trigger an emergency response by substring matching.
+_SAFETY_CUE_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("direct_self_harm_intent", r"\b(?:i\s+)?(?:(?:want|plan|intend)\s+to|(?:might|will)\s+|am going\s+to)\s*(?:kill myself|hurt myself|harm myself|end my life|take my own life|commit suicide)\b"),
+    ("direct_suicidal_ideation", r"\b(?:i\s+)?(?:want to die|wish i (?:were|was) dead|wish i could die|better off dead|don't want to live|dont want to live|do not want to live)(?:\s+(?:anymore|any more))?\b"),
+    ("first_person_suicidal_thoughts", r"\b(?:i am|i'm|im|i have been|i've been)\s+(?:feeling )?suicidal\b|\b(?:i am|i'm|im|i have been|i've been)\s+(?:thinking about|thinking of|having thoughts of)\s+(?:suicide|killing myself|hurting myself|self[- ]harm)\b"),
+    ("self_harm_language", r"\b(?:i self[- ]harm|i have self[- ]harmed|i've self[- ]harmed|i am hurting myself|i'm hurting myself|i am harming myself|i'm harming myself|i (?:can't|cannot|don't think i can|dont think i can) keep myself safe)\b|\b(?:thinking about|thinking of|thoughts of)\s+(?:suicide|killing myself|hurting myself|self[- ]harm)\b"),
+    ("hinglish_self_harm_cue", r"\b(?:khudkushi kar(?:na|ne)?|khud ko (?:maar(?:na)?|khatam kar(?:na)?|nuksan pahunchana)|jeene ka mann nahi|jeena nahi chahta|jeena nahi chahti|ab aur nahi jeena|marna chahta hoon|marna chahti hoon|mar jana chahta hoon|mar jana chahti hoon)\b"),
+)
 
-CRISIS_KEYWORDS = [
-    "suicide", "kill myself", "end my life", "don't want to live",
-    "want to die", "self harm", "hurt myself", "no reason to live",
-    "better off dead", "can't go on", "no point", "ending it",
-    "worthless", "disappear forever",
-]
+# Explicit denials should not trigger solely because the words "suicide" or "self-harm"
+# are present. Only the matching denial span is masked; a second, positive cue in the same
+# message can still trigger a safety response. This is a guard against common false positives,
+# not natural-language understanding or a validated safety classifier.
+_NEGATED_CUE_PATTERNS: tuple[str, ...] = (
+    r"\b(?:i\s+)?(?:don't|dont|do not)\s+want\s+to\s+die\b",
+    r"\b(?:i am|i'm|im)\s+not\s+suicidal\b",
+    r"\b(?:i am|i'm|im)\s+not\s+(?:thinking about|thinking of|having thoughts of)\s+(?:suicide|killing myself|hurting myself|self[- ]harm)\b",
+    r"\bno\s+(?:suicidal thoughts|thoughts of suicide|thoughts of self[- ]harm)\b",
+    r"\b(?:i have|i've)\s+no\s+(?:suicidal thoughts|thoughts of suicide|thoughts of self[- ]harm)\b",
+)
 
-CRISIS_RESOURCES = """
-If you might act on these thoughts or are in immediate danger, contact your local emergency number or go to the nearest emergency department now. If you can, tell someone you trust and stay near them while you get support. For a phone, text, or chat service in your country, use Find A Helpline: https://findahelpline.com/.
-"""
+CRISIS_RESOURCES = """If you may act on these thoughts or cannot keep yourself safe right now, call India's emergency number 112 or go to the nearest emergency department. If you are in India, free 24/7 mental health support is available through Tele-MANAS at 14416. Vandrevala Foundation also offers free 24/7 phone/WhatsApp support at +91 9999 666 555. If you are elsewhere, contact your local emergency number or crisis service."""
+
+SAFETY_CHECK_RESPONSE = """Thank you for telling me. I want to take this seriously without making assumptions. Are you in immediate danger right now, or do you feel you might act on thoughts of harming yourself today?\n\nIf yes, or if you are unsure you can stay safe, please contact emergency support now and, if possible, stay with someone you trust.\n\n""" + CRISIS_RESOURCES
 
 
 def check_crisis(text: str) -> Tuple[bool, str]:
-    lower = text.lower()
-    for kw in CRISIS_KEYWORDS:
-        if kw in lower:
-            return True, kw
+    """Return whether explicit self-harm language warrants a direct safety check.
+
+    This does not estimate severity or imminent risk and is not exhaustive. A False
+    result means only that this small set of cues was not matched; it does not mean
+    the user is safe. The model prompt separately instructs the assistant to clarify
+    ambiguous hopelessness and to ask about safety when warranted.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return False, ""
+
+    normalized = " ".join(text.lower().replace("’", "'").replace("‘", "'").split())
+    searchable = normalized
+    for pattern in _NEGATED_CUE_PATTERNS:
+        searchable = re.sub(pattern, " ", searchable, flags=re.IGNORECASE)
+
+    for label, pattern in _SAFETY_CUE_PATTERNS:
+        if re.search(pattern, searchable, flags=re.IGNORECASE):
+            return True, label
     return False, ""
-
-
-def get_text_sentiment_risk(text: str) -> float:
-    """Returns 0.0 (very positive) to 1.0 (very negative) risk."""
-    try:
-        from services.sentiment_service import compound_sentiment
-        compound = compound_sentiment(text)
-        return round((1.0 - compound) / 2.0, 4)
-    except Exception:
-        return 0.5
 
 
 def compute_risk_score(
@@ -46,67 +68,45 @@ def compute_risk_score(
     emotion: str | None = None,
     text: str = "",
 ) -> dict:
-    components = []
-    weights = []
-    phq9_n = (phq9_score / 27.0) if phq9_score is not None else None
-    gad7_n = (gad7_score / 21.0) if gad7_score is not None else None
-    facial_risk = EMOTION_RISK_MAP.get(emotion.lower()) if emotion and emotion.lower() in EMOTION_RISK_MAP else None
-    text_risk = get_text_sentiment_risk(text) if text.strip() else None
+    """Deprecated compatibility API: intentionally does not create a risk score.
 
-    # Only include signals actually provided; do not treat a missing assessment as a zero score.
-    if phq9_n is not None:
-        components.append(phq9_n); weights.append(0.40)
-    if gad7_n is not None:
-        components.append(gad7_n); weights.append(0.25)
-    if facial_risk is not None:
-        components.append(facial_risk); weights.append(0.20)
-    if text_risk is not None:
-        components.append(text_risk); weights.append(0.15)
-    final = round(sum(value * weight for value, weight in zip(components, weights)) / sum(weights), 3) if weights else 0.0
-
-    if final >= 0.75:
-        level, color = "HIGH",      "#ef4444"
-    elif final >= 0.50:
-        level, color = "MODERATE",  "#f97316"
-    elif final >= 0.25:
-        level, color = "LOW",       "#eab308"
-    else:
-        level, color = "MINIMAL",   "#22c55e"
-
+    Old versions combined questionnaire totals, VADER sentiment, and guessed facial
+    expression values into a weighted number. That number was not clinically validated
+    and could label a sad face as HIGH risk. Keep a response shape for older callers,
+    but return an explicit unassessed state until a clinically governed alternative is
+    designed and validated. None of the arguments are used to make a safety decision.
+    """
     return {
-        "risk_score": final,
-        "risk_level": level,
-        "risk_color": color,
+        "risk_score": None,
+        "risk_level": "UNASSESSED",
+        "risk_color": "#84918a",
         "is_clinical_assessment": False,
+        "status": "disabled_pending_validation",
+        "note": "MindCare does not calculate a clinical risk score. Screening results are interpreted separately; facial-expression and sentiment estimates are not safety evidence.",
         "available_signals": {
             "phq9": phq9_score is not None,
             "gad7": gad7_score is not None,
-            "emotion_label": facial_risk is not None,
-            "text_signal": text_risk is not None,
+            "emotion_label": bool(emotion),
+            "text_signal": bool(text and text.strip()),
         },
         "components": {
-            "phq9_contribution": round(phq9_n, 3) if phq9_n is not None else None,
-            "gad7_contribution": round(gad7_n, 3) if gad7_n is not None else None,
-            "facial_contribution": round(facial_risk, 3) if facial_risk is not None else None,
-            "text_contribution": round(text_risk, 3) if text_risk is not None else None,
+            "phq9_contribution": None,
+            "gad7_contribution": None,
+            "facial_contribution": None,
+            "text_contribution": None,
         },
     }
 
 
-def get_recommendations(risk_level: str, emotion: str) -> dict:
-    exercises = [
-        "If it feels comfortable, slow your breathing for a few moments. You can stop at any time.",
-        "Look around and name a few things you can see, hear, and feel where you are.",
-        "Consider telling someone you trust what today has been like.",
-    ]
-    resources = []
-    message = "These are optional ideas, not a reading of how you are doing. Keep what feels useful and leave the rest."
-
-    if risk_level in {"HIGH", "MODERATE"}:
-        resources = [
-            {"name": "Find a support line by country", "contact": "https://findahelpline.com/", "type": "directory"},
-            {"name": "Professional support", "contact": "A qualified mental health professional", "type": "care"},
-        ]
-        message = "This activity indicator is experimental and cannot assess your safety. If you might hurt yourself or are in immediate danger, contact local emergency services or go to the nearest emergency department."
-
-    return {"exercises": exercises, "resources": resources, "message": message}
+def get_recommendations(risk_level: str | None = None, emotion: str | None = None) -> dict:
+    """Return general, low-risk support options; never infer how well/badly a user is doing."""
+    return {
+        "exercises": [
+            "If it feels comfortable, try a few slow, easy breaths without forcing the pace.",
+            "Name one thing that feels most important to you right now.",
+            "Consider reaching out to a trusted person if you would rather not handle this alone.",
+        ],
+        "resources": [],
+        "message": "I haven't calculated a clinical risk level. We can start with what you tell me and work out what kind of support would help.",
+        "personalized_by_risk": False,
+    }

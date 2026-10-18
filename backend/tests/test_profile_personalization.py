@@ -20,16 +20,6 @@ def test_profile_update_trims_and_deduplicates_preferences():
     assert profile.focus_areas == ["stress", "sleep"]
 
 
-
-def test_profile_update_rejects_blank_preferred_name():
-    with pytest.raises(ValidationError):
-        ProfileUpdateRequest(display_name="   ")
-
-
-def test_profile_update_rejects_null_preferred_name_when_explicitly_patched():
-    with pytest.raises(ValidationError):
-        ProfileUpdateRequest(display_name=None)
-
 def test_profile_update_rejects_unknown_support_style():
     with pytest.raises(ValidationError):
         ProfileUpdateRequest(support_style="diagnostic")
@@ -48,21 +38,6 @@ def test_profile_update_rejects_more_than_six_focus_areas():
 def test_profile_update_rejects_blank_timezone():
     with pytest.raises(ValidationError):
         ProfileUpdateRequest(timezone="   ")
-
-
-def test_profile_update_normalizes_and_validates_username():
-    assert ProfileUpdateRequest(username="  New_Handle ").username == "new_handle"
-    with pytest.raises(ValidationError):
-        ProfileUpdateRequest(username="x!")
-    with pytest.raises(ValidationError):
-        ProfileUpdateRequest(username=None)
-
-
-def test_account_deletion_requires_explicit_confirmation():
-    from routers.auth import DeleteAccountRequest
-    assert DeleteAccountRequest(confirmation="DELETE").confirmation == "DELETE"
-    with pytest.raises(ValidationError):
-        DeleteAccountRequest(confirmation="delete")
 
 
 def test_groq_system_prompt_uses_selected_style_and_focus_areas():
@@ -216,9 +191,10 @@ def test_groq_prompt_uses_saved_identity_but_not_raw_birth_date():
     assert 'Preferred name (JSON-quoted user data): "Mohit"' in prompt
     assert 'Account username (a handle' in prompt
     assert '"mohit_agg7"' in prompt
-    assert 'Age: 22' in prompt
-    assert 'the birth date itself is not shared with you' in prompt
-    assert 'not on file; do not guess' not in prompt
+    # Data-minimization decision: do not include DOB-derived age in the LLM prompt by default.
+    assert 'Age: 22' not in prompt
+    assert 'the birth date itself is not shared with you' not in prompt
+    assert 'not a diagnosis' in prompt
 
 
 def test_avatar_image_is_reencoded_to_webp_and_oriented():

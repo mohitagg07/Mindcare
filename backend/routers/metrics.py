@@ -3,7 +3,6 @@ from collections import Counter
 from fastapi import APIRouter, Depends, Response
 from auth.dependencies import get_current_user
 from db.supabase import select_rows
-from services.trajectory_service import get_trajectory_summary
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 @router.get("/overview")
@@ -22,7 +21,15 @@ async def overview(current_user=Depends(get_current_user)):
 
 @router.get("/trajectory")
 async def trajectory(current_user=Depends(get_current_user)):
-    return await get_trajectory_summary(current_user["id"], current_user["access_token"])
+    # Previous trajectories were calculated from an unvalidated composite of sentiment,
+    # questionnaires and facial-expression estimates. Keep the response shape stable while
+    # disabling those historical modelled trends until a reviewed replacement is designed.
+    return {
+        "trend": "unknown", "points": 0, "current_ema": None,
+        "avg_sentiment": None, "last_trigger": None, "recent": [],
+        "available": False,
+        "note": "Experimental composite trajectory is disabled pending validation; no clinical trend is available.",
+    }
 
 
 @router.get("/emotion-distribution")
@@ -37,12 +44,9 @@ async def emotion_distribution(current_user=Depends(get_current_user)):
 
 @router.get("/risk-distribution")
 async def risk_distribution(current_user=Depends(get_current_user)):
-    rows, _ = await select_rows("conversations", current_user["access_token"], {
-        "select": "risk_level", "user_id": f"eq.{current_user['id']}",
-        "risk_level": "not.is.null", "limit": "1000",
-    })
-    counts = Counter(row["risk_level"] for row in rows if row.get("risk_level"))
-    return [{"level": key, "count": value} for key, value in counts.items()]
+    # Do not re-serve historical category labels produced by the retired unvalidated formula.
+    # Existing rows are left untouched for a later, reviewed migration/retention decision.
+    return []
 
 
 @router.get("/model-performance")
@@ -61,7 +65,7 @@ async def model_performance(current_user=Depends(get_current_user)):
 async def my_sessions(current_user=Depends(get_current_user)):
     uid, token = current_user["id"], current_user["access_token"]
     sessions, _ = await select_rows("conversations", token, {
-        "select": "id,title,created_at,phq9_score,phq9_category,gad7_score,risk_level,risk_score,trajectory_trend",
+        "select": "id,created_at,phq9_score,phq9_category,gad7_score,risk_level,risk_score,trajectory_trend",
         "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "20",
     })
     if not sessions:
@@ -76,10 +80,12 @@ async def my_sessions(current_user=Depends(get_current_user)):
     results = []
     for item in sessions:
         results.append({
-            "session_id": item["id"], "title": item.get("title"), "started_at": item.get("created_at"),
-            "phq9_score": item.get("phq9_score"), "phq9_category": item.get("phq9_category"),
-            "gad7_score": item.get("gad7_score"), "risk_level": item.get("risk_level"),
-            "risk_score": item.get("risk_score"), "trajectory_trend": item.get("trajectory_trend"),
+            "session_id": item["id"], "started_at": item.get("created_at"),
+            # Legacy conversation-level score fields came from client payloads/experimental
+            # composites. Canonical PHQ-9/GAD-7 history lives in assessments.
+            "phq9_score": None, "phq9_category": None,
+            "gad7_score": None, "risk_level": None,
+            "risk_score": None, "trajectory_trend": None,
             "message_count": message_counts.get(item["id"], 0),
         })
     return results

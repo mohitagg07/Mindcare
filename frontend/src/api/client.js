@@ -82,6 +82,8 @@ async function request(path, options = {}, alreadyRetried = false) {
 export const getQuestions   = ()      => request('/api/assessment/questions')
 export const getAssessmentHistory = () => request('/api/assessment/history')
 export const submitPHQ9     = (answers, submissionId) => request('/api/assessment/phq9', { method:'POST', body:JSON.stringify({ responses:answers, submission_id:submissionId }) })
+export const submitGAD7     = (answers, submissionId) => request('/api/assessment/gad7', { method:'POST', body:JSON.stringify({ responses:answers, submission_id:submissionId }) })
+export const sendChat       = (body)  => request('/api/chat', { method:'POST', body:JSON.stringify(body) })
 export async function sendChatStream(body, { signal, onDelta } = {}) {
   const controller = new AbortController()
   const relayAbort = () => controller.abort(signal?.reason)

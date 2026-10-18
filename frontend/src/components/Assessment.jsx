@@ -1,234 +1,256 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle, ClipboardList, RotateCcw, ShieldCheck } from 'lucide-react'
-import { v4 as uuidv4 } from 'uuid'
-import { getQuestions, submitPHQ9 } from '../api/client'
+import { useState, useEffect } from 'react'
+import { ClipboardList, CheckCircle, RotateCcw, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react'
+import { getQuestions, submitPHQ9, submitGAD7 } from '../api/client'
 import { useApp } from '../context/AppContext'
 
-const FALLBACK_OPTIONS = [
-  { value: 0, label: 'Not at all' },
-  { value: 1, label: 'Several days' },
-  { value: 2, label: 'More than half the days' },
-  { value: 3, label: 'Nearly every day' },
+const OPTIONS = [
+  { value:0, label:'Not at all' },
+  { value:1, label:'Several days' },
+  { value:2, label:'More than half the days' },
+  { value:3, label:'Nearly every day' },
 ]
 
-const RESULT_GUIDANCE = {
-  Minimal: 'If this check-in felt useful, keep doing the small things that support you. You can return to it later if you want to reflect on changes.',
-  Mild: 'You may want to share what you have noticed with someone you trust. If these feelings persist or become harder to manage, a mental health professional can help.',
-  Moderate: 'Consider talking with a mental health professional about what has been going on and what support might help.',
-  'Moderately Severe': 'It may help to contact a mental health professional soon and let someone you trust know how you have been feeling.',
-  Severe: 'Please consider reaching out to a mental health professional as soon as you can. If you feel in immediate danger, contact local emergency support now.',
-}
-
+/* ── Score Result — shows CATEGORY only, no numeric score ── */
 function ScoreResult({ result, title, onReset }) {
-  const isPhq = result.max_score === 27
-  const categories = isPhq
-    ? ['Minimal', 'Mild', 'Moderate', 'Moderately Severe', 'Severe']
-    : ['Minimal', 'Mild', 'Moderate', 'Severe']
-  const ranges = isPhq
-    ? { Minimal: '0–4', Mild: '5–9', Moderate: '10–14', 'Moderately Severe': '15–19', Severe: '20–27' }
-    : { Minimal: '0–4', Mild: '5–9', Moderate: '10–14', Severe: '15–21' }
+  const pct = Math.round((result.score / result.max_score) * 100)
+
+  const categoryMeta = {
+    'Minimal':           { emoji:'🌿', msg:'You appear to be doing well. Keep taking care of yourself.' },
+    'Mild':              { emoji:'🌤️', msg:'Some symptoms detected. Small daily habits can make a big difference.' },
+    'Moderate':          { emoji:'⛅', msg:'Moderate symptoms. Consider talking to a counsellor or trusted person.' },
+    'Moderately Severe': { emoji:'🌧️', msg:'Significant symptoms. We recommend seeking professional support soon.' },
+    'Severe':            { emoji:'⚡', msg:'Severe symptoms. Please reach out to a mental health professional now.' },
+  }
+  const meta = categoryMeta[result.category] ?? { emoji:'💙', msg:result.description }
+
+  const levels = result.max_score === 27
+    ? [{ label:'Minimal', color:'#2A7D6F' }, { label:'Mild', color:'#3B6EA8' }, { label:'Moderate', color:'#C07436' }, { label:'Mod. Severe', color:'#C05A2A' }, { label:'Severe', color:'#C0424A' }]
+    : [{ label:'Minimal', color:'#2A7D6F' }, { label:'Mild', color:'#3B6EA8' }, { label:'Moderate', color:'#C07436' }, { label:'Severe', color:'#C0424A' }]
 
   return (
-    <section className="assessment-result" aria-labelledby="assessment-result-heading" aria-live="polite">
-      <div className="assessment-result-card" style={{ '--assessment-accent': result.color || '#438765' }}>
-        <div className="assessment-result-icon" aria-hidden="true"><CheckCircle size={24} /></div>
-        <div>
-          <p className="assessment-kicker">{title} screening result</p>
-          <h3 id="assessment-result-heading">{result.category}</h3>
-          <p className="assessment-result-summary">Your score is <strong>{result.score} of {result.max_score}</strong>. This falls in the {result.category?.toLowerCase()} symptom range for this screening.</p>
-        </div>
-      </div>
+    <div className="animate-scale-in" style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
-      <section className="assessment-scale" aria-label={`${title} screening ranges`}>
-        <div className="assessment-section-heading"><h3>Screening ranges</h3><span>Your result is highlighted</span></div>
-        <div className="assessment-range-list">
-          {categories.map(category => {
-            const active = result.category === category
-            return <div key={category} className={`assessment-range${active ? ' is-current' : ''}`} aria-current={active ? 'true' : undefined}>
-              <span className="assessment-range-dot" />
-              <span>{category} <small>{ranges[category]}</small></span>
-              {active && <strong>Current result</strong>}
-            </div>
-          })}
-        </div>
-      </section>
-
-      <section className="assessment-guidance">
-        <h3>A possible next step</h3>
-        <p>{RESULT_GUIDANCE[result.category] || 'You can use this result as a starting point for a conversation with someone you trust or a qualified professional.'}</p>
-      </section>
-
-      <p className="assessment-disclaimer"><ShieldCheck size={16} /> This is a screening questionnaire, not a diagnosis. A score cannot explain everything you are experiencing. A qualified professional can help you understand it in context.</p>
-
-      {result.crisis_flag && <div className="assessment-safety-panel" role="alert">
-        <AlertTriangle size={19} aria-hidden="true" />
-        <div>
-          <h3>You deserve support with this</h3>
-          <p>Your answer suggests you have had thoughts about being better off dead or hurting yourself. The screening cannot tell how immediate those thoughts are.</p>
-          <p><strong>If you might act on these thoughts or are in immediate danger, contact your local emergency number or go to the nearest emergency department now.</strong> If you can, tell someone you trust and stay near them while you get support.</p>
-          <p><a href="https://findahelpline.com/" target="_blank" rel="noopener noreferrer">Find a verified support line for your country</a></p>
-        </div>
-      </div>}
-
-      <button type="button" onClick={onReset} className="assessment-retake"><RotateCcw size={15} /> Retake screening</button>
-    </section>
-  )
-}
-
-function AssessmentForm({ title, questions, options, onSubmit, result, color, onReset }) {
-  const [answers, setAnswers] = useState(() => Array(questions.length).fill(null))
-  const [step, setStep] = useState(0)
-  const [saving, setSaving] = useState(false)
-  const [submitError, setSubmitError] = useState('')
-  const [done, setDone] = useState(Boolean(result))
-  const submissionAttempt = useRef({ answers: '', id: uuidv4() })
-  const answered = answers.filter(answer => answer !== null).length
-  const allAnswered = questions.length > 0 && answered === questions.length
-  const lastAnswer = title === 'PHQ-9' && step === 8 ? answers[8] : null
-
-  useEffect(() => { setDone(Boolean(result)) }, [result])
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (saving) return
-    setSubmitError('')
-    if (!allAnswered) {
-      setSubmitError('Please answer each question before viewing your result.')
-      const firstMissing = answers.findIndex(answer => answer === null)
-      if (firstMissing >= 0) setStep(firstMissing)
-      return
-    }
-    setSaving(true)
-    try {
-      const answerKey = JSON.stringify(answers)
-      if (submissionAttempt.current.answers !== answerKey) submissionAttempt.current = { answers: answerKey, id: uuidv4() }
-      await onSubmit(answers, submissionAttempt.current.id)
-      setDone(true)
-    } catch (error) {
-      setSubmitError(error.message || 'Your screening could not be saved. Please check your connection and try again.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const reset = () => {
-    setAnswers(Array(questions.length).fill(null))
-    setStep(0)
-    setDone(false)
-    setSubmitError('')
-    submissionAttempt.current = { answers: '', id: uuidv4() }
-    onReset?.()
-  }
-
-  if (done && result) return <ScoreResult result={result} title={title} onReset={reset} />
-
-  const percent = questions.length ? Math.round(answered / questions.length * 100) : 0
-  const selectedAnswer = answers[step]
-
-  return (
-    <form className="assessment-form" onSubmit={handleSubmit} noValidate aria-busy={saving}>
-      <div className="assessment-progress-block">
-        <div className="assessment-progress-top">
-          <div className="assessment-step-list" aria-label="Question navigation">
-            {questions.map((_, index) => {
-              const answeredQuestion = answers[index] !== null
-              return <button key={index} type="button" className={`assessment-step-dot${index === step ? ' is-current' : ''}${answeredQuestion ? ' is-answered' : ''}`} onClick={() => { setStep(index); setSubmitError('') }} disabled={saving} aria-label={`Question ${index + 1}${answeredQuestion ? ', answered' : ', not answered'}${index === step ? ', current' : ''}`} aria-current={index === step ? 'step' : undefined}>
-                {answeredQuestion ? '✓' : index + 1}
-              </button>
-            })}
+      {/* Result card — emoji + category + friendly message, NO score number */}
+      <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap', background:`${result.color}08`, border:`1.5px solid ${result.color}25`, borderRadius:16, padding:'22px 20px' }}>
+        <div style={{ fontSize:52, flexShrink:0, textAlign:'center' }}>{meta.emoji}</div>
+        <div style={{ flex:1, minWidth:180 }}>
+          <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>{title} Result</p>
+          <div style={{ display:'inline-flex', alignItems:'center', padding:'7px 18px', borderRadius:99, marginBottom:10, background:`${result.color}14`, border:`1.5px solid ${result.color}30`, color:result.color, fontSize:16, fontWeight:800, fontFamily:'Lora,serif' }}>
+            {result.category}
           </div>
-          <span className="assessment-answered-count">{answered} of {questions.length} answered</span>
-        </div>
-        <div className="assessment-progress-track" role="progressbar" aria-label="Screening progress" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={answered} aria-valuetext={`${answered} of ${questions.length} questions answered`}>
-          <span style={{ width: `${percent}%`, '--assessment-accent': color }} />
+          <p style={{ fontSize:14, color:'var(--text-2)', lineHeight:1.6, margin:0, fontWeight:500 }}>{meta.msg}</p>
         </div>
       </div>
 
-      <fieldset className="assessment-question" key={step}>
-        <legend className="assessment-sr-only">Question {step + 1} of {questions.length}</legend>
-        <div className="assessment-question-meta" aria-live="polite">Question {step + 1} <span>of {questions.length}</span></div>
-        <p className="assessment-timeframe">Over the past 2 weeks, how often have you been bothered by:</p>
-        <h3 className="assessment-question-title" id={`assessment-question-${step}`}>{questions[step]}</h3>
-        <div className="assessment-options" role="radiogroup" aria-labelledby={`assessment-question-${step}`}>
-          {options.map(option => {
-            const id = `assessment-${title.toLowerCase()}-${step}-${option.value}`
-            return <label className={`assessment-option${selectedAnswer === option.value ? ' is-selected' : ''}`} key={option.value} htmlFor={id} style={{ '--assessment-accent': color }}>
-              <input id={id} type="radio" name={`assessment-${title}-${step}`} value={option.value} checked={selectedAnswer === option.value} onChange={() => { setAnswers(current => current.map((answer, index) => index === step ? option.value : answer)); setSubmitError('') }} disabled={saving} />
-              <span className="assessment-option-mark" aria-hidden="true" />
-              <span>{option.label}</span>
-            </label>
+      {/* Severity scale — visual only, NO score ranges */}
+      <div>
+        <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:10 }}>Screening range</p>
+        <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+          {levels.map(lvl => {
+            const isActive = result.category?.toLowerCase().includes(lvl.label.toLowerCase().split(' ')[0])
+            return (
+              <div key={lvl.label} style={{ flex:'1 1 60px', display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 6px', borderRadius:10, transition:'all 0.2s', background:isActive ? lvl.color+'12' : 'var(--bg-elevated)', border:`1px solid ${isActive ? lvl.color+'40' : 'var(--border)'}`, opacity:isActive?1:0.45 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:lvl.color }}/>
+                <span style={{ fontSize:10, fontWeight:700, color:isActive?lvl.color:'var(--text-3)', textAlign:'center' }}>{lvl.label}</span>
+                {isActive && <span style={{ fontSize:9, color:lvl.color, fontWeight:700 }}>← You</span>}
+              </div>
+            )
           })}
         </div>
-      </fieldset>
-
-      {lastAnswer !== null && lastAnswer > 0 && <aside className="assessment-live-safety" role="status" aria-live="polite">
-        <ShieldCheck size={17} aria-hidden="true" />
-        <p><strong>You deserve support with this.</strong> If you might act on these thoughts or are in immediate danger, contact your local emergency number or go to the nearest emergency department now. If you can, tell someone you trust and stay near them. <a href="https://findahelpline.com/" target="_blank" rel="noopener noreferrer">Find a verified support line for your country.</a></p>
-      </aside>}
-
-      {submitError && <p className="assessment-submit-error" role="alert">{submitError}</p>}
-
-      <div className="assessment-form-actions">
-        <button type="button" className="assessment-secondary-button" onClick={() => { setStep(current => Math.max(0, current - 1)); setSubmitError('') }} disabled={step === 0 || saving}>
-          <ArrowLeft size={15} /> Previous
-        </button>
-        {step < questions.length - 1 ? <button type="button" className="assessment-primary-button" style={{ '--assessment-accent': color }} onClick={() => { setStep(current => Math.min(questions.length - 1, current + 1)); setSubmitError('') }} disabled={selectedAnswer === null || saving}>
-          Next question <ArrowRight size={15} />
-        </button> : <button type="submit" className="assessment-primary-button" style={{ '--assessment-accent': color }} disabled={!allAnswered || saving}>
-          {saving ? <><span className="assessment-button-spinner" aria-hidden="true" /> Saving your result…</> : <>See my result <CheckCircle size={15} /></>}
-        </button>}
       </div>
-    </form>
+
+      {/* Screening context is not a diagnosis and cannot summarize the whole person. */}
+      <div style={{ background:'var(--teal-dim)', border:'1px solid var(--teal-border)', borderRadius:14, padding:'14px 16px' }}>
+        <p style={{ fontSize:12, fontWeight:700, color:'var(--teal)', marginBottom:6 }}>How to read this result</p>
+        <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.65, margin:0 }}>
+          This screening reflects your answers over the past two weeks. It is not a diagnosis and cannot tell the full story or determine whether someone is safe. If anything is worrying you or affecting day-to-day life, support is appropriate whatever the score.
+        </p>
+      </div>
+
+      {result.crisis_flag && (
+        <div style={{ display:'flex', gap:12, padding:'13px 15px', borderRadius:12, background:'var(--rose-dim)', border:'1px solid rgba(192,66,74,0.22)' }}>
+          <AlertTriangle size={16} color="var(--rose)" style={{ flexShrink:0, marginTop:1 }}/>
+          <div>
+            <p style={{ fontSize:13, fontWeight:700, color:'var(--rose)', marginBottom:5 }}>A follow-up matters</p>
+            <p style={{ fontSize:12, color:'#7A2832', lineHeight:1.65 }}>
+              Your answer to the final question needs a direct, compassionate follow-up; it does not by itself tell us whether danger is immediate. Are you in immediate danger right now, or do you feel you might act on these thoughts today?
+              <br/><br/><strong>If yes or unsure: call 112 in India or go to the nearest emergency department.</strong>
+              <br/><strong>Tele-MANAS: 14416</strong> (free, 24/7 support in India)
+              <br/><strong>Vandrevala Foundation: +91 9999 666 555</strong> (free 24/7 phone/WhatsApp support)
+            </p>
+            <button type="button" className="btn-primary" style={{ marginTop:10, minHeight:40 }} onClick={() => { setPendingChatPrompt('I completed a wellbeing check-in and would like help understanding my answer and choosing a next step.'); setActivePage('chat') }}>
+              Continue to a safety check-in <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <button onClick={onReset} className="btn-ghost" style={{ alignSelf:'flex-start' }}>
+        <RotateCcw size={12}/> Retake Assessment
+      </button>
+    </div>
   )
 }
 
+/* ── Question Form ── */
+function AssessmentForm({ title, questions, onSubmit, result, color, onReset }) {
+  const [answers, setAnswers] = useState(Array(questions.length).fill(null))
+  const [step,    setStep]    = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [done,    setDone]    = useState(!!result)
+
+  useEffect(() => { if (result) setDone(true) }, [result])
+
+  const answered = answers.filter(a => a !== null).length
+  const allDone  = answered === questions.length && questions.length > 0
+
+  const handleSelect = (val) => {
+    const next = [...answers]; next[step] = val; setAnswers(next)
+    if (step < questions.length - 1) setTimeout(() => setStep(s => s + 1), 200)
+  }
+  const handleSubmit = async () => {
+    setLoading(true)
+    try { await onSubmit(answers); setDone(true) } catch (e) { console.error(e) }
+    setLoading(false)
+  }
+  const handleReset = () => {
+    setAnswers(Array(questions.length).fill(null)); setStep(0); setDone(false)
+    if (onReset) onReset()
+  }
+
+  if (done && result) return <ScoreResult result={result} title={title} onReset={handleReset}/>
+  if (!questions.length) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, height:140, color:'var(--text-4)', fontSize:14 }}>
+      <div style={{ width:15, height:15, border:'2px solid var(--border)', borderTopColor:'var(--teal)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+      Loading questions…
+    </div>
+  )
+
+  const pct = questions.length ? (answered / questions.length) * 100 : 0
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+      <div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, flexWrap:'wrap', gap:8 }}>
+          <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+            {questions.map((_, i) => (
+              <button key={i} onClick={() => setStep(i)} style={{ width:26, height:26, borderRadius:7, fontSize:10, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit', transition:'all 0.15s', border:`1.5px solid ${i===step?color:answers[i]!==null?color+'50':'var(--border)'}`, background:answers[i]!==null?color+'14':i===step?'var(--bg-elevated)':'transparent', color:answers[i]!==null?color:i===step?'var(--text-2)':'var(--text-4)' }}>
+                {answers[i] !== null ? '✓' : i + 1}
+              </button>
+            ))}
+          </div>
+          <span style={{ fontSize:12, color:'var(--text-4)' }}>{answered}/{questions.length} answered</span>
+        </div>
+        <div style={{ height:3, borderRadius:99, background:'var(--border)', overflow:'hidden' }}>
+          <div style={{ height:'100%', borderRadius:99, background:color, width:`${pct}%`, transition:'width 0.6s ease' }}/>
+        </div>
+      </div>
+
+      <div key={step} className="animate-fade-in" style={{ background:'var(--bg-elevated)', border:'1px solid var(--border)', borderRadius:14, padding:'18px 16px' }}>
+        <p style={{ fontSize:10, color:'var(--text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:7 }}>Question {step + 1} of {questions.length}</p>
+        <p style={{ fontSize:12, color:'var(--text-4)', marginBottom:9, lineHeight:1.5 }}>Over the past 2 weeks, how often have you been bothered by…</p>
+        <p style={{ fontSize:16, fontWeight:600, color:'var(--text-1)', lineHeight:1.55, marginBottom:18, fontFamily:'Lora,serif' }}>{questions[step]}</p>
+        <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+          {OPTIONS.map(opt => {
+            const sel = answers[step] === opt.value
+            return (
+              <button key={opt.value} onClick={() => handleSelect(opt.value)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'all 0.14s', border:`1.5px solid ${sel?color:'var(--border)'}`, background:sel?color+'10':'#fff', boxShadow:sel?`0 0 0 1px ${color}22`:'none' }}>
+                <div style={{ width:17, height:17, borderRadius:'50%', flexShrink:0, transition:'all 0.14s', border:`2px solid ${sel?color:'var(--border-md)'}`, background:sel?color:'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {sel && <div style={{ width:5, height:5, borderRadius:'50%', background:'#fff' }}/>}
+                </div>
+                <span style={{ fontSize:13, fontWeight:500, color:sel?'var(--text-1)':'var(--text-3)' }}>{opt.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <button onClick={() => setStep(s => Math.max(0, s-1))} disabled={step===0} className="btn-ghost" style={{ fontSize:13 }}>
+          <ChevronLeft size={14}/> Previous
+        </button>
+        {step < questions.length-1 ? (
+          <button onClick={() => setStep(s => Math.min(questions.length-1, s+1))} className="btn-ghost" style={{ fontSize:13 }}>
+            Next <ChevronRight size={14}/>
+          </button>
+        ) : (
+          <button onClick={handleSubmit} disabled={!allDone||loading} style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10, border:'none', fontFamily:'inherit', transition:'all 0.18s', background:allDone?color:'var(--bg-elevated)', color:allDone?'#fff':'var(--text-4)', fontSize:13, fontWeight:600, cursor:allDone&&!loading?'pointer':'not-allowed', opacity:allDone&&!loading?1:0.55, boxShadow:allDone?`0 2px 12px ${color}35`:'none' }}>
+            {loading?<><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Scoring…</>:<><CheckCircle size={14}/> View Results</>}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── Main ── */
 export default function Assessment() {
-  const { setPhq9Result, phq9Result } = useApp()
-  const [questions, setQuestions] = useState({ phq9: [], options: FALLBACK_OPTIONS })
+  const { setPhq9Result, setGad7Result, phq9Result, gad7Result } = useApp()
+  const [tab, setTab] = useState('phq9')
+  const [qs,  setQs]  = useState({ phq9:[], gad7:[] })
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-  const [reload, setReload] = useState(0)
 
   useEffect(() => {
-    let active = true
-    setLoading(true)
-    setLoadError('')
-    getQuestions()
-      .then(({ data }) => {
-        if (!Array.isArray(data?.phq9) || data.phq9.length !== 9) {
-          throw new Error('The screening questions are unavailable right now.')
-        }
-        if (active) setQuestions({ phq9: data.phq9, options: Array.isArray(data.options) && data.options.length === 4 ? data.options : FALLBACK_OPTIONS })
-      })
-      .catch(error => { if (active) setLoadError(error.message || 'The screening questions could not be loaded. Please try again.') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [reload])
+    getQuestions().then(({ data }) => setQs({ phq9:data.phq9, gad7:data.gad7 })).catch(console.error).finally(() => setLoading(false))
+  }, [])
 
-  const current = {
-    label: 'PHQ-9',
-    color: '#3f8060',
-    items: questions.phq9,
-    result: phq9Result,
-    submit: async (answers, submissionId) => { const { data } = await submitPHQ9(answers, submissionId); setPhq9Result(data) },
-    reset: () => setPhq9Result(null),
-  }
+  const TABS = [
+    { id:'phq9', label:'PHQ-9', sub:'Depression', color:'#2A7D6F', questions:qs.phq9, result:phq9Result, submit:async a => { const {data}=await submitPHQ9(a); setPhq9Result(data) }, reset:()=>setPhq9Result(null) },
+    { id:'gad7', label:'GAD-7', sub:'Anxiety',    color:'#3B6EA8', questions:qs.gad7, result:gad7Result, submit:async a => { const {data}=await submitGAD7(a); setGad7Result(data) }, reset:()=>setGad7Result(null) },
+  ]
+  const active = TABS.find(t => t.id === tab)
 
   return (
-    <main className="assessment-page">
-      <div className="assessment-content">
-        <header className="assessment-header">
-          <span className="assessment-header-icon"><ClipboardList size={20} /></span>
-          <div><p className="assessment-kicker">A PRIVATE CHECK-IN</p><h1>Wellbeing screening</h1><p>The PHQ-9 asks about mood and interest over the past two weeks. It can support reflection, but it cannot diagnose a condition. Take your time and change any answer before you submit.</p></div>
-        </header>
+    <div style={{ height:'100%', overflowY:'auto', background:'var(--bg-page)' }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{ maxWidth:660, margin:'0 auto', padding:'24px 16px' }}>
 
-        <section className="assessment-card" aria-labelledby="assessment-card-title">
-          <div className="assessment-card-heading"><div><p className="assessment-kicker">{current.label}</p><h2 id="assessment-card-title">Patient Health Questionnaire</h2><p>Think about the past two weeks. You can move back to change any answer.</p></div></div>
-          {loading ? <div className="assessment-loading" role="status"><span className="assessment-spinner" />Loading the questions…</div> : loadError ? <div className="assessment-load-error" role="alert"><p>{loadError}</p><button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <AssessmentForm title={current.label} questions={current.items} options={questions.options} onSubmit={current.submit} result={current.result} color={current.color} onReset={current.reset} />}
-        </section>
+        <div style={{ display:'flex', alignItems:'center', gap:13, marginBottom:24 }}>
+          <div style={{ width:44, height:44, borderRadius:13, flexShrink:0, background:'var(--teal-dim)', border:'1px solid var(--teal-border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <ClipboardList size={20} color="var(--teal)"/>
+          </div>
+          <div>
+            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>Wellbeing Screening</h2>
+            {/* ✅ Clean subtitle — no technical jargon for client */}
+            <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>Answer honestly — there are no right or wrong answers</p>
+          </div>
+        </div>
 
-        <p className="assessment-footer-note">The PHQ-9 is a screening tool, not a medical diagnosis. Your responses are saved privately to your account so you can review your score in Insights later.</p>
+        {/* Tab — no desc, no score */}
+        <div style={{ display:'flex', gap:6, padding:4, borderRadius:13, marginBottom:16, background:'var(--bg-card)', border:'1px solid var(--border)', boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, padding:'11px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', transition:'all 0.18s', border:`1px solid ${tab===t.id?t.color+'30':'transparent'}`, background:tab===t.id?t.color+'10':'transparent', color:tab===t.id?t.color:'var(--text-4)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              <span style={{ fontSize:15, fontWeight:700 }}>{t.label}</span>
+              <span style={{ fontSize:12, opacity:0.65 }}>{t.sub}</span>
+              {t.result && <CheckCircle size={11}/>}
+            </button>
+          ))}
+        </div>
+
+        {/* Card — just the heading, no subtitle/score */}
+        <div style={{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:16, padding:'20px 18px', boxShadow:'0 2px 12px rgba(26,35,50,0.06)' }}>
+          <div style={{ marginBottom:18 }}>
+            <h3 style={{ fontSize:15, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Lora,serif' }}>
+              {tab === 'phq9' ? 'Patient Health Questionnaire' : 'Generalized Anxiety Disorder'}
+            </h3>
+            {/* ✅ No "9 questions · Score 0-27..." — removed entirely */}
+            {/* ✅ No "Score: X" badge — hidden from client */}
+          </div>
+
+          {loading ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, height:140, color:'var(--text-4)', fontSize:14 }}>
+              <div style={{ width:15, height:15, border:'2px solid var(--border)', borderTopColor:'var(--teal)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+              Loading questions…
+            </div>
+          ) : (
+            <AssessmentForm key={tab} title={active.label} questions={active.questions} onSubmit={active.submit} result={active.result} color={active.color} onReset={active.reset}/>
+          )}
+        </div>
+
+        <p style={{ textAlign:'center', fontSize:11, color:'var(--text-4)', marginTop:14, lineHeight:1.6 }}>
+          Screening purposes only · Not a clinical diagnosis · Consult a mental health professional
+        </p>
       </div>
-    </main>
+    </div>
   )
 }

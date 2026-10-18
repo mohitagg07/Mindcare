@@ -33,15 +33,15 @@ def score_phq9(responses: list) -> dict:
     crisis_flag = int(responses[8]) >= 1  # Q9 = self-harm thoughts
 
     if total <= 4:
-        cat, color, desc = "Minimal", "#22c55e", "Score falls in the minimal PHQ-9 symptom range"
+        cat, color, desc = "Minimal", "#22c55e", "Minimal range of depressive symptoms on this screening"
     elif total <= 9:
-        cat, color, desc = "Mild", "#84cc16", "Score falls in the mild PHQ-9 symptom range"
+        cat, color, desc = "Mild", "#84cc16", "Mild range of depressive symptoms on this screening"
     elif total <= 14:
-        cat, color, desc = "Moderate", "#f59e0b", "Score falls in the moderate PHQ-9 symptom range"
+        cat, color, desc = "Moderate", "#f59e0b", "Moderate range of depressive symptoms on this screening"
     elif total <= 19:
-        cat, color, desc = "Moderately Severe", "#f97316", "Score falls in the moderately severe PHQ-9 symptom range"
+        cat, color, desc = "Moderately Severe", "#f97316", "Moderately severe range of depressive symptoms on this screening"
     else:
-        cat, color, desc = "Severe", "#ef4444", "Score falls in the severe PHQ-9 symptom range"
+        cat, color, desc = "Severe", "#ef4444", "Severe range of depressive symptoms on this screening; consider professional support"
 
     return {
         "score": total,
@@ -49,8 +49,17 @@ def score_phq9(responses: list) -> dict:
         "category": cat,
         "color": color,
         "description": desc,
+        # Backward-compatible alias: a positive item 9 is a positive screen requiring
+        # a direct follow-up, not proof of imminent danger or a standalone risk category.
         "crisis_flag": crisis_flag,
+        "requires_safety_follow_up": crisis_flag,
+        "safety_follow_up_question": (
+            "Are you in immediate danger right now, or do you feel you might act on thoughts of harming yourself today?"
+            if crisis_flag else None
+        ),
         "percentage": round((total / 27) * 100, 1),
+        "is_diagnosis": False,
+        "interpretation_note": "PHQ-9 is a screening questionnaire, not a diagnosis. A positive answer to item 9 needs direct human-sensitive follow-up; this score cannot establish immediate risk by itself.",
     }
 
 
@@ -58,13 +67,13 @@ def score_gad7(responses: list) -> dict:
     total = sum(int(r) for r in responses)
 
     if total <= 4:
-        cat, color, desc = "Minimal", "#22c55e", "Score falls in the minimal GAD-7 symptom range"
+        cat, color, desc = "Minimal", "#22c55e", "Minimal range of anxiety symptoms on this screening"
     elif total <= 9:
-        cat, color, desc = "Mild", "#84cc16", "Score falls in the mild GAD-7 symptom range"
+        cat, color, desc = "Mild", "#84cc16", "Mild range of anxiety symptoms on this screening"
     elif total <= 14:
-        cat, color, desc = "Moderate", "#f59e0b", "Score falls in the moderate GAD-7 symptom range"
+        cat, color, desc = "Moderate", "#f59e0b", "Moderate range of anxiety symptoms on this screening"
     else:
-        cat, color, desc = "Severe", "#ef4444", "Score falls in the severe GAD-7 symptom range"
+        cat, color, desc = "Severe", "#ef4444", "Severe range of anxiety symptoms on this screening; consider professional support"
 
     return {
         "score": total,
@@ -73,6 +82,8 @@ def score_gad7(responses: list) -> dict:
         "color": color,
         "description": desc,
         "percentage": round((total / 21) * 100, 1),
+        "is_diagnosis": False,
+        "interpretation_note": "GAD-7 is a screening questionnaire, not a diagnosis. Interpret the score alongside the person's own account and appropriate professional judgment.",
     }
 
 

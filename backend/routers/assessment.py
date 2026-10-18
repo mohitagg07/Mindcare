@@ -1,5 +1,4 @@
 from typing import Annotated
-import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, StrictInt, field_validator
 from fastapi import Depends
@@ -11,7 +10,6 @@ Answer = Annotated[StrictInt, Field(ge=0, le=3)]
 
 class PHQ9Request(BaseModel):
     responses: list[Answer]
-    submission_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     @field_validator("responses")
     @classmethod
     def validate_count(cls, values):
@@ -54,27 +52,13 @@ async def score_phq9_endpoint(req: PHQ9Request, current_user=Depends(get_current
     from services.assessment_service import score_phq9
     result = score_phq9(req.responses)
     result["is_diagnosis"] = False
-    result["disclaimer"] = "Screening result only; not a diagnosis."
+    result["disclaimer"] = "Screening result only; not a diagnosis. A positive answer to PHQ-9 item 9 needs a direct, compassionate safety follow-up and cannot establish imminent risk by itself."
     try:
-        inserted = await insert_row("assessments", current_user["access_token"], {
-            "id": str(req.submission_id), "user_id": current_user["id"], "instrument": "PHQ-9", "score": result["score"],
+        await insert_row("assessments", current_user["access_token"], {
+            "user_id": current_user["id"], "instrument": "PHQ-9", "score": result["score"],
             "max_score": 27, "answers": req.responses,
         })
-        if not inserted:
-            raise SupabaseError(503, "The screening result was not saved")
     except SupabaseError as exc:
-        if exc.status_code == 409:
-            # A retry after a lost response returns the original saved result for
-            # this user instead of writing a second screening row.
-            existing, _ = await select_rows("assessments", current_user["access_token"], {
-                "select": "instrument,answers", "id": f"eq.{req.submission_id}",
-                "user_id": f"eq.{current_user['id']}", "limit": "1",
-            })
-            if existing and existing[0].get("instrument") == "PHQ-9" and isinstance(existing[0].get("answers"), list):
-                result = score_phq9(existing[0]["answers"])
-                result["is_diagnosis"] = False
-                result["disclaimer"] = "Screening result only; not a diagnosis."
-                return result
         raise HTTPException(status_code=503, detail="Assessment could not be saved. Please try again.") from exc
     return result
 

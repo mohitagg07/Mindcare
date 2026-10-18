@@ -89,16 +89,28 @@ def _parse_response(raw: str, model: str) -> dict[str, Any]:
     else:
         scores = {key: float(key == emotion) for key in EMOTION_LABELS}
     try:
+        faces_detected = max(0, min(20, int(data.get("faces_detected", 1))))
+    except (TypeError, ValueError):
+        faces_detected = 0
+    try:
         confidence = float(data.get("confidence", scores[emotion]))
     except (TypeError, ValueError):
         confidence = scores[emotion]
+
+    # Enforce the model contract server-side. A malformed response must never attach a
+    # confident expression label to an image the model itself says contains no clear face.
+    if faces_detected == 0:
+        emotion = "neutral"
+        confidence = 0.0
+        scores = {key: float(key == "neutral") for key in EMOTION_LABELS}
+
     return {
         "emotion": emotion,
         "confidence": round(max(0.0, min(1.0, confidence)), 3),
         "all_scores": scores,
         "model_available": True,
         "backend": f"groq-vision ({model.split('/')[-1]})",
-        "faces_detected": max(0, min(20, int(data.get("faces_detected", 1)))),
+        "faces_detected": faces_detected,
         "note": "Expression estimate only; it is not a reliable measure of mental state or a clinical indicator.",
     }
 
@@ -128,7 +140,7 @@ async def predict_emotion(image_data: str) -> dict[str, Any]:
         )
         text = response.choices[0].message.content or ""
         result = _parse_response(text, model)
-        logger.info("Vision estimate completed: model=%s", model)
+        logger.info("Vision estimate completed: model=%s emotion=%s", model, result["emotion"])
         return result
     except Exception as exc:
         logger.warning("Vision estimate unavailable (%s)", type(exc).__name__)
