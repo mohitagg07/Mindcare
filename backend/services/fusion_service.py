@@ -35,7 +35,7 @@ _NEGATED_CUE_PATTERNS: tuple[str, ...] = (
     r"\b(?:i have|i've)\s+no\s+(?:suicidal thoughts|thoughts of suicide|thoughts of self[- ]harm)\b",
 )
 
-CRISIS_RESOURCES = """If you may act on these thoughts or cannot keep yourself safe right now, call India's emergency number 112 or go to the nearest emergency department. If you are in India, free 24/7 mental health support is available through Tele-MANAS at 14416. Vandrevala Foundation also offers free 24/7 phone/WhatsApp support at +91 9999 666 555. If you are elsewhere, contact your local emergency number or crisis service."""
+CRISIS_RESOURCES = """If you may act on these thoughts or cannot keep yourself safe right now, call India's emergency number 112 or go to the nearest emergency department. If you are in India, free 24/7 mental health support is available through Tele-MANAS at 14416. Vandrevala Foundation also offers free 24/7 phone/WhatsApp support at +91 9999 666 555. If you are elsewhere, contact your local emergency number or find support at https://findahelpline.com/."""
 
 SAFETY_CHECK_RESPONSE = """Thank you for telling me. I want to take this seriously without making assumptions. Are you in immediate danger right now, or do you feel you might act on thoughts of harming yourself today?\n\nIf yes, or if you are unsure you can stay safe, please contact emergency support now and, if possible, stay with someone you trust.\n\n""" + CRISIS_RESOURCES
 
@@ -100,13 +100,20 @@ def compute_risk_score(
 
 def get_recommendations(risk_level: str | None = None, emotion: str | None = None) -> dict:
     """Return general, low-risk support options; never infer how well/badly a user is doing."""
+    resources = []
+    if risk_level in {"HIGH", "MODERATE"}:
+        resources = [
+            {"name": "Find a support line by country", "contact": "https://findahelpline.com/", "type": "directory"},
+            {"name": "Professional support", "contact": "A qualified mental health professional", "type": "care"},
+        ]
     return {
         "exercises": [
             "If it feels comfortable, try a few slow, easy breaths without forcing the pace.",
             "Name one thing that feels most important to you right now.",
             "Consider reaching out to a trusted person if you would rather not handle this alone.",
         ],
-        "resources": [],
+        "resources": resources,
         "message": "I haven't calculated a clinical risk level. We can start with what you tell me and work out what kind of support would help.",
-        "personalized_by_risk": False,
+        "personalized_by_risk": bool(resources),
     }
+

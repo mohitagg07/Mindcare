@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
 
@@ -12,10 +12,25 @@ logger = logging.getLogger("mindcare.chat")
 router = APIRouter()
 
 
+class MemoryCreateRequest(BaseModel):
+    content: str = Field(min_length=2, max_length=240)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def normalize_content(cls, value):
+        if not isinstance(value, str):
+            raise ValueError("Memory must be text")
+        value = " ".join(value.split())
+        if len(value) < 2 or not any(char.isalnum() for char in value):
+            raise ValueError("Enter a short memory with at least one letter or number")
+        return value
+
+
 class ChatRequest(BaseModel):
     session_id: Optional[uuid.UUID] = None
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
+
     # Legacy browser questionnaire fields are intentionally not accepted as model context.
     # Pydantic ignores unknown keys for backward compatibility with older frontends.
 
@@ -375,3 +390,35 @@ async def chat_status():
     from services.rag_service import is_rag_available
     from services.emotion_service import is_model_loaded, get_backend
     return {"rag_available": is_rag_available(), "emotion_available": is_model_loaded(), "emotion_backend": get_backend()}
+
+
+@router.get("/chat/memories")
+async def list_memories_endpoint(current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    memories, _ = await select_rows("user_memories", token, {
+        "select": "id,content,created_at", "user_id": f"eq.{uid}",
+        "order": "created_at.desc", "limit": "20",
+    })
+    return {"memories": memories}
+
+
+@router.post("/chat/memories", status_code=201)
+async def create_memory_endpoint(req: MemoryCreateRequest, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    memories, _ = await select_rows("user_memories", token, {
+        "select": "id", "user_id": f"eq.{uid}", "limit": "20",
+    })
+    if len(memories) >= 20:
+        raise HTTPException(status_code=400, detail="You can store up to 20 memories. Delete one to add more.")
+    rows = await insert_row("user_memories", token, {"user_id": uid, "content": req.content})
+    return {"memory": rows[0]}
+
+
+@router.delete("/chat/memories/{memory_id}")
+async def delete_memory_endpoint(memory_id: uuid.UUID, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    deleted = await delete_rows("user_memories", token, {"id": f"eq.{memory_id}", "user_id": f"eq.{uid}"})
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return {"deleted": True}
+
