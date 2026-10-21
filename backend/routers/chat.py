@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
+from services.input_integrity import normalize_chat_message, normalize_expression_label
 
 logger = logging.getLogger("mindcare.chat")
 router = APIRouter()
@@ -35,6 +36,18 @@ class ChatRequest(BaseModel):
     session_id: Optional[uuid.UUID] = None
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def validate_message(cls, value):
+        return normalize_chat_message(value)
+
+    @field_validator("emotion", mode="before")
+    @classmethod
+    def validate_expression_label(cls, value):
+        # Expression is optional context only. Unknown client strings are discarded, never
+        # copied into the LLM system prompt or treated as evidence about the user's state.
+        return normalize_expression_label(value)
 
     # Legacy browser questionnaire/risk fields are intentionally ignored for backward
     # compatibility, but they are not authoritative input to safety routing or the LLM.
