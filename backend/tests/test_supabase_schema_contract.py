@@ -71,3 +71,17 @@ def test_assessment_safety_followup_state_is_owner_scoped():
     assert "add column if not exists safety_follow_up_at timestamptz" in migration
     assert "using (user_id = auth.uid())" in migration
     assert "with check (user_id = auth.uid())" in migration
+
+
+def test_assessment_submission_idempotency_contract():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261021_assessment_submission_idempotency.sql")
+    assert "submission_id uuid" in schema
+    assert "scoring_version text" in schema
+    assert "result_snapshot jsonb" in schema
+    assert "assessments_user_instrument_submission_uidx" in schema
+    assert "add column if not exists submission_id uuid" in migration
+    assert "add column if not exists scoring_version text" in migration
+    assert "add column if not exists result_snapshot jsonb" in migration
+    assert "assessments_user_instrument_submission_uidx" in migration
+

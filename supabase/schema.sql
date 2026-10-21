@@ -148,10 +148,16 @@ create table if not exists public.assessments (
   max_score integer not null check (max_score > 0),
   answers jsonb not null default '[]'::jsonb,
   completed_at timestamptz not null default now(),
-  safety_follow_up_at timestamptz
+  safety_follow_up_at timestamptz,
+  submission_id uuid,
+  scoring_version text not null default 'legacy-unversioned',
+  result_snapshot jsonb
 );
 create index if not exists assessments_user_completed_idx on public.assessments(user_id, completed_at desc);
 create index if not exists assessments_user_instrument_completed_idx on public.assessments(user_id, instrument, completed_at desc);
+create unique index if not exists assessments_user_instrument_submission_uidx on public.assessments (user_id, instrument, submission_id);
+create index if not exists assessments_user_submission_lookup_idx on public.assessments (user_id, submission_id) where submission_id is not null;
+
 
 create table if not exists public.trajectories (
   id uuid primary key default gen_random_uuid(),
