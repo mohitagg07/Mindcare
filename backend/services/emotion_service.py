@@ -1,8 +1,7 @@
-"""Asynchronous Groq Vision integration for optional expression estimates.
+"""Optional asynchronous expression-estimation service.
 
-Facial expressions are ambiguous and must never be treated as clinical evidence.
-When the remote model is unavailable, return an explicit unavailable result instead
-of guessing an emotion from brightness or contrast heuristics.
+Facial expression is ambiguous and is not evidence of a person's internal mood, diagnosis,
+intent, or imminent risk. The result must never be used for safety triage or scoring.
 """
 from __future__ import annotations
 
@@ -31,13 +30,14 @@ def _client():
     if not key:
         raise RuntimeError("GROQ_API_KEY is not configured")
     if _CLIENT is None:
-        # Lazy import keeps the health endpoint usable even before optional SDK setup.
         from groq import AsyncGroq
         _CLIENT = AsyncGroq(api_key=key, timeout=20.0, max_retries=1)
     return _CLIENT
 
 
 def _decode_image(image_data: str) -> tuple[str, str]:
+    if not isinstance(image_data, str) or not image_data.strip():
+        raise ValueError("An image is required")
     encoded = image_data.strip()
     media_type = "image/jpeg"
     if encoded.startswith("data:"):
@@ -56,7 +56,6 @@ def _decode_image(image_data: str) -> tuple[str, str]:
     if len(decoded) > _MAX_IMAGE_BYTES:
         raise ValueError("Image exceeds the 6 MB limit")
 
-    # Check the container signature rather than trusting the declared MIME type.
     valid = (
         (media_type == "image/jpeg" and decoded.startswith(b"\xff\xd8\xff"))
         or (media_type == "image/png" and decoded.startswith(b"\x89PNG\r\n\x1a\n"))
@@ -68,10 +67,13 @@ def _decode_image(image_data: str) -> tuple[str, str]:
 
 
 def _parse_response(raw: str, model: str) -> dict[str, Any]:
-    content = raw.strip()
+    content = (raw or "").strip()
     if content.startswith("```"):
         content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.IGNORECASE).strip()
     data = json.loads(content)
+    if not isinstance(data, dict):
+        raise ValueError("Vision response must be a JSON object")
+
     emotion = str(data.get("emotion", "neutral")).lower().strip()
     if emotion not in EMOTION_LABELS:
         emotion = "neutral"
@@ -82,24 +84,30 @@ def _parse_response(raw: str, model: str) -> dict[str, Any]:
             score = float(incoming.get(label, 0.0))
         except (TypeError, ValueError):
             score = 0.0
+        if score != score or score in (float("inf"), float("-inf")):
+            score = 0.0
         scores[label] = max(0.0, min(1.0, score))
     total = sum(scores.values())
-    if total:
+    if total > 0:
         scores = {key: round(value / total, 4) for key, value in scores.items()}
     else:
         scores = {key: float(key == emotion) for key in EMOTION_LABELS}
+
     try:
-        faces_detected = max(0, min(20, int(data.get("faces_detected", 1))))
-    except (TypeError, ValueError):
-        faces_detected = 0
+        face_count = int(data.get("faces_detected", 1))
+    except (TypeError, ValueError, OverflowError):
+        face_count = 0
+    if isinstance(data.get("faces_detected"), bool):
+        face_count = 0
+    face_count = max(0, min(20, face_count))
     try:
         confidence = float(data.get("confidence", scores[emotion]))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         confidence = scores[emotion]
+    if confidence != confidence or confidence in (float("inf"), float("-inf")):
+        confidence = 0.0
 
-    # Enforce the model contract server-side. A malformed response must never attach a
-    # confident expression label to an image the model itself says contains no clear face.
-    if faces_detected == 0:
+    if face_count == 0:
         emotion = "neutral"
         confidence = 0.0
         scores = {key: float(key == "neutral") for key in EMOTION_LABELS}
@@ -110,8 +118,9 @@ def _parse_response(raw: str, model: str) -> dict[str, Any]:
         "all_scores": scores,
         "model_available": True,
         "backend": f"groq-vision ({model.split('/')[-1]})",
-        "faces_detected": faces_detected,
+        "faces_detected": face_count,
         "note": "Expression estimate only; it is not a reliable measure of mental state or a clinical indicator.",
+        "safety_use": "not_used_for_triage",
     }
 
 
@@ -120,12 +129,12 @@ def _unavailable(note: str = "Vision analysis is unavailable. No expression esti
         "emotion": "neutral", "confidence": 0.0,
         "all_scores": {label: (1.0 if label == "neutral" else 0.0) for label in EMOTION_LABELS},
         "model_available": False, "backend": "unavailable", "faces_detected": 0,
-        "note": note,
+        "note": note, "safety_use": "not_used_for_triage",
     }
 
 
 async def predict_emotion(image_data: str) -> dict[str, Any]:
-    """Estimate visible expression asynchronously; failure never blocks the event loop."""
+    """Estimate visible expression; malformed images raise ValueError, provider failure degrades safely."""
     media_type, encoded = _decode_image(image_data)
     model = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.8-27b").strip()
     try:
@@ -140,7 +149,7 @@ async def predict_emotion(image_data: str) -> dict[str, Any]:
         )
         text = response.choices[0].message.content or ""
         result = _parse_response(text, model)
-        logger.info("Vision estimate completed: model=%s emotion=%s", model, result["emotion"])
+        logger.info("Vision estimate completed: model=%s faces=%s", model, result["faces_detected"])
         return result
     except Exception as exc:
         logger.warning("Vision estimate unavailable (%s)", type(exc).__name__)
@@ -148,7 +157,7 @@ async def predict_emotion(image_data: str) -> dict[str, Any]:
 
 
 def is_model_loaded() -> bool:
-    # This is a remote service, not a locally loaded model.
+    """This is a remote provider, not a locally loaded model."""
     return bool(os.getenv("GROQ_API_KEY", "").strip())
 
 

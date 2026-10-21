@@ -1,3 +1,8 @@
+"""Canonical PHQ-9 and GAD-7 screening scoring.
+
+These totals are screening summaries, not diagnoses and not predictions of imminent danger.
+A positive PHQ-9 item 9 is handled as a separate reason for a direct, compassionate follow-up.
+"""
 PHQ9_QUESTIONS = [
     "Little interest or pleasure in doing things?",
     "Feeling down, depressed, or hopeless?",
@@ -29,8 +34,10 @@ ANSWER_OPTIONS = [
 
 
 def score_phq9(responses: list) -> dict:
-    total = sum(int(r) for r in responses)
-    crisis_flag = int(responses[8]) >= 1  # Q9 = self-harm thoughts
+    if len(responses) != 9 or any(type(value) is not int or value < 0 or value > 3 for value in responses):
+        raise ValueError("PHQ-9 requires exactly 9 integer responses from 0 to 3")
+    total = sum(responses)
+    item9_positive = responses[8] >= 1
 
     if total <= 4:
         cat, color, desc = "Minimal", "#22c55e", "Minimal range of depressive symptoms on this screening"
@@ -49,22 +56,26 @@ def score_phq9(responses: list) -> dict:
         "category": cat,
         "color": color,
         "description": desc,
-        # Backward-compatible alias: a positive item 9 is a positive screen requiring
-        # a direct follow-up, not proof of imminent danger or a standalone risk category.
-        "crisis_flag": crisis_flag,
-        "requires_safety_follow_up": crisis_flag,
+        # Backward-compatible alias. Positive item 9 is not proof of imminent danger.
+        "crisis_flag": item9_positive,
+        "requires_safety_follow_up": item9_positive,
         "safety_follow_up_question": (
             "Are you in immediate danger right now, or do you feel you might act on thoughts of harming yourself today?"
-            if crisis_flag else None
+            if item9_positive else None
         ),
         "percentage": round((total / 27) * 100, 1),
         "is_diagnosis": False,
-        "interpretation_note": "PHQ-9 is a screening questionnaire, not a diagnosis. A positive answer to item 9 needs direct human-sensitive follow-up; this score cannot establish immediate risk by itself.",
+        "interpretation_note": (
+            "PHQ-9 is a screening questionnaire, not a diagnosis. A positive answer to item 9 needs direct, "
+            "compassionate follow-up; this score cannot establish immediate risk by itself."
+        ),
     }
 
 
 def score_gad7(responses: list) -> dict:
-    total = sum(int(r) for r in responses)
+    if len(responses) != 7 or any(type(value) is not int or value < 0 or value > 3 for value in responses):
+        raise ValueError("GAD-7 requires exactly 7 integer responses from 0 to 3")
+    total = sum(responses)
 
     if total <= 4:
         cat, color, desc = "Minimal", "#22c55e", "Minimal range of anxiety symptoms on this screening"
@@ -83,7 +94,10 @@ def score_gad7(responses: list) -> dict:
         "description": desc,
         "percentage": round((total / 21) * 100, 1),
         "is_diagnosis": False,
-        "interpretation_note": "GAD-7 is a screening questionnaire, not a diagnosis. Interpret the score alongside the person's own account and appropriate professional judgment.",
+        "interpretation_note": (
+            "GAD-7 is a screening questionnaire, not a diagnosis. Interpret the score alongside the person's own "
+            "account and appropriate professional judgment."
+        ),
     }
 
 

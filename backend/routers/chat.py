@@ -1,10 +1,15 @@
-"""MindCare chat API; persistent history and isolation enforced by Supabase RLS."""
+"""MindCare chat API with safety-first routing and authenticated persistence."""
+from __future__ import annotations
+
+import json
 import logging
 import time
 import uuid
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
+
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
 
@@ -31,56 +36,63 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
 
-    # Legacy browser questionnaire fields are intentionally not accepted as model context.
-    # Pydantic ignores unknown keys for backward compatibility with older frontends.
+    # Legacy browser questionnaire/risk fields are intentionally ignored for backward
+    # compatibility, but they are not authoritative input to safety routing or the LLM.
 
 
-def build_message_rows(session_id: str, user_id: str, request: ChatRequest, response: str,
-                       risk_score: float | None, latency_ms: int | None,
-                       safety_follow_up_required: bool, rag_used: bool,
-                       safety_source: str | None = None) -> list[dict]:
-    """Return a PostgREST bulk-insert payload with an identical column set per row.
+def build_message_rows(
+    session_id: str,
+    user_id: str,
+    request: ChatRequest,
+    response: str,
+    risk_score: float | None,
+    latency_ms: int | None,
+    safety_follow_up_required: bool | None = None,
+    rag_used: bool = False,
+    safety_source: str | None = None,
+    crisis_detected: bool | None = None,
+) -> list[dict]:
+    """Build same-column-set rows for PostgREST bulk insert.
 
-    PostgREST rejects bulk inserts when each JSON object has different keys. Optional
-    columns must be present with null values on the row where they do not apply.
+    ``crisis_detected`` remains a compatibility keyword for older tests/callers only;
+    its value is never treated as an authoritative clinical label. New code must use
+    ``safety_follow_up_required`` to describe that a direct follow-up question was shown.
     """
+    if safety_follow_up_required is None:
+        safety_follow_up_required = bool(crisis_detected)
     shared = {"conversation_id": session_id, "user_id": user_id}
-    # Scores supplied by the browser are not authoritative and are stored in the
-    # assessments table by the server, so do not duplicate them in message metadata.
-    user_metadata = {}
-    assistant_metadata = {"safety_follow_up_required": safety_follow_up_required,
-                          "rag_used": rag_used, "risk_score_status": "unassessed"}
+    user_metadata: dict = {}
+    assistant_metadata = {
+        "safety_follow_up_required": safety_follow_up_required,
+        "rag_used": rag_used,
+        "risk_score_status": "unassessed",
+    }
     if safety_source:
         assistant_metadata["safety_signal_source"] = safety_source
     return [
         {
-            **shared,
-            "role": "user",
-            "content": request.message,
-            "emotion": request.emotion,
-            "risk_score": None,
-            "latency_ms": None,
+            **shared, "role": "user", "content": request.message,
+            "emotion": request.emotion, "risk_score": None, "latency_ms": None,
             "metadata": user_metadata,
         },
         {
-            **shared,
-            "role": "assistant",
-            "content": response,
-            "emotion": None,
-            "risk_score": risk_score,
-            "latency_ms": latency_ms,
+            **shared, "role": "assistant", "content": response,
+            "emotion": None, "risk_score": risk_score, "latency_ms": latency_ms,
             "metadata": assistant_metadata,
         },
     ]
 
 
-async def _pending_phq9_safety_follow_up(user_id: str, token: str) -> str | None:
-    """Return the latest PHQ-9 id if item 9 was positive and follow-up is unacknowledged.
+async def _pending_phq9_safety_follow_up(
+    user_id: str, token: str, *, fail_closed: bool = False,
+) -> str | None:
+    """Return latest PHQ-9 id when item 9 is positive and follow-up is unacknowledged.
 
-    Requires the 20261019_assessment_safety_followup.sql migration. Failure to read this
-    optional state is logged and ignored: explicit current-message safety cues still route.
+    Requires migration 20261019_assessment_safety_followup.sql. A normal chat request uses
+    ``fail_closed=True``: if state cannot be verified, do not silently skip a possible saved
+    follow-up. After a direct safety response has already been prepared, the lookup is best
+    effort so a database failure cannot suppress the safety reply.
     """
-    import json
     try:
         rows, _ = await select_rows("assessments", token, {
             "select": "id,answers,safety_follow_up_at,completed_at",
@@ -104,31 +116,38 @@ async def _pending_phq9_safety_follow_up(user_id: str, token: str) -> str | None
         if isinstance(item_9, bool):
             return None
         try:
-            is_positive = int(item_9) >= 1 and str(item_9).strip() == str(int(item_9))
-        except (TypeError, ValueError):
-            is_positive = False
-        return str(latest.get("id")) if is_positive and latest.get("id") else None
+            number = int(item_9)
+            positive = number >= 1 and str(item_9).strip() == str(number)
+        except (TypeError, ValueError, OverflowError):
+            positive = False
+        return str(latest.get("id")) if positive and latest.get("id") else None
     except SupabaseError as exc:
-        logger.info("PHQ-9 follow-up state unavailable (%s); using current-message safety cues", exc.message)
+        logger.warning("PHQ-9 follow-up state unavailable (%s)", exc.message)
+        if fail_closed:
+            raise HTTPException(
+                status_code=503,
+                detail=("MindCare couldn't verify whether a saved screening needs a safety follow-up. "
+                        "Please retry before continuing.")
+            ) from exc
         return None
 
 
 async def _mark_phq9_safety_follow_up_presented(user_id: str, token: str, assessment_id: str) -> None:
-    """Mark that a direct follow-up prompt was presented; this does not mark the concern resolved."""
+    """Mark that a direct question was presented, not that concern was resolved."""
     from datetime import datetime, timezone
     try:
         await update_rows("assessments", token, {
             "id": f"eq.{assessment_id}", "user_id": f"eq.{user_id}",
         }, {"safety_follow_up_at": datetime.now(timezone.utc).isoformat()})
     except SupabaseError as exc:
-        # Fail safe: without acknowledgement the next request may ask again, not silently skip.
+        # Fail safe: if this write fails, a later request may ask again rather than skip it.
         logger.warning("Could not mark PHQ-9 safety follow-up as presented (%s)", exc.message)
 
 
 async def _best_effort_persist_safety_turn(
     req: ChatRequest, user_id: str, token: str, response: str, source: str,
 ) -> tuple[str, bool]:
-    """Persist a safety response if possible, but never let storage outage suppress it."""
+    """Persist a safety response if possible; storage outage must never suppress the response."""
     requested_session = str(req.session_id) if req.session_id else None
     session_id = requested_session or str(uuid.uuid4())
     try:
@@ -141,8 +160,7 @@ async def _best_effort_persist_safety_turn(
                 })
             except SupabaseError:
                 # Ownership could not be established. Never reuse an unverified session id.
-                session_id = str(uuid.uuid4())
-                owned = []
+                session_id, owned = str(uuid.uuid4()), []
 
         if not owned:
             try:
@@ -153,7 +171,6 @@ async def _best_effort_persist_safety_turn(
             except SupabaseError as exc:
                 if exc.status_code != 409:
                     raise
-                # A collision may belong to another account; create a new private session.
                 session_id = str(uuid.uuid4())
                 await insert_row("conversations", token, {
                     "id": session_id, "user_id": user_id,
@@ -162,12 +179,10 @@ async def _best_effort_persist_safety_turn(
 
         rows = build_message_rows(
             session_id=session_id, user_id=user_id, request=req, response=response,
-            risk_score=None, latency_ms=None, safety_follow_up_required=True, rag_used=False,
-            safety_source=source,
+            risk_score=None, latency_ms=None, safety_follow_up_required=True,
+            rag_used=False, safety_source=source,
         )
         await insert_row("messages", token, rows)
-        # Clear only experimental composite values on the current conversation. Raw PHQ-9/GAD-7
-        # answers remain in the user's assessment records and are not copied from client payloads.
         try:
             await update_rows("conversations", token, {
                 "id": f"eq.{session_id}", "user_id": f"eq.{user_id}",
@@ -185,22 +200,21 @@ async def _best_effort_persist_safety_turn(
 
 @router.post("/chat")
 async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)):
-    uid = current_user["id"]
-    token = current_user["access_token"]
+    uid, token = current_user["id"], current_user["access_token"]
     started = time.perf_counter()
 
     from services.fusion_service import (
         compute_risk_score, get_recommendations, check_crisis, SAFETY_CHECK_RESPONSE,
     )
 
-    # Safety routing happens before profile, history, analytics, or LLM calls. This reduces
-    # the chance that an analytics/storage failure prevents the user from receiving guidance.
+    # Safety routing precedes profile, history, analytics, and LLM calls. The signal is a
+    # reason for a direct follow-up—not a diagnosis or proof of imminent danger.
     safety_detected, safety_source = check_crisis(req.message)
     pending_assessment_id = None
     if not safety_detected:
-        # The saved assessment is the source of truth; transient browser flags and scores
-        # are ignored so refreshes and stale SPA state cannot alter safety routing.
-        pending_assessment_id = await _pending_phq9_safety_follow_up(uid, token)
+        # Fail closed when safety state is unreadable. This may temporarily pause normal
+        # chat, but avoids silently skipping a required follow-up after a positive screen.
+        pending_assessment_id = await _pending_phq9_safety_follow_up(uid, token, fail_closed=True)
     if not safety_detected and pending_assessment_id:
         safety_detected, safety_source = True, "saved_positive_phq9_item9"
 
@@ -209,9 +223,6 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             req, uid, token, SAFETY_CHECK_RESPONSE, safety_source,
         )
         if persisted:
-            # A direct message cue may have taken the fast path before we queried the
-            # saved assessment. If a positive PHQ-9 is also pending, record that its
-            # follow-up prompt was presented. This timestamp is not a clinical clearance.
             if pending_assessment_id is None:
                 pending_assessment_id = await _pending_phq9_safety_follow_up(uid, token)
             if pending_assessment_id:
@@ -222,8 +233,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             "response": SAFETY_CHECK_RESPONSE,
             "risk": risk_status,
             "recommendations": get_recommendations(),
-            # Retain the legacy field without making a clinical claim. Use the explicit
-            # handoff field to describe the deterministic safety response.
+            # Legacy field retained without falsely claiming a classifier established crisis.
             "crisis_detected": False,
             "safety_follow_up_required": True,
             "safety_signal_source": safety_source,
@@ -234,9 +244,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             "persistence_warning": None if persisted else "This safety response was shown but could not be saved to conversation history. Check your connection before relying on history being complete.",
         }
 
-    # Normal conversation setup. Analytics and legacy composite scoring are deliberately not
-    # part of the response path. If history/profile fetches fail, continue without claiming
-    # that those context sources were available; tell the client which continuity degraded.
+    # Normal conversation setup. Analytics and composite scoring are not in the response path.
     session_id = str(req.session_id or uuid.uuid4())
     session_ready = False
     context_warnings: list[str] = []
@@ -259,7 +267,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
                 session_ready = True
             except SupabaseError as exc:
                 if exc.status_code == 409:
-                    # Do not distinguish another user's UUID from other conflicts; start clean.
+                    # Don't distinguish a foreign UUID from another conflict; start a private session.
                     session_id = str(uuid.uuid4())
                     await insert_row("conversations", token, {
                         "id": session_id, "user_id": uid,
@@ -276,7 +284,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
     if session_ready:
         try:
             profile_rows, _ = await select_rows("profiles", token, {
-                # Data minimization: no DOB, derived age, or timezone is sent to the LLM.
+                # Data minimization: no DOB, derived age, or time zone is sent to the LLM.
                 "select": "display_name,username,pronouns,support_style,focus_areas",
                 "id": f"eq.{uid}", "limit": "1",
             })
@@ -295,8 +303,18 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             logger.warning("Conversation history unavailable (%s)", history_exc.message)
             context_warnings.append("I couldn't load earlier messages, so this reply may miss some previous context.")
 
-    # Do not accept client-supplied questionnaire scores as authoritative model context or
-    # write them into conversations. The canonical PHQ-9/GAD-7 results remain in assessments.
+        # Saved memories are explicitly user-created, optional, and separately controlled.
+        try:
+            memory_rows, _ = await select_rows("user_memories", token, {
+                "select": "content", "user_id": f"eq.{uid}",
+                "order": "created_at.desc", "limit": "20",
+            })
+            profile_context = {**(profile_context or {}), "saved_memories": memory_rows}
+        except SupabaseError as memory_exc:
+            logger.info("Saved memories unavailable (%s)", memory_exc.message)
+            context_warnings.append("I couldn't load your saved memories for this reply.")
+
+    # Never accept browser-supplied questionnaire values as authoritative safety or model context.
     context = {"emotion": req.emotion if req.emotion else None}
     from services.groq_service import generate_reply
     try:
@@ -321,7 +339,6 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             )
             await insert_row("messages", token, rows)
             persistence_status = "saved"
-            # Clear old unvalidated summary fields without altering the separate assessment history.
             try:
                 await update_rows("conversations", token, {
                     "id": f"eq.{session_id}", "user_id": f"eq.{uid}",
@@ -335,11 +352,10 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
     else:
         persistence_warning = "This reply was generated without a confirmed saved conversation. It may not appear in history."
 
-    risk_status = compute_risk_score()
     return {
         "session_id": session_id,
         "response": response,
-        "risk": risk_status,
+        "risk": compute_risk_score(),
         "recommendations": get_recommendations(),
         "crisis_detected": False,
         "safety_follow_up_required": False,
@@ -379,7 +395,6 @@ async def clear_session_endpoint(session_id: uuid.UUID, current_user=Depends(get
     })
     if not owned:
         raise HTTPException(status_code=404, detail="Session not found")
-    # Ownership filter and RLS both apply to each deletion.
     await delete_rows("messages", token, {"conversation_id": f"eq.{session_id}", "user_id": f"eq.{uid}"})
     await delete_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"})
     return {"message": "Session deleted"}
@@ -421,4 +436,3 @@ async def delete_memory_endpoint(memory_id: uuid.UUID, current_user=Depends(get_
     if not deleted:
         raise HTTPException(status_code=404, detail="Memory not found")
     return {"deleted": True}
-

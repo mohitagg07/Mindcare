@@ -1,7 +1,7 @@
 """PHQ-9/GAD-7 screening endpoints with user-scoped, retry-safe persistence.
 
 Screening totals are not diagnoses and must never be presented as an imminent-risk
-prediction. PHQ-9 item 9 triggers a direct follow-up pathway independent of the total.
+prediction. PHQ-9 item 9 triggers a separate, compassionate safety follow-up pathway.
 """
 from __future__ import annotations
 
@@ -26,8 +26,7 @@ GAD7_SCORING_VERSION = "gad7-standard-v1"
 class _AssessmentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     responses: list[Answer]
-    # Optional for compatibility with stale/third-party clients. The current MindCare
-    # frontend sends a UUID. Calls without it continue to work but are not retry-safe.
+    # Optional for compatibility with older clients. Current clients should send a UUID.
     submission_id: UUID | None = None
 
 
@@ -89,12 +88,7 @@ def _result_from_snapshot(
     max_score: int,
     disclaimer: str,
 ) -> dict:
-    """Validate a replay against stored facts and recompute the client-facing result.
-
-    The result snapshot is useful for audit/version tracking, but it is not blindly
-    trusted as output: a signed-in browser must never be able to make the API echo a
-    forged category or explanation by directly inserting a row under its own RLS policy.
-    """
+    """Validate a replay against persisted facts and recompute canonical output."""
     saved_answers = _normalize_stored_answers(existing.get("answers"))
     if saved_answers is None or saved_answers != responses:
         raise HTTPException(
@@ -102,15 +96,12 @@ def _result_from_snapshot(
             detail="This submission ID was already used with different or unreadable answers. Start a new assessment attempt.",
         )
 
-    saved_version = existing.get("scoring_version")
-    if saved_version != version:
+    if existing.get("scoring_version") != version:
         raise HTTPException(
             status_code=409,
             detail="This saved submission uses a different scoring version and cannot be replayed safely.",
         )
 
-    # Recompute from validated answers. Never trust user-writable score/category fields
-    # without checking them against the server's canonical scorer.
     result = dict(scorer(responses))
     result["is_diagnosis"] = False
     try:
@@ -133,38 +124,33 @@ def _result_from_snapshot(
     if snapshot is not None:
         if not isinstance(snapshot, dict):
             raise HTTPException(status_code=409, detail="This saved submission has an invalid result snapshot.")
-        # Catch internal record corruption without exposing raw stored data to the caller.
-        core_fields = ("score", "max_score", "category", "is_diagnosis")
-        if any(snapshot.get(key) != result.get(key) for key in core_fields):
-            raise HTTPException(status_code=409, detail="This saved submission has inconsistent result data.")
+        for key in ("score", "max_score", "category", "is_diagnosis"):
+            if snapshot.get(key) != result.get(key):
+                raise HTTPException(status_code=409, detail="This saved submission has inconsistent result data.")
         if result.get("crisis_flag") is not None and snapshot.get("crisis_flag") != result.get("crisis_flag"):
             raise HTTPException(status_code=409, detail="This saved submission has inconsistent safety-follow-up data.")
 
-    result["is_diagnosis"] = False
-    result["disclaimer"] = disclaimer
-    result["submission_id"] = str(existing.get("submission_id"))
-    result["assessment_id"] = existing.get("id")
-    result["scoring_version"] = version
-    result["idempotent_replay"] = True
-    result["idempotency_status"] = "protected"
+    result.update({
+        "is_diagnosis": False,
+        "disclaimer": disclaimer,
+        "submission_id": str(existing.get("submission_id")),
+        "assessment_id": existing.get("id"),
+        "scoring_version": version,
+        "idempotent_replay": True,
+        "idempotency_status": "protected",
+    })
     return result
 
-async def _persist_assessment(
-    *,
-    current_user: dict,
-    instrument: str,
-    responses: list[int],
-    max_score: int,
-    submission_id: UUID | None,
-    scorer: Callable[[list[int]], dict],
-    scoring_version: str,
-    disclaimer: str,
-) -> dict:
-    user_id = current_user["id"]
-    token = current_user["access_token"]
 
-    # Fail closed on idempotency lookup errors. Inserting anyway could duplicate a result
-    # after the browser timed out but the first database write had actually succeeded.
+async def _persist_assessment(
+    *, current_user: dict, instrument: str, responses: list[int], max_score: int,
+    submission_id: UUID | None, scorer: Callable[[list[int]], dict],
+    scoring_version: str, disclaimer: str,
+) -> dict:
+    user_id, token = current_user["id"], current_user["access_token"]
+
+    # Fail closed on idempotency lookup failures: inserting anyway could duplicate a row
+    # after a client timeout where the first database write actually succeeded.
     if submission_id is not None:
         try:
             existing = await _find_submission(user_id, token, instrument, submission_id)
@@ -174,13 +160,14 @@ async def _persist_assessment(
             return _result_from_snapshot(existing, responses, scorer, instrument, scoring_version, max_score, disclaimer)
 
     result = dict(scorer(responses))
-    result["is_diagnosis"] = False
-    result["disclaimer"] = disclaimer
-    result["submission_id"] = str(submission_id) if submission_id else None
-    result["scoring_version"] = scoring_version
-    result["idempotent_replay"] = False
-    result["idempotency_status"] = "protected" if submission_id else "legacy_no_key"
-
+    result.update({
+        "is_diagnosis": False,
+        "disclaimer": disclaimer,
+        "submission_id": str(submission_id) if submission_id else None,
+        "scoring_version": scoring_version,
+        "idempotent_replay": False,
+        "idempotency_status": "protected" if submission_id else "legacy_no_key",
+    })
     row = {
         "user_id": user_id,
         "instrument": instrument,
@@ -199,8 +186,8 @@ async def _persist_assessment(
             result["assessment_id"] = inserted[0].get("id")
         return result
     except SupabaseError as exc:
-        # Two requests can pass the first lookup simultaneously. The database unique
-        # index serializes that race; the loser reads back the winner and compares answers.
+        # Two requests can pass the initial lookup simultaneously. The unique index
+        # serializes that race; the loser reads the winner and verifies exact answers.
         if submission_id is not None and exc.status_code == 409:
             try:
                 existing = await _find_submission(user_id, token, instrument, submission_id)
@@ -219,7 +206,7 @@ async def get_questions():
 
 @router.get("/assessment/history")
 async def assessment_history_endpoint(current_user=Depends(get_current_user)):
-    """Return only the signed-in user's assessment summaries, never raw answers."""
+    """Return only the signed-in user's recent summaries, never raw answers or user IDs."""
     try:
         rows, _ = await select_rows("assessments", current_user["access_token"], {
             "select": "id,instrument,score,max_score,completed_at",
