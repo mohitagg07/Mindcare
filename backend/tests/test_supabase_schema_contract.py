@@ -94,3 +94,13 @@ def test_chat_turn_idempotency_contract():
     assert "add column if not exists client_turn_id uuid" in migration
     assert "messages_user_client_turn_role_uidx" in migration
 
+
+def test_assessment_integrity_permissions_contract():
+    migration = read_sql("supabase/migrations/20261022_assessment_integrity_permissions.sql")
+    assert "assessment_answers_match_score" in migration
+    assert "assessments_score_within_max_check" in migration
+    assert "assessments_instrument_max_check" in migration
+    assert "assessments_answers_match_score_check" in migration
+    assert "assessments_result_snapshot_object_check" in migration
+    assert "grant update (safety_follow_up_at) on public.assessments to authenticated" in migration
+

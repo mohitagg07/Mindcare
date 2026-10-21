@@ -182,9 +182,48 @@ async def _persist_assessment(
 
     try:
         inserted = await insert_row("assessments", token, row)
-        if inserted:
-            result["assessment_id"] = inserted[0].get("id")
-        return result
+        if (
+            isinstance(inserted, list)
+            and len(inserted) == 1
+            and isinstance(inserted[0], dict)
+            and isinstance(inserted[0].get("id"), str)
+            and inserted[0]["id"].strip()
+        ):
+            # insert_row explicitly asks PostgREST for return=representation.
+            # A returned row with an id is the write receipt; an empty/malformed
+            # payload is ambiguous and must not be reported as a saved assessment.
+            result["assessment_id"] = inserted[0]["id"]
+            return result
+
+        logger.error(
+            "Assessment insert returned no verifiable receipt (instrument=%s, idempotent=%s)",
+            instrument,
+            submission_id is not None,
+        )
+
+        # The database may have committed the row even if the HTTP response did not
+        # include its representation. With an idempotency key, read the exact attempt
+        # back and verify answers, score, scoring version, and snapshot before claiming
+        # success. Retrying the same key is safe because the database unique index guards it.
+        if submission_id is not None:
+            try:
+                existing = await _find_submission(user_id, token, instrument, submission_id)
+            except SupabaseError as lookup_exc:
+                raise _http_persistence_error(lookup_exc) from lookup_exc
+            if existing:
+                return _result_from_snapshot(
+                    existing, responses, scorer, instrument, scoring_version, max_score, disclaimer
+                )
+
+        detail = (
+            "MindCare could not confirm that this assessment was saved. The submission may have been received. "
+            "Retry this same attempt with the same submission ID."
+            if submission_id is not None
+            else
+            "MindCare could not confirm that this assessment was saved. The submission may have been received; "
+            "check assessment history before starting another attempt. This older request did not include a retry key."
+        )
+        raise HTTPException(status_code=503, detail=detail)
     except SupabaseError as exc:
         # Two requests can pass the initial lookup simultaneously. The unique index
         # serializes that race; the loser reads the winner and verifies exact answers.
