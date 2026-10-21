@@ -11,7 +11,7 @@ router  = APIRouter()
 
 
 class EmotionRequest(BaseModel):
-    image: str = Field(description="Base64-encoded image (with or without data URL prefix)")
+    image: str = Field(min_length=1, description="Base64-encoded image (with or without data URL prefix)")
 
 
 @router.post("/emotion/analyze", dependencies=[Depends(rate_limit("emotion", 20, 60))])

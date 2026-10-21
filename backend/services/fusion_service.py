@@ -115,20 +115,20 @@ def compute_risk_score(
 
 
 def get_recommendations(risk_level: str | None = None, emotion: str | None = None) -> dict:
-    """Return general, low-risk support options; never infer the person's wellbeing level."""
-    resources = []
-    if risk_level in {"HIGH", "MODERATE"}:
-        resources = [
-            {"name": "Find a support line by country", "contact": "https://findahelpline.com/", "type": "directory"},
-            {"name": "Professional support", "contact": "A qualified mental health professional", "type": "care"},
-        ]
+    """Return only generic, low-risk options; legacy labels never personalize care.
+
+    ``risk_level`` and ``emotion`` remain in the signature for compatibility with older
+    call sites. They are intentionally ignored: the composite risk score is disabled,
+    and facial-expression/sentiment signals are not validated safety evidence.
+    """
+    _ = (risk_level, emotion)
     return {
         "exercises": [
             "If it feels comfortable, try a few slow, easy breaths without forcing the pace.",
             "Name one thing that feels most important to you right now.",
             "Consider reaching out to a trusted person if you would rather not handle this alone.",
         ],
-        "resources": resources,
+        "resources": [],
         "message": "I haven't calculated a clinical risk level. We can start with what you tell me and work out what kind of support would help.",
-        "personalized_by_risk": bool(resources),
+        "personalized_by_risk": False,
     }

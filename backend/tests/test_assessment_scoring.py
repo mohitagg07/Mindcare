@@ -58,9 +58,8 @@ def test_assessment_payloads_require_exact_integer_responses():
 
 
 def test_crisis_guidance_uses_location_aware_support():
-    from services.fusion_service import CRISIS_RESOURCES, get_recommendations
+    from services.fusion_service import CRISIS_RESOURCES
     assert "local emergency number" in CRISIS_RESOURCES
     assert "https://findahelpline.com/" in CRISIS_RESOURCES
-    high_support = get_recommendations("HIGH", "sad")
-    assert all("contact" not in item or "9152987821" not in item["contact"] for item in high_support["resources"])
-    assert any(item["contact"] == "https://findahelpline.com/" for item in high_support["resources"])
+    assert "9152987821" not in CRISIS_RESOURCES
+

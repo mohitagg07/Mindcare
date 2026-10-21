@@ -94,7 +94,7 @@ def _parse_response(raw: str, model: str) -> dict[str, Any]:
         scores = {key: float(key == emotion) for key in EMOTION_LABELS}
 
     try:
-        face_count = int(data.get("faces_detected", 1))
+        face_count = int(data.get("faces_detected", 0))
     except (TypeError, ValueError, OverflowError):
         face_count = 0
     if isinstance(data.get("faces_detected"), bool):

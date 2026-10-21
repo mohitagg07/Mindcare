@@ -99,48 +99,89 @@ def build_message_rows(
 async def _pending_phq9_safety_follow_up(
     user_id: str, token: str, *, fail_closed: bool = False,
 ) -> str | None:
-    """Return latest PHQ-9 id when item 9 is positive and follow-up is unacknowledged.
+    """Return the newest unpresented positive PHQ-9 item-9 assessment, if any.
 
-    Requires migration 20261019_assessment_safety_followup.sql. A normal chat request uses
-    ``fail_closed=True``: if state cannot be verified, do not silently skip a possible saved
-    follow-up. After a direct safety response has already been prepared, the lookup is best
-    effort so a database failure cannot suppress the safety reply.
+    The lookup intentionally searches ALL unpresented positive item-9 assessments,
+    not only the newest PHQ-9 row. A later negative screen must not silently hide an
+    earlier positive response that has never received a direct safety follow-up.
+
+    The JSON-path filter limits results to item 9 >= 1. Assessment answer integrity
+    is also enforced by the database migration. Returned rows are revalidated here;
+    malformed rows fail closed in the normal-chat path instead of being treated as safe.
+    Requires 20261019_assessment_safety_followup.sql and
+    20261017_assessment_integrity.sql.
     """
     try:
         rows, _ = await select_rows("assessments", token, {
             "select": "id,answers,safety_follow_up_at,completed_at",
-            "user_id": f"eq.{user_id}", "instrument": "eq.PHQ-9",
-            "order": "completed_at.desc", "limit": "1",
+            "user_id": f"eq.{user_id}",
+            "instrument": "eq.PHQ-9",
+            "safety_follow_up_at": "is.null",
+            # PostgREST JSON-path filter: item 9 is array index 8. The database
+            # integrity constraint restricts every response to the integer 0..3.
+            "answers->>8": "gte.1",
+            "order": "completed_at.desc",
+            "limit": "1000",
         })
-        if not rows:
-            return None
-        latest = rows[0]
-        if latest.get("safety_follow_up_at"):
-            return None
-        answers = latest.get("answers", [])
-        if isinstance(answers, str):
-            try:
-                answers = json.loads(answers)
-            except (TypeError, ValueError):
-                return None
-        if not isinstance(answers, list) or len(answers) != 9:
-            return None
-        item_9 = answers[8]
-        if isinstance(item_9, bool):
-            return None
-        try:
-            number = int(item_9)
-            positive = number >= 1 and str(item_9).strip() == str(number)
-        except (TypeError, ValueError, OverflowError):
-            positive = False
-        return str(latest.get("id")) if positive and latest.get("id") else None
+
+        for candidate in rows:
+            # Defensive check in case a test double or intermediary ignores filters.
+            if candidate.get("safety_follow_up_at"):
+                continue
+
+            answers = candidate.get("answers")
+            if isinstance(answers, str):
+                try:
+                    answers = json.loads(answers)
+                except (TypeError, ValueError):
+                    answers = None
+
+            valid_answers = (
+                isinstance(answers, list)
+                and len(answers) == 9
+                and all(type(value) is int and 0 <= value <= 3 for value in answers)
+            )
+            if not valid_answers:
+                logger.error("Pending PHQ-9 assessment has invalid stored answers; safety state is unverifiable")
+                if fail_closed:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=("MindCare couldn't verify a saved screening's safety follow-up state. "
+                                "Please retry or contact support before continuing."),
+                    )
+                continue
+
+            # The query should only return positive item-9 answers. If the persisted
+            # payload contradicts the query, treat it as an integrity failure.
+            if answers[8] < 1:
+                logger.error("Pending PHQ-9 assessment does not match its positive item-9 query")
+                if fail_closed:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=("MindCare couldn't verify a saved screening's safety follow-up state. "
+                                "Please retry or contact support before continuing."),
+                    )
+                continue
+
+            assessment_id = candidate.get("id")
+            if not isinstance(assessment_id, str) or not assessment_id.strip():
+                logger.error("Pending PHQ-9 assessment has no usable ID")
+                if fail_closed:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=("MindCare couldn't verify a saved screening's safety follow-up state. "
+                                "Please retry or contact support before continuing."),
+                    )
+                continue
+            return assessment_id
+        return None
     except SupabaseError as exc:
         logger.warning("PHQ-9 follow-up state unavailable (%s)", exc.message)
         if fail_closed:
             raise HTTPException(
                 status_code=503,
                 detail=("MindCare couldn't verify whether a saved screening needs a safety follow-up. "
-                        "Please retry before continuing.")
+                        "Please retry before continuing."),
             ) from exc
         return None
 
