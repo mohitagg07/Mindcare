@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
 from services.input_integrity import normalize_chat_message, normalize_expression_label
+from services.chat_idempotency import load_saved_turn
 
 logger = logging.getLogger("mindcare.chat")
 router = APIRouter()
@@ -34,6 +35,8 @@ class MemoryCreateRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     session_id: Optional[uuid.UUID] = None
+    # Reuse this UUID only when retrying the same logical user turn.
+    client_turn_id: Optional[uuid.UUID] = None
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
 
@@ -74,6 +77,8 @@ def build_message_rows(
     if safety_follow_up_required is None:
         safety_follow_up_required = bool(crisis_detected)
     shared = {"conversation_id": session_id, "user_id": user_id}
+    if request.client_turn_id is not None:
+        shared["client_turn_id"] = str(request.client_turn_id)
     user_metadata: dict = {}
     assistant_metadata = {
         "safety_follow_up_required": safety_follow_up_required,
@@ -246,10 +251,36 @@ async def _best_effort_persist_safety_turn(
         return session_id, True
     except SupabaseError as exc:
         logger.warning("Safety response was delivered but not persisted (%s)", exc.message)
-        return str(uuid.uuid4()), False
+        return session_id, False
     except Exception as exc:
         logger.warning("Safety response persistence failed (%s)", type(exc).__name__)
-        return str(uuid.uuid4()), False
+        return session_id, False
+
+
+def _replay_turn_payload(saved_turn: dict) -> dict:
+    """Return the already-persisted assistant answer for a safe idempotent retry."""
+    from services.fusion_service import compute_risk_score, get_recommendations
+
+    assistant = saved_turn["assistant_message"]
+    metadata = assistant.get("metadata") if isinstance(assistant.get("metadata"), dict) else {}
+    safety_required = bool(metadata.get("safety_follow_up_required"))
+    return {
+        "session_id": saved_turn["conversation_id"],
+        "response": assistant["content"],
+        "risk": compute_risk_score(),
+        "recommendations": get_recommendations(),
+        "crisis_detected": False,
+        "safety_follow_up_required": safety_required,
+        "safety_signal_source": metadata.get("safety_signal_source"),
+        "rag_used": bool(metadata.get("rag_used")),
+        "agent_tools_used": [],
+        "trajectory": {"trend": "unknown", "available": False, "note": "Experimental composite trajectory is disabled pending validation."},
+        "context_status": "replayed",
+        "context_warnings": [],
+        "persistence_status": "saved",
+        "persistence_warning": None,
+        "idempotency_status": "replayed",
+    }
 
 
 @router.post("/chat")
@@ -264,6 +295,16 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
     # Safety routing precedes profile, history, analytics, and LLM calls. The signal is a
     # reason for a direct follow-up—not a diagnosis or proof of imminent danger.
     safety_detected, safety_source = check_crisis(req.message)
+    if req.client_turn_id is not None:
+        try:
+            saved_turn = await load_saved_turn(uid, token, req.client_turn_id, expected_message=req.message)
+        except HTTPException:
+            if not safety_detected:
+                raise
+            logger.warning("Idempotency lookup unavailable for a safety-triggered message; delivering safety guidance anyway")
+        else:
+            if saved_turn is not None:
+                return _replay_turn_payload(saved_turn)
     pending_assessment_id = None
     if not safety_detected:
         # Fail closed when safety state is unreadable. This may temporarily pause normal
@@ -276,6 +317,21 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
         session_id, persisted = await _best_effort_persist_safety_turn(
             req, uid, token, SAFETY_CHECK_RESPONSE, safety_source,
         )
+        if not persisted and req.client_turn_id is not None:
+            # A concurrent retry may have won the unique-index race. Try to replay
+            # it, but never let a second read failure suppress safety guidance.
+            try:
+                saved_turn = await load_saved_turn(uid, token, req.client_turn_id, expected_message=req.message)
+            except HTTPException:
+                logger.warning("Could not verify a concurrent safety-turn retry; delivering the safety response")
+            else:
+                if saved_turn is not None:
+                    if session_id != saved_turn["conversation_id"]:
+                        try:
+                            await delete_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"})
+                        except SupabaseError as cleanup_exc:
+                            logger.info("Could not remove duplicate safety session (%s)", cleanup_exc.status_code)
+                    return _replay_turn_payload(saved_turn)
         if persisted:
             if pending_assessment_id is None:
                 pending_assessment_id = await _pending_phq9_safety_follow_up(uid, token)
@@ -296,6 +352,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             "trajectory": {"trend": "unknown", "available": False, "note": "Experimental composite trajectory is disabled pending validation."},
             "persistence_status": "saved" if persisted else "not_saved",
             "persistence_warning": None if persisted else "This safety response was shown but could not be saved to conversation history. Check your connection before relying on history being complete.",
+            "idempotency_status": ("saved" if persisted else "not_saved") if req.client_turn_id is not None else "not_requested",
         }
 
     # Normal conversation setup. Analytics and composite scoring are not in the response path.
@@ -401,6 +458,18 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
                 logger.warning("Messages saved but legacy indicator fields could not be cleared (%s)", exc.message)
                 context_warnings.append("The reply was saved, but an old experimental indicator could not be cleared.")
         except SupabaseError as exc:
+            if req.client_turn_id is not None and exc.status_code == 409:
+                # Another identical request may have inserted the pair first. The unique
+                # index prevents duplicate persisted turns; return the winner's response.
+                saved_turn = await load_saved_turn(uid, token, req.client_turn_id, expected_message=req.message)
+                if saved_turn is not None:
+                    if session_id != saved_turn["conversation_id"]:
+                        try:
+                            await delete_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"})
+                        except SupabaseError as cleanup_exc:
+                            logger.info("Could not remove duplicate chat session (%s)", cleanup_exc.status_code)
+                    return _replay_turn_payload(saved_turn)
+                raise HTTPException(status_code=503, detail="MindCare could not verify a concurrent message retry. Please retry shortly.") from exc
             logger.warning("Assistant response was generated but conversation persistence failed (%s)", exc.message)
             persistence_warning = "This reply was generated but could not be saved to conversation history. Check your connection before relying on history being complete."
     else:
@@ -420,6 +489,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
         "context_warnings": context_warnings,
         "persistence_status": persistence_status,
         "persistence_warning": persistence_warning,
+        "idempotency_status": ("saved" if persistence_status == "saved" else "not_saved") if req.client_turn_id is not None else "not_requested",
     }
 
 

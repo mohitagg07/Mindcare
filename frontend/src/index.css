@@ -1450,3 +1450,15 @@ button, input, textarea { font-family: inherit; }
   .home-personalize-card > button { width: 100%; justify-content: center; }
   .mc-auth-brand-lockup { width: min(100%, 340px); }
 }
+
+/* Phase 3: visible, keyboard-accessible retry after an unconfirmed chat turn. */
+.chat-notice.is-retryable { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px 14px; text-align: left; }
+.chat-notice.is-retryable > span { min-width: 0; max-width: 760px; line-height: 1.55; }
+.chat-retry-button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 7px 12px; border: 1px solid #d7bd98; border-radius: 10px; color: #694b2c; background: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.chat-retry-button:hover:not(:disabled) { border-color: #b79060; background: #fff; }
+.chat-retry-button:focus-visible { outline: 3px solid rgba(94, 133, 95, .35); outline-offset: 2px; }
+.chat-retry-button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 560px) {
+  .chat-notice.is-retryable { align-items: stretch; justify-content: flex-start; text-align: left; }
+  .chat-retry-button { width: 100%; }
+}

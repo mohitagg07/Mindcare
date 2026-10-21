@@ -85,3 +85,12 @@ def test_assessment_submission_idempotency_contract():
     assert "add column if not exists result_snapshot jsonb" in migration
     assert "assessments_user_instrument_submission_uidx" in migration
 
+
+def test_chat_turn_idempotency_contract():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261022_chat_turn_idempotency.sql")
+    assert "client_turn_id uuid" in schema
+    assert "messages_user_client_turn_role_uidx" in schema
+    assert "add column if not exists client_turn_id uuid" in migration
+    assert "messages_user_client_turn_role_uidx" in migration
+

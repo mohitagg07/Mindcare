@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { v4 as uuidv4 } from 'uuid'
 import {
   Send, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
-  ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle,
+  ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle, RefreshCw,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -82,6 +83,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [notice, setNotice] = useState('')
+  const [failedTurn, setFailedTurn] = useState(null)
   const scrollAreaRef = useRef(null)
   const inputRef = useRef(null)
   const interacted = useRef(false)
@@ -129,20 +131,25 @@ export default function Chat() {
     area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
 
-  const handleSend = async (providedText) => {
+  const handleSend = async (providedText, retryTurn = null) => {
     const text = (providedText ?? input).trim()
-    if (!text || loading) return
+    if (!text || loading || historyLoading) return
+    const clientTurnId = retryTurn?.clientTurnId || uuidv4()
     interacted.current = true
     setNotice('')
-    setInput('')
-    addMessage({ role: 'user', content: text })
+    setFailedTurn(null)
+    if (!retryTurn) {
+      setInput('')
+      addMessage({ role: 'user', content: text })
+    }
     setLoading(true)
     try {
       const { data } = await sendChat({
         session_id: sessionId,
+        client_turn_id: clientTurnId,
         message: text,
         // The backend reads canonical saved assessment data for pending safety follow-up.
-        // Avoid sending the questionnaire score/category again from client-side state.
+        // Avoid sending questionnaire scores again from client-side state.
         emotion: currentEmotion?.confidence > 0 && currentEmotion?.emotion !== 'unavailable' ? currentEmotion.emotion : null,
       })
       if (data.session_id && data.session_id !== sessionId) setSessionId(data.session_id)
@@ -159,7 +166,10 @@ export default function Chat() {
       ].filter(Boolean)
       setNotice(feedback.join(' '))
     } catch (error) {
-      addMessage({ role: 'assistant', content: `I couldn't complete that message just now. ${error.message || 'Please check your connection and try again.'}`, error: true })
+      // Keep the failed user bubble visible. Retry reuses this same UUID, so a server
+      // that already saved the answer can return it instead of storing a duplicate turn.
+      setFailedTurn({ clientTurnId, text })
+      setNotice(`MindCare couldn't confirm a response. ${error.message || 'Check your connection, then retry the same message.'}`)
     } finally {
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
@@ -174,10 +184,11 @@ export default function Chat() {
     createNewSession()
     interacted.current = false
     setInput('')
+    setFailedTurn(null)
     setNotice('A new conversation is ready.')
   }
 
-  const isNewChat = messages.length <= 1
+  const isNewChat = messages.length <= 1 && (messages.length === 0 || messages[0]?.role === 'assistant') && !failedTurn
 
   return (
     <section className="chat-workspace" aria-label="Chat with MindCare">
@@ -205,7 +216,7 @@ export default function Chat() {
               <p className="chat-welcome-copy">{String(user?.display_name || '').trim() ? 'Your saved preferences come with you. Start with whatever is on your mind today.' : 'You can start with a thought, a feeling, or a question.'}</p>
               <div className="chat-prompt-grid">
                 {QUICK_STARTS.map(({ icon: Icon, title, text, tint }) => (
-                  <button key={title} type="button" className={`chat-prompt-card tint-${tint}`} onClick={() => handleSend(text)} disabled={loading || historyLoading}>
+                  <button key={title} type="button" className={`chat-prompt-card tint-${tint}`} onClick={() => handleSend(text)} disabled={loading || historyLoading || Boolean(failedTurn)}>
                     <span className="chat-prompt-icon"><Icon size={17} /></span>
                     <span className="chat-prompt-title">{title}</span>
                     <ArrowUpRight size={15} className="chat-prompt-arrow" />
@@ -223,7 +234,12 @@ export default function Chat() {
         </div>
       </div>
 
-      {notice && <div className="chat-notice" role="status">{notice}</div>}
+      {notice && (
+        <div className={`chat-notice${failedTurn ? " is-retryable" : ""}`} role={failedTurn ? "alert" : "status"}>
+          <span>{notice}</span>
+          {failedTurn && <button type="button" className="chat-retry-button" onClick={() => handleSend(failedTurn.text, failedTurn)} disabled={loading}><RefreshCw size={14} /> Retry same message</button>}
+        </div>
+      )}
 
       <footer className="chat-composer-shell">
         <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); handleSend() }}>
@@ -243,9 +259,9 @@ export default function Chat() {
               if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend() }
             }}
             placeholder="Write what’s on your mind…"
-            disabled={loading || historyLoading}
+            disabled={loading || historyLoading || Boolean(failedTurn)}
           />
-          <button type="submit" disabled={!input.trim() || loading || historyLoading} aria-label="Send message" className="chat-send-button">
+          <button type="submit" disabled={!input.trim() || loading || historyLoading || Boolean(failedTurn)} aria-label="Send message" className="chat-send-button">
             {loading ? <LoaderCircle size={18} className="spin-icon" /> : <Send size={17} />}
           </button>
         </form>
