@@ -27,13 +27,14 @@ def test_legacy_platform_wide_user_count_rpc_is_not_created():
 
 def test_all_user_data_tables_have_row_level_security_enabled():
     schema = read_sql("supabase/schema.sql")
-    for table in ("profiles", "conversations", "messages", "assessments", "trajectories"):
+    for table in ("profiles", "conversations", "messages", "assessments", "user_memories", "trajectories"):
         assert f"alter table public.{table} enable row level security" in schema
     for policy in (
         "profile_select_own", "profile_insert_own", "profile_update_own",
         "conversations_select_own", "conversations_insert_own", "conversations_update_own", "conversations_delete_own",
         "messages_select_own", "messages_insert_own", "messages_delete_own",
         "assessments_select_own", "assessments_insert_own", "assessments_delete_own",
+        "user_memories_select_own", "user_memories_insert_own", "user_memories_delete_own",
         "trajectories_select_own", "trajectories_insert_own",
     ):
         assert f'create policy "{policy}"' in schema
@@ -103,4 +104,23 @@ def test_assessment_integrity_permissions_contract():
     assert "assessments_answers_match_score_check" in migration
     assert "assessments_result_snapshot_object_check" in migration
     assert "grant update (safety_follow_up_at) on public.assessments to authenticated" in migration
+
+def test_fresh_schema_contains_user_memory_contract_and_matches_migration():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261017_user_memories.sql")
+
+    for contract in (
+        "create table if not exists public.user_memories",
+        "id uuid primary key default gen_random_uuid()",
+        "user_id uuid not null references auth.users(id) on delete cascade",
+        "content text not null check (char_length(content) between 2 and 240)",
+        "created_at timestamptz not null default now()",
+        "user_memories_owner_created_idx",
+        'create policy "user_memories_select_own"',
+        'create policy "user_memories_insert_own"',
+        'create policy "user_memories_delete_own"',
+        "grant select, insert, delete on public.user_memories to authenticated",
+    ):
+        assert contract in schema
+        assert contract in migration
 
