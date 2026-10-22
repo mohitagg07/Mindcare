@@ -418,3 +418,48 @@ def test_delete_chat_session_returns_404_without_deleting_other_rows(monkeypatch
         "conversations",
         {"id": f"eq.{session_id}", "user_id": f"eq.{TEST_USER['id']}"},
     )]
+
+
+
+def test_chat_history_orders_equal_timestamp_turn_user_before_assistant(monkeypatch):
+    import routers.chat as chat_router_module
+
+    session_id = "66666666-6666-4666-8666-666666666666"
+    same_timestamp = "2026-10-22T17:53:10.499231+00:00"
+    select_calls = []
+
+    async def fake_select(table, token, params, **kwargs):
+        select_calls.append((table, params))
+        if table == "conversations":
+            return ([{"id": session_id}], None)
+        if table == "messages":
+            # Simulate PostgREST returning an unstable order for identical timestamps.
+            return ([
+                {
+                    "role": "assistant",
+                    "content": "Assistant reply",
+                    "created_at": same_timestamp,
+                    "emotion": None,
+                    "risk_score": None,
+                    "metadata": {},
+                },
+                {
+                    "role": "user",
+                    "content": "User message",
+                    "created_at": same_timestamp,
+                    "emotion": None,
+                    "risk_score": None,
+                    "metadata": {},
+                },
+            ], None)
+        raise AssertionError(f"Unexpected table: {table}")
+
+    monkeypatch.setattr(chat_router_module, "select_rows", fake_select)
+    response = client.get(f"/api/chat/history/{session_id}")
+
+    assert response.status_code == 200
+    history = response.json()["history"]
+    assert [row["role"] for row in history] == ["user", "assistant"]
+    assert [row["content"] for row in history] == ["User message", "Assistant reply"]
+    assert select_calls[0][1]["user_id"] == f"eq.{TEST_USER['id']}"
+    assert select_calls[1][1]["user_id"] == f"eq.{TEST_USER['id']}"

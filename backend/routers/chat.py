@@ -535,6 +535,14 @@ async def get_history_endpoint(session_id: uuid.UUID, current_user=Depends(get_c
         "conversation_id": f"eq.{session_id}", "user_id": f"eq.{uid}",
         "order": "created_at.asc", "limit": "500",
     })
+
+    # A user/assistant pair is persisted with one shared created_at timestamp.
+    # PostgREST does not guarantee a stable order for ties, so normalize each
+    # timestamp tie to user-first, assistant-second before returning history.
+    messages.sort(key=lambda row: (
+        str(row.get("created_at") or ""),
+        0 if row.get("role") == "user" else 1,
+    ))
     return {"session_id": session_id, "history": messages}
 
 
