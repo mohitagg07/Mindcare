@@ -375,3 +375,46 @@ def test_assessment_history_returns_only_summary_fields(monkeypatch):
     assert "answers" not in history[0]
     assert "user_id" not in history[0]
 
+
+
+
+def test_delete_chat_session_is_owner_scoped_and_uses_cascade(monkeypatch):
+    import routers.chat as chat_router_module
+
+    session_id = "44444444-4444-4444-8444-444444444444"
+    calls = []
+
+    async def fake_delete(table, token, params):
+        calls.append((table, token, params))
+        return [{"id": session_id, "user_id": TEST_USER["id"]}]
+
+    monkeypatch.setattr(chat_router_module, "delete_rows", fake_delete)
+    response = client.delete(f"/api/chat/session/{session_id}")
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "Session deleted"}
+    assert calls == [(
+        "conversations",
+        "test-token",
+        {"id": f"eq.{session_id}", "user_id": f"eq.{TEST_USER['id']}"},
+    )]
+
+
+def test_delete_chat_session_returns_404_without_deleting_other_rows(monkeypatch):
+    import routers.chat as chat_router_module
+
+    session_id = "55555555-5555-4555-8555-555555555555"
+    calls = []
+
+    async def fake_delete(table, token, params):
+        calls.append((table, params))
+        return []
+
+    monkeypatch.setattr(chat_router_module, "delete_rows", fake_delete)
+    response = client.delete(f"/api/chat/session/{session_id}")
+
+    assert response.status_code == 404
+    assert calls == [(
+        "conversations",
+        {"id": f"eq.{session_id}", "user_id": f"eq.{TEST_USER['id']}"},
+    )]

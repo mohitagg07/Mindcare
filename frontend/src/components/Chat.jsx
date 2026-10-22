@@ -2,12 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { v4 as uuidv4 } from 'uuid'
 import {
-  Send, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
+  Send, Plus, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
   ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle, RefreshCw,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { sendChat, clearSession, getChatHistory } from '../api/client.js'
+import {
+  canDeleteConversation,
+  deleteConversationAndStartFresh,
+  startNewConversation,
+} from '../chat/conversationLifecycle.js'
 
 const QUICK_STARTS = [
   { icon: Wind, title: 'I feel anxious', text: "I've been feeling anxious lately", tint: 'sage' },
@@ -87,6 +92,8 @@ export default function Chat() {
   const scrollAreaRef = useRef(null)
   const inputRef = useRef(null)
   const interacted = useRef(false)
+  const isNewChat = messages.length <= 1 && (messages.length === 0 || messages[0]?.role === 'assistant') && !failedTurn
+  const canDeleteActiveConversation = canDeleteConversation(messages, failedTurn)
 
   useEffect(() => {
     let alive = true
@@ -176,19 +183,41 @@ export default function Chat() {
     }
   }
 
-  const handleNewConversation = async () => {
-    if (loading) return
-    const confirmed = window.confirm('Start a new conversation? This removes the current conversation from your account history.')
-    if (!confirmed) return
-    try { await clearSession(sessionId) } catch { /* A fresh local session can still begin if no saved session exists. */ }
-    createNewSession()
+  const resetTransientConversationState = () => {
     interacted.current = false
     setInput('')
     setFailedTurn(null)
-    setNotice('A new conversation is ready.')
+    setNotice('')
   }
 
-  const isNewChat = messages.length <= 1 && (messages.length === 0 || messages[0]?.role === 'assistant') && !failedTurn
+  const handleNewConversation = () => {
+    // A new session is a local lifecycle change, not a request to delete saved history.
+    // Keep retryable failed turns on screen until the user retries or resolves them.
+    if (loading || historyLoading || failedTurn) return
+    startNewConversation({
+      createNewSession,
+      resetTransientState: resetTransientConversationState,
+    })
+  }
+
+  const handleDeleteConversation = async () => {
+    if (loading || historyLoading || !canDeleteActiveConversation) return
+    const confirmed = window.confirm('Delete this conversation and all its saved messages? This cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      await deleteConversationAndStartFresh({
+        sessionId,
+        deleteSession: clearSession,
+        createNewSession,
+        resetTransientState: resetTransientConversationState,
+      })
+    } catch (error) {
+      setNotice(error?.status === 404
+        ? 'This conversation was not found in saved history. Nothing was deleted, and your current view has been kept.'
+        : `MindCare couldn't delete this conversation. ${error?.message || 'Please try again.'}`)
+    }
+  }
 
   return (
     <section className="chat-workspace" aria-label="Chat with MindCare">
@@ -202,7 +231,8 @@ export default function Chat() {
         </div>
         <div className="chat-header-actions">
           <div className="chat-secure-label"><ShieldCheck size={14} /><span>Account-protected</span></div>
-          <button type="button" className="chat-icon-button" onClick={handleNewConversation} disabled={loading} aria-label="Start a new conversation" title="New conversation"><Trash2 size={17} /></button>
+          <button type="button" className="chat-icon-button chat-new-button" onClick={handleNewConversation} disabled={loading || historyLoading || Boolean(failedTurn)} aria-label="Start a new conversation" title="New conversation"><Plus size={17} /></button>
+          <button type="button" className="chat-icon-button chat-delete-button" onClick={handleDeleteConversation} disabled={loading || historyLoading || !canDeleteActiveConversation} aria-label="Delete current conversation" title="Delete current conversation"><Trash2 size={17} /></button>
         </div>
       </header>
 

@@ -542,13 +542,15 @@ async def get_history_endpoint(session_id: uuid.UUID, current_user=Depends(get_c
 async def clear_session_endpoint(session_id: uuid.UUID, current_user=Depends(get_current_user)):
     uid, token = current_user["id"], current_user["access_token"]
     session_id = str(session_id)
-    owned, _ = await select_rows("conversations", token, {
-        "select": "id", "id": f"eq.{session_id}", "user_id": f"eq.{uid}", "limit": "1",
+
+    # messages.conversation_id has ON DELETE CASCADE, so deleting the owner-scoped
+    # parent row removes its messages in the same database transaction. Avoid two
+    # separate DELETE calls that could leave a partially deleted conversation.
+    deleted = await delete_rows("conversations", token, {
+        "id": f"eq.{session_id}", "user_id": f"eq.{uid}",
     })
-    if not owned:
+    if not deleted:
         raise HTTPException(status_code=404, detail="Session not found")
-    await delete_rows("messages", token, {"conversation_id": f"eq.{session_id}", "user_id": f"eq.{uid}"})
-    await delete_rows("conversations", token, {"id": f"eq.{session_id}", "user_id": f"eq.{uid}"})
     return {"message": "Session deleted"}
 
 

@@ -7,7 +7,7 @@
     "dev": "vite --port 5173",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test test/sse.test.js"
+    "test": "node --test"
   },
   "dependencies": {
     "lucide-react": "^0.363.0",
