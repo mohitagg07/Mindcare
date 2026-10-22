@@ -216,3 +216,46 @@ def test_avatar_image_rejects_non_image_bytes():
     with pytest.raises(HTTPException) as error:
         _normalize_avatar(b"not an image")
     assert error.value.status_code == 415
+
+
+def test_memory_preference_patch_requires_an_explicit_boolean():
+    disabled = ProfileUpdateRequest(memory_enabled=False)
+    enabled = ProfileUpdateRequest(memory_enabled=True)
+    assert disabled.model_dump(mode="json", exclude_unset=True) == {"memory_enabled": False}
+    assert enabled.model_dump(mode="json", exclude_unset=True) == {"memory_enabled": True}
+    with pytest.raises(ValidationError):
+        ProfileUpdateRequest(memory_enabled="true")
+    with pytest.raises(ValidationError):
+        ProfileUpdateRequest(memory_enabled=None)
+
+
+def test_memory_preference_patch_persists_for_the_authenticated_profile(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    from auth.dependencies import get_current_user
+    import routers.auth as auth_router
+
+    current = {
+        "id": "11111111-1111-4111-8111-111111111111", "access_token": "test-user-token",
+        "username": "test_user", "email": "test@example.com", "created_at": None,
+    }
+    async def fake_ensure(user):
+        return {"id": user["id"], "username": user["username"], "memory_enabled": False}
+    async def fake_update(table, token, params, patch):
+        assert table == "profiles"
+        assert token == current["access_token"]
+        assert params == {"id": f"eq.{current['id']}"}
+        assert patch == {"memory_enabled": True}
+        return [{"id": current["id"], "username": "test_user", **patch}]
+
+    original = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: current
+    monkeypatch.setattr(auth_router, "_ensure_profile", fake_ensure)
+    monkeypatch.setattr(auth_router, "update_rows", fake_update)
+    try:
+        response = TestClient(app).patch("/api/auth/profile", json={"memory_enabled": True})
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original)
+    assert response.status_code == 200
+    assert response.json()["memory_enabled"] is True

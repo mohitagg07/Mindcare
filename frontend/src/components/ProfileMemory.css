@@ -1,0 +1,21 @@
+.profile-memory-panel { margin-top: 17px; }
+.profile-memory-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.profile-memory-copy { min-width: 220px; flex: 1 1 300px; }
+.profile-memory-copy strong { display: block; margin-bottom: 5px; color: #2d4a38; font-size: 13px; font-weight: 750; }
+.profile-memory-copy p { margin: 0; color: #718075; font-size: 12px; line-height: 1.65; }
+.profile-memory-switch { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; cursor: pointer; }
+.profile-memory-switch input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.profile-memory-switch-track { display: inline-flex; width: 50px; height: 28px; align-items: center; padding: 3px; border: 1px solid #cfd9cd; border-radius: 999px; background: #e7ece4; transition: background .18s ease, border-color .18s ease; }
+.profile-memory-switch-knob { width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(25,45,30,.18); transform: translateX(0); transition: transform .18s ease; }
+.profile-memory-switch input:checked + .profile-memory-switch-track { border-color: #367e54; background: #367e54; }
+.profile-memory-switch input:checked + .profile-memory-switch-track .profile-memory-switch-knob { transform: translateX(22px); }
+.profile-memory-switch input:focus-visible + .profile-memory-switch-track { outline: 3px solid rgba(54,126,84,.28); outline-offset: 3px; }
+.profile-memory-switch input:disabled + .profile-memory-switch-track { cursor: wait; opacity: .6; }
+.profile-memory-status, .profile-memory-error { margin: 12px 0 0; font-size: 12px; line-height: 1.6; }
+.profile-memory-status { color: #4d785a; }
+.profile-memory-error { color: #a13d37; }
+@media (max-width: 560px) {
+  .profile-memory-row { align-items: flex-start; }
+  .profile-memory-switch { margin-top: 2px; }
+}
+

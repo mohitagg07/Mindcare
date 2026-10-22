@@ -283,6 +283,37 @@ def _replay_turn_payload(saved_turn: dict) -> dict:
     }
 
 
+def _memory_enabled_from_profile(profile_context: dict | None) -> bool:
+    """Only a literal boolean from the authenticated profile enables retrieval."""
+    return isinstance(profile_context, dict) and profile_context.get("memory_enabled") is True
+
+
+async def _load_saved_memories(
+    user_id: str,
+    token: str,
+    *,
+    enabled: bool,
+    context_warnings: list[str],
+) -> list[dict] | None:
+    """Fetch memories only after the server-owned preference explicitly opts in.
+
+    None means disabled or unavailable; an empty list means enabled, with no saved notes.
+    The preference is read from the authenticated profile, never from the chat request.
+    """
+    if enabled is not True:
+        return None
+    try:
+        memories, _ = await select_rows("user_memories", token, {
+            "select": "content", "user_id": f"eq.{user_id}",
+            "order": "created_at.desc", "limit": "20",
+        })
+        return memories
+    except SupabaseError as memory_exc:
+        logger.info("Saved memories unavailable (%s)", memory_exc.message)
+        context_warnings.append("I couldn't load your saved memories for this reply.")
+        return None
+
+
 @router.post("/chat")
 async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)):
     uid, token = current_user["id"], current_user["access_token"]
@@ -396,7 +427,7 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
         try:
             profile_rows, _ = await select_rows("profiles", token, {
                 # Data minimization: no DOB, derived age, or time zone is sent to the LLM.
-                "select": "display_name,username,pronouns,support_style,focus_areas",
+                "select": "display_name,username,pronouns,support_style,focus_areas,memory_enabled",
                 "id": f"eq.{uid}", "limit": "1",
             })
             profile_context = profile_rows[0] if profile_rows else None
@@ -414,16 +445,13 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             logger.warning("Conversation history unavailable (%s)", history_exc.message)
             context_warnings.append("I couldn't load earlier messages, so this reply may miss some previous context.")
 
-        # Saved memories are explicitly user-created, optional, and separately controlled.
-        try:
-            memory_rows, _ = await select_rows("user_memories", token, {
-                "select": "content", "user_id": f"eq.{uid}",
-                "order": "created_at.desc", "limit": "20",
-            })
+        # Memory retrieval is opt-in and controlled by the server-owned profile field.
+        memory_enabled = _memory_enabled_from_profile(profile_context)
+        memory_rows = await _load_saved_memories(
+            uid, token, enabled=memory_enabled, context_warnings=context_warnings,
+        )
+        if memory_rows is not None:
             profile_context = {**(profile_context or {}), "saved_memories": memory_rows}
-        except SupabaseError as memory_exc:
-            logger.info("Saved memories unavailable (%s)", memory_exc.message)
-            context_warnings.append("I couldn't load your saved memories for this reply.")
 
     # Never accept browser-supplied questionnaire values as authoritative safety or model context.
     context = {"emotion": req.emotion if req.emotion else None}

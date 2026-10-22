@@ -19,6 +19,7 @@ create table if not exists public.profiles (
   timezone text not null default 'Asia/Kolkata',
   support_style text not null default 'gentle',
   focus_areas text[] not null default '{}'::text[],
+  memory_enabled boolean not null default false,
   avatar_tone text not null default 'sage',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -32,6 +33,7 @@ alter table public.profiles add column if not exists avatar_path text;
 alter table public.profiles add column if not exists timezone text not null default 'Asia/Kolkata';
 alter table public.profiles add column if not exists support_style text not null default 'gentle';
 alter table public.profiles add column if not exists focus_areas text[] not null default '{}'::text[];
+alter table public.profiles add column if not exists memory_enabled boolean not null default false;
 alter table public.profiles add column if not exists avatar_tone text not null default 'sage';
 DO $$ begin
   if not exists (select 1 from pg_constraint where conrelid = 'public.profiles'::regclass and conname = 'profiles_display_name_length_check') then

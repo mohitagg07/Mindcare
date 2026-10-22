@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar, deleteMyAccount } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import './ProfileMemory.css'
 
 const SUPPORT_STYLES = [
   { id: 'gentle', title: 'Gentle & reassuring', description: 'A little warmth first, with calm guidance when you want it.', icon: Heart },
@@ -90,6 +91,10 @@ export default function Profile() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [avatarBusy, setAvatarBusy] = useState(false)
+  const [memoryEnabled, setMemoryEnabled] = useState(false)
+  const [memorySaving, setMemorySaving] = useState(false)
+  const [memoryError, setMemoryError] = useState('')
+  const [memoryStatus, setMemoryStatus] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteText, setDeleteText] = useState('')
   const [deleting, setDeleting] = useState(false)
@@ -104,6 +109,9 @@ export default function Profile() {
       .then(({ data }) => {
         if (!active) return
         setForm(initialForm({ ...user, ...data }))
+        setMemoryEnabled(data?.memory_enabled === true)
+        setMemoryError('')
+        setMemoryStatus('')
         setAccountDeletionAvailable(Boolean(data?.account_deletion_enabled))
         syncProfile?.(data)
       })
@@ -172,6 +180,36 @@ export default function Profile() {
       setError(err.message || 'Your changes could not be saved. Please try again.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const saveMemoryPreference = async (event) => {
+    const requested = event.currentTarget.checked
+    setMemorySaving(true)
+    setMemoryError('')
+    setMemoryStatus('')
+    try {
+      const { data } = await updateMyProfile({ memory_enabled: requested })
+      if (data?.memory_enabled !== requested) {
+        throw new Error('MindCare could not verify the saved-memory setting. Reload your profile and try again.')
+      }
+      setMemoryEnabled(data.memory_enabled)
+      setMemoryStatus(requested
+        ? 'Saved memories are enabled for future replies.'
+        : 'Saved memories are disabled for future replies. Your notes have not been deleted.')
+      syncProfile?.(data)
+    } catch (err) {
+      setMemoryError(err.message || 'The saved-memory setting could not be updated. Your previous setting remains active.')
+      // A network failure can happen after the server committed the preference. Re-read
+      // the source of truth so the switch does not knowingly display a stale value.
+      try {
+        const { data } = await getMyProfile()
+        setMemoryEnabled(data?.memory_enabled === true)
+      } catch {
+        // Keep the current state and leave the recoverable error visible.
+      }
+    } finally {
+      setMemorySaving(false)
     }
   }
 
@@ -346,6 +384,26 @@ export default function Profile() {
               })}
             </div>
             <p className="profile-focus-footnote"><Info size={13} /> Select up to 6. MindCare will use your choices only to tailor responses when relevant.</p>
+          </section>
+
+          <section className="profile-panel profile-memory-panel" aria-labelledby="profile-memory-heading">
+            <div className="profile-panel-heading">
+              <span className="profile-panel-icon"><BookOpen size={17} /></span>
+              <div><h3 id="profile-memory-heading">Saved memory</h3><p>You're in control of whether saved notes can be used in replies.</p></div>
+            </div>
+            <div className="profile-memory-row">
+              <div className="profile-memory-copy">
+                <strong>Use saved memories in replies</strong>
+                <p id="profile-memory-description">When enabled, saved notes may be included in the AI context for future replies. Turning this off stops their use; it does not delete the notes.</p>
+              </div>
+              <label className="profile-memory-switch">
+                <input type="checkbox" checked={memoryEnabled} disabled={memorySaving} onChange={saveMemoryPreference} aria-label="Use saved memories in replies" aria-describedby="profile-memory-description" />
+                <span className="profile-memory-switch-track" aria-hidden="true"><span className="profile-memory-switch-knob" /></span>
+              </label>
+            </div>
+            {memorySaving && <p className="profile-memory-status" role="status">Saving memory preference…</p>}
+            {memoryError && <p className="profile-memory-error" role="alert">{memoryError}</p>}
+            {memoryStatus && <p className="profile-memory-status" role="status">{memoryStatus}</p>}
           </section>
 
           <section className="profile-privacy-banner"><span><ShieldCheck size={18} /></span><div><strong>Your space stays personal.</strong><p>Only share what feels useful. MindCare supports reflection; it does not diagnose or replace professional care.</p></div></section>

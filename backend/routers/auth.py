@@ -54,7 +54,7 @@ PROFILE_FOCUS_AREAS = {
 }
 PROFILE_SUPPORT_STYLES = {"gentle", "practical", "reflective"}
 PROFILE_AVATAR_TONES = {"sage", "ocean", "lavender", "sunrise"}
-PROFILE_SELECT = "id,username,display_name,pronouns,date_of_birth,timezone,support_style,focus_areas,avatar_tone,avatar_path,created_at,updated_at"
+PROFILE_SELECT = "id,username,display_name,pronouns,date_of_birth,timezone,support_style,focus_areas,memory_enabled,avatar_tone,avatar_path,created_at,updated_at"
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -67,6 +67,14 @@ class ProfileUpdateRequest(BaseModel):
     support_style: str | None = Field(default=None, max_length=20)
     focus_areas: list[str] | None = Field(default=None, max_length=6)
     avatar_tone: str | None = Field(default=None, max_length=20)
+    memory_enabled: bool | None = None
+
+    @field_validator("memory_enabled", mode="before")
+    @classmethod
+    def validate_memory_enabled(cls, value):
+        if not isinstance(value, bool):
+            raise ValueError("Memory preference must be true or false")
+        return value
 
     @field_validator("username", mode="before")
     @classmethod
@@ -159,11 +167,11 @@ def _profile_error(exc: SupabaseError) -> HTTPException:
     lowered = exc.message.lower()
     if "username" in lowered and ("duplicate" in lowered or "unique" in lowered or "already" in lowered):
         return HTTPException(status_code=409, detail="That username is already in use. Choose another handle.")
-    profile_columns = ("display_name", "pronouns", "date_of_birth", "avatar_path", "timezone", "support_style", "focus_areas", "avatar_tone")
+    profile_columns = ("display_name", "pronouns", "date_of_birth", "avatar_path", "timezone", "support_style", "focus_areas", "avatar_tone", "memory_enabled")
     if "schema cache" in lowered or ("column" in lowered and any(name in lowered for name in profile_columns)):
         return HTTPException(
             status_code=503,
-            detail="Profile schema is missing. Run supabase/migrations/20261013_personal_profile.sql, supabase/migrations/20261013_profile_permissions.sql, and supabase/migrations/20261013_dob_avatar_storage.sql in the Supabase SQL Editor, then retry.",
+            detail="Profile schema is missing. Run supabase/migrations/20261013_personal_profile.sql, supabase/migrations/20261013_profile_permissions.sql, supabase/migrations/20261013_dob_avatar_storage.sql, and supabase/migrations/20261022_profile_memory_enabled.sql in the Supabase SQL Editor, then retry.",
         )
     if exc.status_code in (401, 403):
         return HTTPException(status_code=exc.status_code, detail="Please sign in again to manage your profile.")
@@ -179,7 +187,7 @@ async def _ensure_profile(current_user: dict) -> dict:
     username = (current_user.get("username") or "mindful_user")[:30]
     inserted = await insert_row("profiles", token, {
         "id": uid, "username": username, "display_name": None, "pronouns": None, "date_of_birth": None, "avatar_path": None,
-        "timezone": "Asia/Kolkata", "support_style": "gentle", "focus_areas": [], "avatar_tone": "sage",
+        "timezone": "Asia/Kolkata", "support_style": "gentle", "focus_areas": [], "memory_enabled": False, "avatar_tone": "sage",
     }, upsert=True, on_conflict="id")
     if inserted:
         return inserted[0]
@@ -399,7 +407,7 @@ async def update_profile(req: ProfileUpdateRequest, current_user=Depends(get_cur
                 inserted = await insert_row("profiles", current_user["access_token"], {
                     "id": current_user["id"], "username": current_user["username"],
                     "timezone": "Asia/Kolkata", "support_style": "gentle", "focus_areas": [],
-                    "avatar_tone": "sage", "date_of_birth": None, "avatar_path": None, **patch,
+                    "memory_enabled": False, "avatar_tone": "sage", "date_of_birth": None, "avatar_path": None, **patch,
                 }, upsert=True, on_conflict="id")
                 profile = inserted[0] if inserted else {}
         return await _profile_response(profile, current_user)

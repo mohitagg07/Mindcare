@@ -124,3 +124,11 @@ def test_fresh_schema_contains_user_memory_contract_and_matches_migration():
         assert contract in schema
         assert contract in migration
 
+
+def test_memory_preference_defaults_off_in_fresh_schema_and_upgrade_migration():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261022_profile_memory_enabled.sql")
+    assert "memory_enabled boolean not null default false" in schema
+    assert "add column if not exists memory_enabled boolean not null default false" in schema
+    assert "add column if not exists memory_enabled boolean not null default false" in migration
+
