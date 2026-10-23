@@ -26,6 +26,7 @@ export function AppProvider({ children }) {
   const [sessionId, setSessionIdState] = useState(getInitialSessionId)
   const [activePage, setActivePage] = useState('dashboard')
   const [pendingChatPrompt, setPendingChatPrompt] = useState('')
+  const [pendingAssessmentFollowUpId, setPendingAssessmentFollowUpId] = useState(null)
   const [phq9Result, setPhq9Result] = useState(null)
   const [gad7Result, setGad7Result] = useState(null)
   const [currentEmotion, setCurrentEmotion] = useState({ emotion: 'unavailable', confidence: 0 })
@@ -70,6 +71,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       sessionId, setSessionId, createNewSession,
       activePage, setActivePage, pendingChatPrompt, setPendingChatPrompt,
+      pendingAssessmentFollowUpId, setPendingAssessmentFollowUpId,
       phq9Result, setPhq9Result, gad7Result, setGad7Result,
       currentEmotion, setCurrentEmotion, riskData, setRiskData,
       recommendations, setRecommendations, trajectory, setTrajectory,

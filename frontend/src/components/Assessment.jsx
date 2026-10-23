@@ -206,7 +206,7 @@ function AssessmentForm({ title, assessmentKey, questions, onSubmit, result, col
 }
 
 export default function Assessment() {
-  const { phq9Result, setPhq9Result, gad7Result, setGad7Result, setPendingChatPrompt, setActivePage } = useApp()
+  const { phq9Result, setPhq9Result, gad7Result, setGad7Result, setPendingChatPrompt, setPendingAssessmentFollowUpId, setActivePage } = useApp()
   const [questionSets, setQuestionSets] = useState({ phq9: [], gad7: [] })
   const [selectedId, setSelectedId] = useState(null)
   const [loadingQuestions, setLoadingQuestions] = useState(true)
@@ -231,7 +231,11 @@ export default function Assessment() {
     if (selectedId === 'mood') setPhq9Result(data); else setGad7Result(data)
   }
   const handleReset = () => { if (selectedId === 'mood') setPhq9Result(null); else setGad7Result(null) }
-  const returnToChat = () => { setPendingChatPrompt("I'd like to reflect on my recent check-in and understand what support might help."); setActivePage('chat') }
+  const returnToChat = (savedResult) => {
+    setPendingAssessmentFollowUpId(savedResult?.assessment_id || null)
+    setPendingChatPrompt("I'd like to reflect on my recent check-in and understand what support might help.")
+    setActivePage('chat')
+  }
   const handleSafetyFollowUp = () => { setPendingChatPrompt('I completed a check-in and would like a direct safety check-in now.'); setActivePage('chat') }
 
   return <div className="assessment-page"><div className="assessment-content">

@@ -84,7 +84,7 @@ export default function Chat() {
     sessionId, setSessionId, createNewSession,
     currentEmotion, setRiskData, setRecommendations, setTrajectory,
     messages, addMessage, replaceMessages, pendingChatPrompt, setPendingChatPrompt,
-    setActivePage,
+    pendingAssessmentFollowUpId, setPendingAssessmentFollowUpId, setActivePage,
   } = useApp()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -144,6 +144,8 @@ export default function Chat() {
     const text = (providedText ?? input).trim()
     if (!text || loading || historyLoading) return
     const clientTurnId = retryTurn?.clientTurnId || uuidv4()
+    const assessmentFollowUpId = retryTurn?.assessmentFollowUpId || pendingAssessmentFollowUpId || null
+    if (!retryTurn && pendingAssessmentFollowUpId) setPendingAssessmentFollowUpId(null)
     interacted.current = true
     setNotice('')
     setFailedTurn(null)
@@ -157,6 +159,7 @@ export default function Chat() {
         session_id: sessionId,
         client_turn_id: clientTurnId,
         message: text,
+        ...(assessmentFollowUpId ? { assessment_follow_up_id: assessmentFollowUpId } : {}),
         // The backend reads canonical saved assessment data for pending safety follow-up.
         // Avoid sending questionnaire scores again from client-side state.
         emotion: currentEmotion?.confidence > 0 && currentEmotion?.emotion !== 'unavailable' ? currentEmotion.emotion : null,
@@ -177,7 +180,7 @@ export default function Chat() {
     } catch (error) {
       // Keep the failed user bubble visible. Retry reuses this same UUID, so a server
       // that already saved the answer can return it instead of storing a duplicate turn.
-      setFailedTurn({ clientTurnId, text })
+      setFailedTurn({ clientTurnId, text, assessmentFollowUpId })
       setNotice(`MindCare couldn't confirm a response. ${error.message || 'Check your connection, then retry the same message.'}`)
     } finally {
       setLoading(false)

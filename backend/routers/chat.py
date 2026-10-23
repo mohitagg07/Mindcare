@@ -39,6 +39,7 @@ class ChatRequest(BaseModel):
     client_turn_id: Optional[uuid.UUID] = None
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
+    assessment_follow_up_id: Optional[uuid.UUID] = None
 
     @field_validator("message", mode="before")
     @classmethod
@@ -314,6 +315,48 @@ async def _load_saved_memories(
         return None
 
 
+async def _load_assessment_follow_up(user_id: str, token: str, assessment_id: uuid.UUID) -> dict:
+    """Load the minimal summary of a saved check-in after the user explicitly asks to discuss it."""
+    try:
+        rows, _ = await select_rows("assessments", token, {
+            "select": "id,instrument,score,max_score,result_snapshot",
+            "id": f"eq.{assessment_id}", "user_id": f"eq.{user_id}", "limit": "1",
+        })
+    except SupabaseError as exc:
+        raise HTTPException(status_code=503, detail="Your saved check-in could not be verified. Please try again.") from exc
+    if not rows:
+        raise HTTPException(status_code=404, detail="That saved check-in was not found in your account.")
+    row = rows[0]
+    definitions = {
+        "PHQ-9": ("Mood & interest check-in", 27, {"Minimal", "Mild", "Moderate", "Moderately Severe", "Severe"}),
+        "GAD-7": ("Worry & tension check-in", 21, {"Minimal", "Mild", "Moderate", "Severe"}),
+    }
+    instrument = row.get("instrument")
+    if instrument not in definitions:
+        raise HTTPException(status_code=409, detail="This check-in is not available for conversation follow-up.")
+    title, expected_max, categories = definitions[instrument]
+    try:
+        score, max_score = int(row.get("score")), int(row.get("max_score"))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail="This saved check-in could not be verified safely.") from exc
+    if max_score != expected_max or not 0 <= score <= max_score:
+        raise HTTPException(status_code=409, detail="This saved check-in has inconsistent result data.")
+    snapshot = row.get("result_snapshot")
+    if isinstance(snapshot, str):
+        try:
+            snapshot = json.loads(snapshot)
+        except (TypeError, ValueError):
+            snapshot = None
+    # A positive final item follows the safety pathway, not ordinary score reflection.
+    if instrument == "PHQ-9" and isinstance(snapshot, dict) and snapshot.get("crisis_flag") is True:
+        raise HTTPException(status_code=409, detail="This check-in needs a separate safety follow-up before ordinary reflection.")
+    category = snapshot.get("category") if isinstance(snapshot, dict) else None
+    if not isinstance(category, str) or category not in categories:
+        category = None
+    # Never provide individual answers, the entire snapshot, or an internal instrument ID to the model.
+    return {"title": title, "score": score, "max_score": max_score, "category": category}
+
+
 @router.post("/chat")
 async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)):
     uid, token = current_user["id"], current_user["access_token"]
@@ -455,6 +498,10 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
 
     # Never accept browser-supplied questionnaire values as authoritative safety or model context.
     context = {"emotion": req.emotion if req.emotion else None}
+    if req.assessment_follow_up_id is not None:
+        context["assessment_follow_up"] = await _load_assessment_follow_up(
+            uid, token, req.assessment_follow_up_id,
+        )
     from services.groq_service import generate_reply
     try:
         generated = await generate_reply(
