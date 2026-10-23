@@ -41,7 +41,7 @@ function ScoreResult({ result, title, onReset, onSafetyFollowUp, onTalkAboutResu
       </section>
 
       <p className="assessment-result-disclaimer">
-        This is a screening result, not a diagnosis. Support is appropriate whatever your result.
+        This is a screening result, not a diagnosis, and cannot determine whether you're safe. Support is appropriate whatever your result.
       </p>
 
       {isSafetyFollowUp && (
