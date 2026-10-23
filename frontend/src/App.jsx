@@ -18,7 +18,7 @@ const Profile = lazy(() => import('./components/Profile'))
 const pageMeta = {
   dashboard: { eyebrow: 'HOME', title: 'A little room for you' },
   chat: { eyebrow: 'TALK', title: 'Start wherever you are' },
-  assessment: { eyebrow: 'CHECK IN', title: 'Take a moment' },
+  assessment: { eyebrow: 'CHECK-IN', title: 'Check-ins' },
   emotion: { eyebrow: 'REFLECT', title: 'Pause and notice' },
   metrics: { eyebrow: 'INSIGHTS', title: 'Your patterns' },
   profile: { eyebrow: 'PROFILE', title: 'Make it yours' },

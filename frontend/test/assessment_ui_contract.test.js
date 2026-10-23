@@ -26,8 +26,16 @@ test('result layout removes the severity strip but keeps separate safety follow-
   assert.doesNotMatch(assessmentSource, /Your response at a glance/)
   assert.match(assessmentSource, /assessment-result-summary/)
   assert.match(assessmentSource, /result\.crisis_flag/)
+  assert.match(assessmentSource, /cannot determine whether you're safe/)
   assert.match(assessmentSource, /Tele-MANAS: 14416/)
   assert.match(assessmentSource, /Vandrevala Foundation: \+91 9999 666 555/)
+})
+
+test('the check-in hub avoids a duplicate hero and shows a short choice list', () => {
+  assert.doesNotMatch(assessmentSource, /assessment-hero|assessment-trust-row/)
+  assert.match(assessmentSource, /Choose a check-in/)
+  assert.match(assessmentSource, /View result/)
+  assert.match(assessmentSource, /Retake check-in/)
 })
 
 test('assessment occupies its own scroll area and reserves space above the workspace note', () => {
