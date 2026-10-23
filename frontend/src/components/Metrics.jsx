@@ -11,6 +11,7 @@ import {
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { getAssessmentIdFromInstrument } from '../assessment/display.js'
 
 const EMOTION_COLORS = {
   happy: '#579879', sad: '#6d93ba', angry: '#cd7b70', neutral: '#9ca99c',
@@ -51,7 +52,7 @@ function EmptyChart({ title, description, action }) {
   )
 }
 
-function AssessmentScoreCard({ instrument, maxScore, rows, timeZone }) {
+function AssessmentScoreCard({ title, maxScore, rows, timeZone }) {
   const latest = rows[rows.length - 1]
   const previous = rows.length > 1 ? rows[rows.length - 2] : null
   const change = previous ? Number(latest.score) - Number(previous.score) : null
@@ -62,11 +63,11 @@ function AssessmentScoreCard({ instrument, maxScore, rows, timeZone }) {
   }))
 
   return <article className="insights-chart-card insights-assessment-card">
-    <div className="insights-card-heading"><div><span className="insights-card-icon is-lilac"><Activity size={16} /></span><div><h3>{instrument} screening</h3><p>Saved score · out of {maxScore}</p></div></div></div>
+    <div className="insights-card-heading"><div><span className="insights-card-icon is-lilac"><Activity size={16} /></span><div><h3>{title}</h3><p>Saved score · out of {maxScore}</p></div></div></div>
     {latest ? <>
       <div className="insights-score-summary"><strong>{latest.score}<span>/{maxScore}</span></strong><div><span>Latest check-in</span><small>{formatDateInProfileZone(latest.completed_at, timeZone, false)}</small></div></div>
       {previous ? <p className="insights-score-change">{change === 0 ? 'Same score as' : `${Math.abs(change)} ${change < 0 ? 'fewer' : 'more'} points than`} the previous check-in</p> : <p className="insights-score-change">One check-in saved. A later check-in is needed before a change can be shown.</p>}
-      {rows.length > 1 ? <div className="insights-score-chart" role="img" aria-label={`${instrument} screening scores across ${rows.length} saved check-ins`}>
+      {rows.length > 1 ? <div className="insights-score-chart" role="img" aria-label={`${title} scores across ${rows.length} saved check-ins`}>
         <ResponsiveContainer width="100%" height={190}>
           <LineChart data={chartRows} margin={{ top: 12, right: 12, bottom: 2, left: -18 }}>
             <CartesianGrid stroke="#e9eee5" strokeDasharray="4 5" vertical={false} />
@@ -78,7 +79,7 @@ function AssessmentScoreCard({ instrument, maxScore, rows, timeZone }) {
         </ResponsiveContainer>
       </div> : <div className="insights-score-single">A trend line will appear after another completed check-in.</div>}
       <details className="insights-score-history"><summary>View saved scores</summary><ol>{[...rows].reverse().slice(0, 10).map(row => <li key={row.id || `${row.completed_at}-${row.score}`}><time dateTime={row.completed_at}>{formatDateInProfileZone(row.completed_at, timeZone, false)}</time><strong>{row.score} / {maxScore}</strong></li>)}</ol></details>
-    </> : <EmptyChart title="No screening scores yet" description="Your saved PHQ-9 results will appear here when you complete a screening." />}
+    </> : <EmptyChart title="No saved results yet" description="Your completed check-ins will appear here when you choose to save one." />}
   </article>
 }
 
@@ -118,7 +119,7 @@ export default function Metrics() {
     if (trajectoryResult.status === 'fulfilled') { setTrajectory(trajectoryResult.value.data); successful += 1 }
     if (assessmentsResult.status === 'fulfilled') {
       const history = assessmentsResult.value.data?.history
-      setAssessments(Array.isArray(history) ? history.filter(row => row.instrument === 'PHQ-9' && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
+      setAssessments(Array.isArray(history) ? history.filter(row => getAssessmentIdFromInstrument(row.instrument) && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
       successful += 1
     }
     if (successful === 0) {
@@ -153,7 +154,8 @@ export default function Metrics() {
     const valid = assessments.filter(row => Number.isFinite(new Date(row.completed_at).getTime()) && Number(row.score) >= 0 && Number(row.score) <= Number(row.max_score))
     const chronological = valid.sort((a, b) => new Date(a.completed_at) - new Date(b.completed_at))
     return {
-      phq9: chronological.filter(row => row.instrument === 'PHQ-9' && Number(row.max_score) === 27),
+      mood: chronological.filter(row => row.instrument === 'PHQ-9' && Number(row.max_score) === 27),
+      worry: chronological.filter(row => row.instrument === 'GAD-7' && Number(row.max_score) === 21),
     }
   }, [assessments])
 
@@ -224,10 +226,11 @@ export default function Metrics() {
         </section>
 
         <section className="insights-assessment-section" aria-labelledby="insights-assessment-heading">
-          <div className="insights-section-heading"><div><span>SCREENINGS</span><h2 id="insights-assessment-heading">Your check-ins over time</h2></div><span>Scores are not diagnoses</span></div>
+          <div className="insights-section-heading"><div><span>YOUR CHECK-INS</span><h2 id="insights-assessment-heading">Your check-ins over time</h2></div><span>Results are not diagnoses</span></div>
           {assessments.length ? <div className="insights-assessment-grid">
-            <AssessmentScoreCard instrument="PHQ-9" maxScore={27} rows={assessmentRows.phq9} timeZone={user?.timezone} />
-          </div> : <article className="insights-chart-card"><EmptyChart title="No screening history yet" description="When you complete a PHQ-9 screening, your saved scores and changes will appear here." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Start a check-in <ArrowUpRight size={14} /></button>} /></article>}
+            <AssessmentScoreCard title="Mood & interest check-in" maxScore={27} rows={assessmentRows.mood} timeZone={user?.timezone} />
+            <AssessmentScoreCard title="Worry & tension check-in" maxScore={21} rows={assessmentRows.worry} timeZone={user?.timezone} />
+          </div> : <article className="insights-chart-card"><EmptyChart title="No check-in history yet" description="Your saved check-in results will appear here when you choose to complete one." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Explore check-ins <ArrowUpRight size={14} /></button>} /></article>}
           <p className="insights-chart-disclaimer">A score change is only one piece of information and may not reflect how you feel overall. The chart appears after at least two saved results for the same screening.</p>
         </section>
 

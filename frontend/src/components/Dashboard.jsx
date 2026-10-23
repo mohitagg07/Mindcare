@@ -18,6 +18,7 @@ import {
 import { api, getAssessmentHistory } from '../api/client'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import { getAssessmentDisplayTitle } from '../assessment/display.js'
 import './Dashboard.css'
 
 const MOODS = [
@@ -91,10 +92,7 @@ function greeting(timezone) {
 }
 
 function activityTitle(item) {
-  if (item.kind === 'assessment') {
-    const instrument = String(item.instrument || 'Self-check').toUpperCase()
-    return `${instrument} check-in`
-  }
+  if (item.kind === 'assessment') return getAssessmentDisplayTitle(item.instrument)
   return item.title || 'Conversation'
 }
 

@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 const NAV = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Home', detail: 'Your space' },
   { id: 'chat', icon: MessageCircle, label: 'Talk', detail: 'Open conversation' },
-  { id: 'assessment', icon: ClipboardList, label: 'Check-in', detail: 'PHQ-9 screening' },
+  { id: 'assessment', icon: ClipboardList, label: 'Check-in', detail: 'Guided self-reflection' },
   { id: 'emotion', icon: ScanFace, label: 'Reflect', detail: 'Optional tool' },
   { id: 'metrics', icon: BarChart3, label: 'Insights', detail: 'Your activity' },
   { id: 'profile', icon: UserRound, label: 'Profile', detail: 'Your preferences' },

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import {
   Send, Plus, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
   ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle, RefreshCw,
+  ClipboardCheck, ArrowRight,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -83,6 +84,7 @@ export default function Chat() {
     sessionId, setSessionId, createNewSession,
     currentEmotion, setRiskData, setRecommendations, setTrajectory,
     messages, addMessage, replaceMessages, pendingChatPrompt, setPendingChatPrompt,
+    setActivePage,
   } = useApp()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -253,6 +255,11 @@ export default function Chat() {
                   </button>
                 ))}
               </div>
+              <section className="chat-checkin-invite" aria-label="Optional guided check-in">
+                <span className="chat-checkin-invite-icon"><ClipboardCheck size={18} /></span>
+                <div className="chat-checkin-invite-copy"><strong>Would a little structure help?</strong><p>Try an optional guided check-in, then come back here to reflect on the result.</p></div>
+                <button type="button" onClick={() => setActivePage('assessment')} disabled={loading || historyLoading || Boolean(failedTurn)}>Explore check-ins <ArrowRight size={14} /></button>
+              </section>
               <div className="chat-welcome-note"><ShieldCheck size={15} /><span>Your chat is associated with your account. Avoid sharing passwords or information you don't need to share.</span></div>
             </div>
           ) : (
