@@ -1,0 +1,38 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const dashboard = readFileSync(resolve(here, '../src/components/Dashboard.jsx'), 'utf8')
+const styles = readFileSync(resolve(here, '../src/components/Dashboard.css'), 'utf8')
+
+test('Home offers three explicit starting points with different conversation prompts', () => {
+  assert.match(dashboard, /Talk it through/)
+  assert.match(dashboard, /Get some clarity/)
+  assert.match(dashboard, /Find a next step/)
+  assert.match(dashboard, /STARTING_POINTS\.find/)
+  assert.match(dashboard, /setPendingChatPrompt/)
+  assert.match(dashboard, /startSelectedConversation/)
+})
+
+test('guided check-in remains directly reachable from Home', () => {
+  assert.match(dashboard, /Prefer guided questions\? Take a check-in/)
+  assert.match(dashboard, /setActivePage\('assessment'\)/)
+})
+
+test('recent activity retains loading, retry, and empty states', () => {
+  assert.match(dashboard, /mcd-activity-skeleton/)
+  assert.match(dashboard, /Try again/)
+  assert.match(dashboard, /Nothing to pick up yet/)
+  assert.match(dashboard, /resume\(item\.session\)/)
+})
+
+test('Home choices expose selected state and keep responsive keyboard affordances', () => {
+  assert.match(dashboard, /aria-pressed=\{selected\}/)
+  assert.match(styles, /\.mcd-intent-option\.is-selected/)
+  assert.match(styles, /focus-visible/)
+  assert.match(styles, /@media\s*\(max-width:\s*760px\)/)
+  assert.match(styles, /prefers-reduced-motion/)
+})

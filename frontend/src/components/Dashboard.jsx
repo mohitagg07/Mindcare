@@ -5,15 +5,12 @@ import {
   BookOpen,
   Check,
   ChevronRight,
-  Cloud,
-  Meh,
+  ClipboardList,
+  Compass,
+  Footprints,
   MessageCircle,
   RotateCcw,
-  Smile,
-  Sun,
   UserRound,
-  Waves,
-  X,
 } from 'lucide-react'
 import { api, getAssessmentHistory } from '../api/client'
 import { useApp } from '../context/AppContext'
@@ -21,41 +18,33 @@ import { useAuth } from '../context/AuthContext'
 import { getAssessmentDisplayTitle } from '../assessment/display.js'
 import './Dashboard.css'
 
-const MOODS = [
+const STARTING_POINTS = [
   {
-    id: 'good',
-    label: 'Good',
-    Icon: Sun,
-    prompt: "I'm feeling pretty good today. Help me understand what's going well and how I can keep it going.",
-    reply: 'It might be worth noticing what is helping today.',
+    id: 'talk',
+    label: 'Talk it through',
+    description: 'A little space to say what is on your mind.',
+    helper: 'We can start with whatever feels most important to you.',
+    actionLabel: 'Start talking',
+    Icon: MessageCircle,
+    prompt: "I'd like you to listen first. Help me put words to what's on my mind without rushing to advice.",
   },
   {
-    id: 'okay',
-    label: 'Okay',
-    Icon: Smile,
-    prompt: "I'm feeling okay, but I'd like to check in with myself for a moment.",
-    reply: 'You don’t need to feel a certain way to check in.',
+    id: 'clarity',
+    label: 'Get some clarity',
+    description: 'Untangle a thought or feeling, one piece at a time.',
+    helper: 'We can slow things down and look at one piece at a time.',
+    actionLabel: 'Work it through',
+    Icon: Compass,
+    prompt: "Help me sort through something on my mind. Ask gentle questions and help me find some clarity before suggesting solutions.",
   },
   {
-    id: 'tense',
-    label: 'Tense',
-    Icon: Meh,
-    prompt: "I'm feeling tense right now. Can you help me slow down and work out what's weighing on me?",
-    reply: 'We can take it one thing at a time.',
-  },
-  {
-    id: 'low',
-    label: 'Low',
-    Icon: Cloud,
-    prompt: "I've been feeling low. I'd like a gentle conversation to work out what I need right now.",
-    reply: 'You don’t have to figure everything out right now.',
-  },
-  {
-    id: 'overwhelmed',
-    label: 'Overwhelmed',
-    Icon: Waves,
-    prompt: "I'm feeling overwhelmed. Can you help me focus on one manageable next step?",
-    reply: 'Let’s start with just one thing.',
+    id: 'next-step',
+    label: 'Find a next step',
+    description: 'Think through one small, realistic thing you could do.',
+    helper: 'We will keep the next step small and manageable.',
+    actionLabel: 'Find a next step',
+    Icon: Footprints,
+    prompt: "Help me identify one small, realistic next step for what's on my mind. Keep it practical and don't overwhelm me with a long list.",
   },
 ]
 
@@ -104,7 +93,7 @@ export default function Dashboard() {
   const [activityLoading, setActivityLoading] = useState(true)
   const [activityErrors, setActivityErrors] = useState({ sessions: false, assessments: false })
   const [reloadKey, setReloadKey] = useState(0)
-  const [mood, setMood] = useState(null)
+  const [selectedIntentId, setSelectedIntentId] = useState(null)
 
   const timezone = user?.timezone || 'Asia/Kolkata'
   const firstName = String(user?.display_name || '').trim().split(/\s+/)[0]
@@ -162,13 +151,18 @@ export default function Dashboard() {
       .slice(0, 3)
   }, [sessions, assessments])
 
-  const selectedMood = MOODS.find(item => item.id === mood)
+  const selectedIntent = STARTING_POINTS.find(item => item.id === selectedIntentId) || null
   const allActivityRequestsFailed = activityErrors.sessions && activityErrors.assessments
   const someActivityRequestFailed = activityErrors.sessions || activityErrors.assessments
 
   const startChat = (prompt = '') => {
     if (prompt) setPendingChatPrompt?.(prompt)
     setActivePage('chat')
+  }
+
+  const startSelectedConversation = () => {
+    if (!selectedIntent) return
+    startChat(selectedIntent.prompt)
   }
 
   const resume = session => {
@@ -182,7 +176,7 @@ export default function Dashboard() {
         <header className="mcd-heading">
           <p className="mcd-date">{today}</p>
           <h1>{greeting(timezone)}{firstName ? `, ${firstName}` : ''}<span>.</span></h1>
-          <p className="mcd-subtitle">Take a moment for yourself. Start wherever you are.</p>
+          <p className="mcd-subtitle">No need to have it all figured out. Start where you are.</p>
         </header>
 
         {!String(user?.display_name || '').trim() && (
@@ -193,26 +187,52 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className="mcd-top-grid">
+        <div className="mcd-home-grid">
           <section className="mcd-start-card" aria-labelledby="mcd-start-title">
-            <p className="mcd-eyebrow">START HERE</p>
-            <h2 id="mcd-start-title">What’s on your mind?</h2>
-            <p className="mcd-start-copy">You don’t need the right words. A thought, a feeling, or even “I’m not sure” is enough.</p>
-            <div className="mcd-start-actions">
-              <button type="button" className="mcd-button-primary" onClick={() => startChat()}>
-                <MessageCircle size={17} strokeWidth={1.9} />
-                Start a conversation
-                <ArrowUpRight size={15} />
-              </button>
-              <button type="button" className="mcd-button-text" onClick={() => setActivePage('assessment')}>
-                Take a check-in <ArrowRight size={15} />
-              </button>
+            <p className="mcd-eyebrow">A PLACE TO START</p>
+            <h2 id="mcd-start-title">What would help right now?</h2>
+            <p className="mcd-start-copy">Pick the option that feels closest. You can change direction any time.</p>
+
+            <div className="mcd-intent-list" role="group" aria-label="Choose how you'd like to begin">
+              {STARTING_POINTS.map(({ id, label, description, Icon }) => {
+                const selected = selectedIntentId === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`mcd-intent-option${selected ? ' is-selected' : ''}`}
+                    onClick={() => setSelectedIntentId(id)}
+                    aria-pressed={selected}
+                  >
+                    <span className="mcd-intent-icon" aria-hidden="true"><Icon size={17} strokeWidth={1.8} /></span>
+                    <span className="mcd-intent-copy">
+                      <strong>{label}</strong>
+                      <small>{description}</small>
+                    </span>
+                    <span className="mcd-intent-radio" aria-hidden="true">{selected && <Check size={13} strokeWidth={2.5} />}</span>
+                  </button>
+                )
+              })}
             </div>
+
+            <div className="mcd-start-footer">
+              <p aria-live="polite">{selectedIntent ? selectedIntent.helper : 'Choose a starting point to continue.'}</p>
+              {selectedIntent && (
+                <button type="button" className="mcd-button-primary" onClick={startSelectedConversation}>
+                  {selectedIntent.actionLabel} <ArrowRight size={15} />
+                </button>
+              )}
+            </div>
+
+            <button type="button" className="mcd-checkin-link" onClick={() => setActivePage('assessment')}>
+              Prefer guided questions? Take a check-in <ChevronRight size={15} />
+            </button>
           </section>
 
           <section className="mcd-activity-card" aria-labelledby="mcd-activity-title">
             <div className="mcd-card-heading">
               <div>
+                <p className="mcd-eyebrow">PICK UP WHERE YOU LEFT OFF</p>
                 <h2 id="mcd-activity-title">Recent activity</h2>
               </div>
               {recent.length > 0 && !activityLoading && (
@@ -233,7 +253,7 @@ export default function Dashboard() {
               </div>
             ) : recent.length > 0 ? (
               <div className="mcd-activity-list">
-                {recent.slice(0, 3).map(item => (
+                {recent.map(item => (
                   <button
                     type="button"
                     className="mcd-activity-row"
@@ -270,44 +290,6 @@ export default function Dashboard() {
             )}
           </section>
         </div>
-
-        <section className="mcd-checkin" aria-labelledby="mcd-checkin-title">
-          <div className="mcd-checkin-heading">
-            <div>
-              <p className="mcd-eyebrow">A SMALL CHECK-IN</p>
-              <h2 id="mcd-checkin-title">How are you feeling today?</h2>
-            </div>
-            <span className="mcd-not-saved">Just for this moment</span>
-          </div>
-          <div className="mcd-mood-options" role="group" aria-label="Choose how you feel">
-            {MOODS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                className={`mcd-mood-option${mood === id ? ' is-selected' : ''}`}
-                onClick={() => setMood(id)}
-                aria-pressed={mood === id}
-              >
-                <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
-                <span>{label}</span>
-                {mood === id && <Check className="mcd-mood-check" size={13} aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-          {selectedMood && (
-            <div className="mcd-mood-followup" role="status">
-              <div className="mcd-mood-followup-copy">
-                <strong>{selectedMood.reply}</strong>
-                <span>Your selection isn’t saved. It only helps shape the conversation.</span>
-              </div>
-              <button type="button" className="mcd-followup-action" onClick={() => startChat(selectedMood.prompt)}>
-                Talk about it <ArrowRight size={15} />
-              </button>
-              <button type="button" className="mcd-clear-mood" onClick={() => setMood(null)} aria-label="Clear selected feeling"><X size={15} /></button>
-            </div>
-          )}
-        </section>
-
       </div>
     </main>
   )
