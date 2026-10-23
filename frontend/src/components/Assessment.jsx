@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { ClipboardList, CheckCircle, RotateCcw, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react'
-import { getQuestions, submitPHQ9 } from '../api/client'
+import { ClipboardList, CheckCircle, RotateCcw, AlertTriangle, ChevronRight, ChevronLeft, ArrowLeft, ArrowRight, Heart, Wind, ShieldCheck, Sparkles } from 'lucide-react'
+import { getQuestions, submitPHQ9, submitGAD7 } from '../api/client'
 import { useApp } from '../context/AppContext'
+import { ASSESSMENT_TYPES, getAssessmentType } from '../assessment/display.js'
+import './Assessment.css'
 
 const OPTIONS = [
   { value: 0, label: 'Not at all' },
@@ -13,7 +15,7 @@ const OPTIONS = [
 
 const PRIMARY_COLOR = '#2A7D6F'
 
-function ScoreResult({ result, title, onReset, onSafetyFollowUp }) {
+function ScoreResult({ result, title, assessmentKey, onReset, onSafetyFollowUp, onTalkAboutResult }) {
   const categoryMeta = {
     Minimal: { emoji: '🌿', msg: 'This is the minimal symptom range on this screening. It does not describe your whole experience or determine whether you are safe.' },
     Mild: { emoji: '🌤️', msg: 'This is the mild symptom range on this screening. You can still seek support for anything that is affecting you.' },
@@ -28,13 +30,9 @@ function ScoreResult({ result, title, onReset, onSafetyFollowUp }) {
     ? { emoji: '💙', msg: 'Your total score is not the whole picture. Your answer to the final question deserves a separate, direct follow-up.' }
     : (categoryMeta[result.category] ?? { emoji: '💙', msg: result.description || 'This screening is one part of understanding what support might help.' })
 
-  const levels = [
-    { label: 'Minimal', color: '#2A7D6F' },
-    { label: 'Mild', color: '#3B6EA8' },
-    { label: 'Moderate', color: '#C07436' },
-    { label: 'Mod. Severe', color: '#C05A2A' },
-    { label: 'Severe', color: '#C0424A' },
-  ]
+  const levels = assessmentKey === 'mood'
+    ? [{ label: 'Minimal', color: '#6B9B74' }, { label: 'Mild', color: '#8CA96B' }, { label: 'Moderate', color: '#C5A15D' }, { label: 'Mod. Severe', color: '#C78566' }, { label: 'Severe', color: '#B96D77' }]
+    : [{ label: 'Minimal', color: '#6B9B74' }, { label: 'Mild', color: '#8CA96B' }, { label: 'Moderate', color: '#C5A15D' }, { label: 'Severe', color: '#B96D77' }]
   const activeColor = result.color || PRIMARY_COLOR
 
   return (
@@ -51,7 +49,7 @@ function ScoreResult({ result, title, onReset, onSafetyFollowUp }) {
       </div>
 
       <div>
-        <p style={{ fontSize: 10, color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>PHQ-9 screening range</p>
+        <p style={{ fontSize: 10, color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Your response at a glance</p>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {levels.map(level => {
             const isActive = result.category === level.label || (level.label === 'Mod. Severe' && result.category === 'Moderately Severe')
@@ -91,14 +89,13 @@ function ScoreResult({ result, title, onReset, onSafetyFollowUp }) {
         </div>
       )}
 
-      <button type="button" onClick={onReset} className="btn-ghost" style={{ alignSelf: 'flex-start' }}>
-        <RotateCcw size={12} /> Retake Assessment
-      </button>
+      {!result.crisis_flag && <button type="button" onClick={() => onTalkAboutResult(result)} className="btn-primary" style={{ alignSelf: 'flex-start', minHeight: 42 }}>Talk about this check-in <ChevronRight size={14} /></button>}
+      <button type="button" onClick={onReset} className="btn-ghost" style={{ alignSelf: 'flex-start' }}><RotateCcw size={12} /> Start again</button>
     </div>
   )
 }
 
-function AssessmentForm({ title, questions, onSubmit, result, color, onReset, onSafetyFollowUp }) {
+function AssessmentForm({ title, assessmentKey, questions, onSubmit, result, color, onReset, onSafetyFollowUp, onTalkAboutResult }) {
   const [answers, setAnswers] = useState(Array(questions.length).fill(null))
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -147,7 +144,7 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset, on
     onReset?.()
   }
 
-  if (done && result) return <ScoreResult result={result} title={title} onReset={handleReset} onSafetyFollowUp={onSafetyFollowUp} />
+  if (done && result) return <ScoreResult result={result} title={title} assessmentKey={assessmentKey} onReset={handleReset} onSafetyFollowUp={onSafetyFollowUp} onTalkAboutResult={onTalkAboutResult} />
 
   const pct = questions.length ? (answered / questions.length) * 100 : 0
 
@@ -172,8 +169,8 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset, on
       <div key={step} className="animate-fade-in" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 16px' }}>
         <p style={{ fontSize: 10, color: 'var(--text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 7 }}>Question {step + 1} of {questions.length}</p>
         <p style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 9, lineHeight: 1.5 }}>Over the past 2 weeks, how often have you been bothered by…</p>
-        <p id="phq9-question-text" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.55, marginBottom: 18, fontFamily: 'Lora,serif' }}>{questions[step]}</p>
-        <div role="radiogroup" aria-labelledby="phq9-question-text" style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <p id="checkin-question-text" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.55, marginBottom: 18, fontFamily: 'Lora,serif' }}>{questions[step]}</p>
+        <div role="radiogroup" aria-labelledby="checkin-question-text" style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {OPTIONS.map(option => {
             const selected = answers[step] === option.value
             return (
@@ -209,85 +206,61 @@ function AssessmentForm({ title, questions, onSubmit, result, color, onReset, on
 }
 
 export default function Assessment() {
-  const { setPhq9Result, phq9Result, setPendingChatPrompt, setActivePage } = useApp()
-  const [questions, setQuestions] = useState([])
+  const { phq9Result, setPhq9Result, gad7Result, setGad7Result, setPendingChatPrompt, setActivePage } = useApp()
+  const [questionSets, setQuestionSets] = useState({ phq9: [], gad7: [] })
+  const [selectedId, setSelectedId] = useState(null)
   const [loadingQuestions, setLoadingQuestions] = useState(true)
   const [questionError, setQuestionError] = useState('')
 
   const loadQuestions = () => {
-    setLoadingQuestions(true)
-    setQuestionError('')
-    getQuestions()
-      .then(({ data }) => {
-        if (!Array.isArray(data?.phq9) || data.phq9.length !== 9) throw new Error('PHQ-9 questions were not available.')
-        setQuestions(data.phq9)
-      })
-      .catch(() => setQuestionError('We could not load the PHQ-9 questions. Check your connection and try again.'))
-      .finally(() => setLoadingQuestions(false))
+    setLoadingQuestions(true); setQuestionError('')
+    getQuestions().then(({ data }) => {
+      if (!Array.isArray(data?.phq9) || data.phq9.length !== 9 || !Array.isArray(data?.gad7) || data.gad7.length !== 7) throw new Error('Incomplete check-in questions')
+      setQuestionSets({ phq9: data.phq9, gad7: data.gad7 })
+    }).catch(() => setQuestionError('We could not load the check-in questions. Your answers have not been changed. Please try again.')).finally(() => setLoadingQuestions(false))
   }
-
   useEffect(() => { loadQuestions() }, [])
-
-  const handleSafetyFollowUp = () => {
-    setPendingChatPrompt('I completed a wellbeing check-in and would like help understanding my answer and choosing a next step.')
-    setActivePage('chat')
-  }
+  const selectedType = getAssessmentType(selectedId)
+  const selectedResult = selectedId === 'mood' ? phq9Result : selectedId === 'worry' ? gad7Result : null
+  const questionKey = selectedId === 'mood' ? 'phq9' : 'gad7'
+  const color = selectedId === 'worry' ? '#8973a4' : PRIMARY_COLOR
+  const ICONS = { mood: Heart, worry: Wind }
 
   const handleSubmit = async (answers, submissionId) => {
-    const { data } = await submitPHQ9(answers, submissionId)
-    setPhq9Result(data)
+    const { data } = selectedId === 'mood' ? await submitPHQ9(answers, submissionId) : await submitGAD7(answers, submissionId)
+    if (selectedId === 'mood') setPhq9Result(data); else setGad7Result(data)
   }
+  const handleReset = () => { if (selectedId === 'mood') setPhq9Result(null); else setGad7Result(null) }
+  const returnToChat = () => { setPendingChatPrompt("I'd like to reflect on my recent check-in and understand what support might help."); setActivePage('chat') }
+  const handleSafetyFollowUp = () => { setPendingChatPrompt('I completed a check-in and would like a direct safety check-in now.'); setActivePage('chat') }
 
-  const handleReset = () => setPhq9Result(null)
-
-  return (
-    <div style={{ height: '100%', overflowY: 'auto', background: 'var(--bg-page)' }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ maxWidth: 660, margin: '0 auto', padding: '24px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 24 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 13, flexShrink: 0, background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ClipboardList size={20} color="var(--teal)" />
-          </div>
-          <div>
-            <h2 style={{ fontSize: 19, fontWeight: 700, color: 'var(--text-1)', margin: 0, fontFamily: 'Lora,serif' }}>Wellbeing Screening</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 3 }}>Answer honestly — there are no right or wrong answers</p>
-          </div>
-        </div>
-
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 18px', boxShadow: '0 2px 12px rgba(26,35,50,0.06)' }}>
-          <div style={{ marginBottom: 18 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0, fontFamily: 'Lora,serif' }}>Patient Health Questionnaire (PHQ-9)</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-4)', margin: '6px 0 0', lineHeight: 1.55 }}>A screening questionnaire, not a diagnosis. Your answer to the final question may need a separate follow-up regardless of the total score.</p>
-          </div>
-
-          {loadingQuestions ? (
-            <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, height: 140, color: 'var(--text-4)', fontSize: 14 }}>
-              <span style={{ width: 15, height: 15, border: '2px solid var(--border)', borderTopColor: 'var(--teal)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              Loading questions…
-            </div>
-          ) : questionError ? (
-            <div role="alert" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.6 }}>
-              <p style={{ margin: 0 }}>{questionError}</p>
-              <button type="button" className="btn-primary" onClick={loadQuestions}>Retry loading questions</button>
-            </div>
-          ) : (
-            <AssessmentForm
-              key="phq9"
-              title="PHQ-9"
-              questions={questions}
-              onSubmit={handleSubmit}
-              result={phq9Result}
-              color={PRIMARY_COLOR}
-              onReset={handleReset}
-              onSafetyFollowUp={handleSafetyFollowUp}
-            />
-          )}
-        </div>
-
-        <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-4)', marginTop: 14, lineHeight: 1.6 }}>
-          For screening purposes only · Not a clinical diagnosis · You can seek support regardless of your result.
-        </p>
+  return <div className="assessment-page"><div className="assessment-content">
+    <header className="assessment-hero"><div className="assessment-hero-lockup">
+      <div className="assessment-hero-icon"><ClipboardList size={22} /></div><div>
+        <p className="assessment-eyebrow">YOUR CHECK-IN SPACE</p><h1>Make room for how you feel.</h1>
+        <p className="assessment-hero-copy">Choose a short guided check-in. Answer one question at a time, review your result, and return to a conversation when you're ready.</p>
+        <div className="assessment-trust-row"><span><ShieldCheck size={12}/> Private to your account</span><span><Heart size={12}/> Always optional</span><span><Sparkles size={12}/> Not a diagnosis</span></div>
       </div>
-    </div>
-  )
+    </div></header>
+    {loadingQuestions ? <div className="assessment-flow-card" role="status" style={{display:'flex',alignItems:'center',gap:10,minHeight:100}}><span className="mc-loader"/> Preparing your check-ins…</div>
+    : questionError ? <div className="assessment-error" role="alert"><AlertTriangle size={17}/><div><strong>We couldn't prepare your check-in.</strong><p>{questionError}</p><button type="button" className="btn-primary" onClick={loadQuestions}>Try again</button></div></div>
+    : selectedType ? <section className="assessment-flow-card" aria-labelledby="assessment-flow-title">
+      <button type="button" className="assessment-back-button" onClick={() => setSelectedId(null)}><ArrowLeft size={13}/> All check-ins</button>
+      <div className="assessment-flow-top"><div><h2 id="assessment-flow-title">{selectedType.title}</h2><p>{selectedType.description} This is optional and does not replace professional care.</p></div>
+       {(() => { const Icon = ICONS[selectedId]; return <span className={`assessment-choice-icon tone-${selectedType.accent}`}><Icon size={17}/></span> })()}
+      </div>
+      <AssessmentForm key={selectedId} title={selectedType.displayTitle} assessmentKey={selectedId} questions={questionSets[questionKey]} onSubmit={handleSubmit} result={selectedResult} color={color} onReset={handleReset} onSafetyFollowUp={handleSafetyFollowUp} onTalkAboutResult={returnToChat}/>
+    </section>
+    : <>
+      <div className="assessment-section-head"><div><p>CHOOSE YOUR CHECK-IN</p><h2>What would you like to explore?</h2></div></div>
+      <div className="assessment-choice-grid">{ASSESSMENT_TYPES.map(type => {
+        const Icon = ICONS[type.id], latest = type.id === 'mood' ? phq9Result : gad7Result
+        return <button key={type.id} type="button" className="assessment-choice-card" onClick={() => setSelectedId(type.id)}>
+          <span className={`assessment-choice-icon tone-${type.accent}`}><Icon size={19}/></span><h3>{type.title}</h3><p>{type.description}</p>
+          <span className="assessment-choice-footer"><span>{type.questionCount} short questions · About 2 minutes</span><span className="assessment-choice-cta">{latest ? 'View latest' : 'Start'} <ArrowRight size={13}/></span></span>
+        </button>
+      })}</div>
+      <p className="assessment-disclaimer">These check-ins are optional screening tools, not diagnoses. A score cannot describe your whole experience or determine whether you are safe. You can seek support whatever your result.</p>
+    </>}
+  </div></div>
 }
