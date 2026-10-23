@@ -132,3 +132,12 @@ def test_memory_preference_defaults_off_in_fresh_schema_and_upgrade_migration():
     assert "add column if not exists memory_enabled boolean not null default false" in schema
     assert "add column if not exists memory_enabled boolean not null default false" in migration
 
+def test_saved_memory_edit_permission_is_owner_scoped_and_column_limited():
+    schema = read_sql("supabase/schema.sql")
+    migration = read_sql("supabase/migrations/20261023_user_memory_edit.sql")
+
+    for source in (schema, migration):
+        assert 'create policy "user_memories_update_own"' in source
+        assert "for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid())" in source
+        assert "grant update (content) on public.user_memories to authenticated" in source
+

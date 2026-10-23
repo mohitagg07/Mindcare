@@ -310,6 +310,9 @@ create policy "user_memories_select_own" on public.user_memories
 drop policy if exists "user_memories_insert_own" on public.user_memories;
 create policy "user_memories_insert_own" on public.user_memories
   for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "user_memories_update_own" on public.user_memories;
+create policy "user_memories_update_own" on public.user_memories
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "user_memories_delete_own" on public.user_memories;
 create policy "user_memories_delete_own" on public.user_memories
   for delete to authenticated using (user_id = auth.uid());
@@ -331,5 +334,6 @@ grant select, insert, update, delete on public.conversations to authenticated;
 grant select, insert, update, delete on public.messages to authenticated;
 grant select, insert, update, delete on public.assessments to authenticated;
 grant select, insert, delete on public.user_memories to authenticated;
+grant update (content) on public.user_memories to authenticated;
 grant select, insert on public.trajectories to authenticated;
 grant usage on schema public to anon, authenticated;

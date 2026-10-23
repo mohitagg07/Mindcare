@@ -190,3 +190,93 @@ def test_chat_payload_cannot_enable_saved_memory():
     request = ChatRequest(message="Hello", memory_enabled=True)
     assert "memory_enabled" not in request.model_dump()
     assert not hasattr(request, "memory_enabled")
+
+def test_memory_update_is_owner_scoped_and_normalizes_content(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    from auth.dependencies import get_current_user
+    import routers.chat as chat_router
+
+    current = {"id": "11111111-1111-4111-8111-111111111111", "access_token": "test-user-token"}
+    memory_id = "22222222-2222-4222-8222-222222222222"
+
+    async def fake_update(table, token, filters, body):
+        assert table == "user_memories"
+        assert token == current["access_token"]
+        assert filters == {"id": f"eq.{memory_id}", "user_id": f"eq.{current['id']}"}
+        assert body == {"content": "I prefer calm reminders."}
+        return [{
+            "id": memory_id, "user_id": current["id"],
+            "content": body["content"], "created_at": "2026-10-01T00:00:00Z",
+        }]
+
+    original = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: current
+    monkeypatch.setattr(chat_router, "update_rows", fake_update)
+    try:
+        response = TestClient(app).patch(
+            f"/api/chat/memories/{memory_id}",
+            json={"content": " I   prefer calm reminders. "},
+        )
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original)
+
+    assert response.status_code == 200
+    assert response.json()["memory"]["content"] == "I prefer calm reminders."
+
+
+def test_memory_update_returns_404_for_missing_or_other_users_note(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    from auth.dependencies import get_current_user
+    import routers.chat as chat_router
+
+    current = {"id": "11111111-1111-4111-8111-111111111111", "access_token": "test-user-token"}
+    memory_id = "22222222-2222-4222-8222-222222222222"
+
+    async def fake_update(table, token, filters, body):
+        assert filters == {"id": f"eq.{memory_id}", "user_id": f"eq.{current['id']}"}
+        return []
+
+    original = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: current
+    monkeypatch.setattr(chat_router, "update_rows", fake_update)
+    try:
+        response = TestClient(app).patch(
+            f"/api/chat/memories/{memory_id}",
+            json={"content": "Updated note"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original)
+
+    assert response.status_code == 404
+
+
+def test_delete_all_memories_is_scoped_to_authenticated_owner(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    from auth.dependencies import get_current_user
+    import routers.chat as chat_router
+
+    current = {"id": "11111111-1111-4111-8111-111111111111", "access_token": "test-user-token"}
+
+    async def fake_delete(table, token, filters):
+        assert table == "user_memories"
+        assert token == current["access_token"]
+        assert filters == {"user_id": f"eq.{current['id']}"}
+        return [{"id": "note-1"}, {"id": "note-2"}]
+
+    original = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: current
+    monkeypatch.setattr(chat_router, "delete_rows", fake_delete)
+    try:
+        response = TestClient(app).delete("/api/chat/memories")
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original)
+
+    assert response.status_code == 200
+    assert response.json() == {"deleted": True, "deleted_count": 2}
+
