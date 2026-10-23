@@ -139,7 +139,7 @@ function AssessmentForm({ title, assessmentKey, questions, onSubmit, result, col
 
   if (done && result) return <ScoreResult result={result} title={title} onReset={handleReset} onSafetyFollowUp={onSafetyFollowUp} onTalkAboutResult={onTalkAboutResult} />
 
-  const progress = questions.length ? ((step + 1) / questions.length) * 100
+  const progress = questions.length ? ((step + 1) / questions.length) * 100 : 0
 
   return (
     <div className="assessment-form">
