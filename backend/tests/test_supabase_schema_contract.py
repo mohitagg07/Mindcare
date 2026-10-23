@@ -137,7 +137,8 @@ def test_saved_memory_edit_permission_is_owner_scoped_and_column_limited():
     migration = read_sql("supabase/migrations/20261023_user_memory_edit.sql")
 
     for source in (schema, migration):
-        assert 'create policy "user_memories_update_own"' in source
-        assert "for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid())" in source
-        assert "grant update (content) on public.user_memories to authenticated" in source
+        normalized = " ".join(source.split())
+        assert 'create policy "user_memories_update_own"' in normalized
+        assert "for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid())" in normalized
+        assert "grant update (content) on public.user_memories to authenticated" in normalized
 
