@@ -5,7 +5,7 @@ import json
 import logging
 import time
 import uuid
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -39,6 +39,7 @@ class ChatRequest(BaseModel):
     client_turn_id: Optional[uuid.UUID] = None
     message: str = Field(min_length=1, max_length=2000)
     emotion: Optional[str] = Field(default=None, max_length=20)
+    conversation_mode: Literal["listen", "explore", "next_step", "reflect"] = "listen"
     assessment_follow_up_id: Optional[uuid.UUID] = None
 
     @field_validator("message", mode="before")
@@ -497,7 +498,10 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
             profile_context = {**(profile_context or {}), "saved_memories": memory_rows}
 
     # Never accept browser-supplied questionnaire values as authoritative safety or model context.
-    context = {"emotion": req.emotion if req.emotion else None}
+    context = {
+        "emotion": req.emotion if req.emotion else None,
+        "conversation_mode": req.conversation_mode,
+    }
     if req.assessment_follow_up_id is not None:
         context["assessment_follow_up"] = await _load_assessment_follow_up(
             uid, token, req.assessment_follow_up_id,

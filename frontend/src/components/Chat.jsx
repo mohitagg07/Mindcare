@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import {
   Send, Plus, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
   ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle, RefreshCw,
-  ClipboardCheck, ArrowRight,
+  ClipboardCheck, ArrowRight, Compass, Footprints,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -19,6 +19,13 @@ const QUICK_STARTS = [
   { icon: Wind, title: 'I feel anxious', text: "I've been feeling anxious lately", tint: 'sage' },
   { icon: Moon, title: 'Sleep has been hard', text: "I've been having trouble sleeping", tint: 'blue' },
   { icon: Brain, title: 'Too much on my mind', text: 'I feel overwhelmed with everything', tint: 'plum' },
+]
+
+const CONVERSATION_MODES = [
+  { id: 'listen', label: 'Just listen', Icon: Heart },
+  { id: 'explore', label: 'Explore', Icon: Compass },
+  { id: 'next_step', label: 'Next step', Icon: Footprints },
+  { id: 'reflect', label: 'Reflect', Icon: BookOpen },
 ]
 
 function formatTime(value, timeZone) {
@@ -85,6 +92,7 @@ export default function Chat() {
     currentEmotion, setRiskData, setRecommendations, setTrajectory,
     messages, addMessage, replaceMessages, pendingChatPrompt, setPendingChatPrompt,
     pendingAssessmentFollowUpId, setPendingAssessmentFollowUpId, setActivePage,
+    conversationMode, setConversationMode,
   } = useApp()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -145,6 +153,7 @@ export default function Chat() {
     if (!text || loading || historyLoading) return
     const clientTurnId = retryTurn?.clientTurnId || uuidv4()
     const assessmentFollowUpId = retryTurn?.assessmentFollowUpId || pendingAssessmentFollowUpId || null
+    const selectedConversationMode = retryTurn?.conversationMode || conversationMode || 'listen'
     if (!retryTurn && pendingAssessmentFollowUpId) setPendingAssessmentFollowUpId(null)
     interacted.current = true
     setNotice('')
@@ -159,6 +168,7 @@ export default function Chat() {
         session_id: sessionId,
         client_turn_id: clientTurnId,
         message: text,
+        conversation_mode: selectedConversationMode,
         ...(assessmentFollowUpId ? { assessment_follow_up_id: assessmentFollowUpId } : {}),
         // The backend reads canonical saved assessment data for pending safety follow-up.
         // Avoid sending questionnaire scores again from client-side state.
@@ -180,7 +190,7 @@ export default function Chat() {
     } catch (error) {
       // Keep the failed user bubble visible. Retry reuses this same UUID, so a server
       // that already saved the answer can return it instead of storing a duplicate turn.
-      setFailedTurn({ clientTurnId, text, assessmentFollowUpId })
+      setFailedTurn({ clientTurnId, text, assessmentFollowUpId, conversationMode: selectedConversationMode })
       setNotice(`MindCare couldn't confirm a response. ${error.message || 'Check your connection, then retry the same message.'}`)
     } finally {
       setLoading(false)
@@ -240,6 +250,25 @@ export default function Chat() {
           <button type="button" className="chat-icon-button chat-delete-button" onClick={handleDeleteConversation} disabled={loading || historyLoading || !canDeleteActiveConversation} aria-label="Delete current conversation" title="Delete current conversation"><Trash2 size={17} /></button>
         </div>
       </header>
+
+      <div className="chat-mode-bar">
+        <span className="chat-mode-label">How would you like me to respond?</span>
+        <div className="chat-mode-options" role="group" aria-label="Choose a conversation approach">
+          {CONVERSATION_MODES.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`chat-mode-option${conversationMode === id ? ' is-selected' : ''}`}
+              onClick={() => setConversationMode(id)}
+              aria-pressed={conversationMode === id}
+              disabled={loading || historyLoading || Boolean(failedTurn)}
+            >
+              <Icon size={14} strokeWidth={1.8} aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div ref={scrollAreaRef} className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}>
         <div className="chat-content-column">

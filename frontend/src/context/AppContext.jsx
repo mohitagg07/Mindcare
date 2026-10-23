@@ -25,6 +25,7 @@ function getInitialSessionId() {
 export function AppProvider({ children }) {
   const [sessionId, setSessionIdState] = useState(getInitialSessionId)
   const [activePage, setActivePage] = useState('dashboard')
+  const [conversationMode, setConversationMode] = useState('listen')
   const [pendingChatPrompt, setPendingChatPrompt] = useState('')
   const [pendingAssessmentFollowUpId, setPendingAssessmentFollowUpId] = useState(null)
   const [phq9Result, setPhq9Result] = useState(null)
@@ -47,8 +48,9 @@ export function AppProvider({ children }) {
     setRiskData(null)
     setRecommendations(null)
     setTrajectory(null)
+    setConversationMode('listen')
     return nextId
-  }, [setSessionId])
+  }, [setSessionId, setConversationMode])
 
   const replaceMessages = useCallback((nextMessages) => {
     setMessages(nextMessages)
@@ -70,7 +72,8 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       sessionId, setSessionId, createNewSession,
-      activePage, setActivePage, pendingChatPrompt, setPendingChatPrompt,
+      activePage, setActivePage, conversationMode, setConversationMode,
+      pendingChatPrompt, setPendingChatPrompt,
       pendingAssessmentFollowUpId, setPendingAssessmentFollowUpId,
       phq9Result, setPhq9Result, gad7Result, setGad7Result,
       currentEmotion, setCurrentEmotion, riskData, setRiskData,
