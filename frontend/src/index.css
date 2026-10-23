@@ -1470,3 +1470,37 @@ button, input, textarea { font-family: inherit; }
 .chat-checkin-invite>button{display:inline-flex;align-items:center;gap:6px;padding:9px 11px;border:1px solid #d8e7d5;border-radius:10px;color:#3e7955;background:rgba(255,255,252,.9);font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer;transition:background .16s ease,transform .16s ease,border-color .16s ease}
 .chat-checkin-invite>button:hover:not(:disabled){transform:translateY(-1px);background:#fff;border-color:#bcd8be}.chat-checkin-invite>button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:620px){.chat-checkin-invite{grid-template-columns:35px minmax(0,1fr);gap:10px;padding:11px}.chat-checkin-invite-icon{width:35px;height:35px;border-radius:11px}.chat-checkin-invite>button{grid-column:2;justify-content:center;justify-self:start}}
+
+
+/* Conversation approach: quiet controls that stay out of the way. */
+.chat-mode-bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 15px;
+  padding: 9px clamp(20px, 3vw, 38px);
+  border-bottom: 1px solid #e8ede5;
+  background: rgba(255, 255, 251, .76);
+}
+.chat-mode-label { flex: 0 0 auto; margin: 0; color: #7a897d; font-size: 10.5px; font-weight: 600; }
+.chat-mode-options { display: flex; min-width: 0; flex: 1; gap: 5px; }
+.chat-mode-option {
+  display: inline-flex; min-width: 0; min-height: 34px; flex: 1 1 auto;
+  align-items: center; justify-content: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid transparent; border-radius: 9px; color: #6d7d71; background: transparent;
+  font-size: 10.5px; font-weight: 650; white-space: nowrap; cursor: pointer;
+  transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+.chat-mode-option:hover:not(:disabled) { color: #355b41; background: #f4f7f0; }
+.chat-mode-option.is-selected { border-color: #d8e5d5; color: #315e43; background: #edf5e9; }
+.chat-mode-option:focus-visible { outline: 3px solid rgba(71,128,87,.32); outline-offset: 2px; }
+.chat-mode-option:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 760px) {
+  .chat-mode-bar { align-items: stretch; flex-direction: column; gap: 7px; padding: 9px 15px; }
+  .chat-mode-label { font-size: 10px; }
+  .chat-mode-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  .chat-mode-option { min-height: 35px; gap: 5px; padding: 6px 4px; font-size: 10px; }
+  .chat-mode-option svg { width: 12px; height: 12px; }
+}
+@media (max-width: 430px) { .chat-mode-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .chat-mode-option { transition: none; } }
