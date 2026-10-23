@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { ClipboardList, CheckCircle, RotateCcw, AlertTriangle, ChevronRight, ChevronLeft, ArrowLeft, ArrowRight, Heart, Wind, ShieldCheck, Sparkles } from 'lucide-react'
+import { RotateCcw, AlertTriangle, ChevronRight, ChevronLeft, ArrowLeft, ArrowRight, Heart, Wind } from 'lucide-react'
 import { getQuestions, submitPHQ9, submitGAD7 } from '../api/client'
 import { useApp } from '../context/AppContext'
 import { ASSESSMENT_TYPES, getAssessmentType } from '../assessment/display.js'
@@ -29,28 +29,24 @@ function ScoreResult({ result, title, onReset, onSafetyFollowUp, onTalkAboutResu
     : (categoryMeta[result.category] || result.description || 'This check-in is one part of understanding what support might help.')
 
   return (
-    <div className="assessment-result animate-scale-in">
+    <div className="assessment-result">
       <section className={`assessment-result-summary${isSafetyFollowUp ? ' is-safety-follow-up' : ''}`} aria-labelledby="assessment-result-title">
-        <span className="assessment-result-mark" aria-hidden="true">
-          {isSafetyFollowUp ? <AlertTriangle size={20} /> : <CheckCircle size={20} />}
-        </span>
         <div className="assessment-result-copy">
           <p className="assessment-result-overline">{title}</p>
-          <h3 id="assessment-result-title" aria-live="polite">
+          <h2 id="assessment-result-title" aria-live="polite">
             {isSafetyFollowUp ? 'A follow-up matters' : result.category ? `${result.category} range` : 'Your check-in is complete'}
-          </h3>
+          </h2>
           <p>{message}</p>
         </div>
       </section>
 
       <p className="assessment-result-disclaimer">
-        This is a screening result, not a diagnosis. A score cannot determine whether someone is safe, and support is appropriate at any score.
+        This is a screening result, not a diagnosis. Support is appropriate whatever your result.
       </p>
 
       {isSafetyFollowUp && (
         <section className="assessment-safety-card" role="alert" aria-labelledby="assessment-safety-title">
           <div className="assessment-safety-heading">
-            <AlertTriangle size={18} aria-hidden="true" />
             <h3 id="assessment-safety-title">Let's check on your immediate safety</h3>
           </div>
           <p className="assessment-safety-question">
@@ -74,7 +70,7 @@ function ScoreResult({ result, title, onReset, onSafetyFollowUp, onTalkAboutResu
           </button>
         )}
         <button type="button" onClick={onReset} className="btn-ghost assessment-result-reset">
-          <RotateCcw size={14} /> Start again
+          <RotateCcw size={14} /> Retake check-in
         </button>
       </div>
     </div>
@@ -226,39 +222,74 @@ export default function Assessment() {
   }
   const handleSafetyFollowUp = () => { setPendingChatPrompt('I completed a check-in and would like a direct safety check-in now.'); setActivePage('chat') }
 
-  return <div className={`assessment-page${selectedType ? ' is-in-flow' : ''}`}><div className="assessment-content">
-    <header className="assessment-hero"><div className="assessment-hero-lockup">
-      <div className="assessment-hero-icon"><ClipboardList size={22} /></div><div>
-        <p className="assessment-eyebrow">YOUR CHECK-IN SPACE</p><h1>Make room for how you feel.</h1>
-        <p className="assessment-hero-copy">Choose a short guided check-in. Answer one question at a time, review your result, and return to a conversation when you're ready.</p>
-        <div className="assessment-trust-row"><span><ShieldCheck size={12}/> Private to your account</span><span><Heart size={12}/> Always optional</span><span><Sparkles size={12}/> Not a diagnosis</span></div>
-      </div>
-    </div></header>
-    {loadingQuestions ? <div className="assessment-flow-card" role="status" style={{display:'flex',alignItems:'center',gap:10,minHeight:100}}><span className="mc-loader"/> Preparing your check-ins…</div>
-    : questionError ? <div className="assessment-error" role="alert"><AlertTriangle size={17}/><div><strong>We couldn't prepare your check-in.</strong><p>{questionError}</p><button type="button" className="btn-primary" onClick={loadQuestions}>Try again</button></div></div>
-    : selectedType ? <section className={`assessment-flow-card${selectedResult ? ' is-result' : ''}`} aria-labelledby={selectedResult ? 'assessment-result-title' : 'assessment-flow-title'}>
-      <button type="button" className="assessment-back-button" onClick={() => setSelectedId(null)}><ArrowLeft size={14}/> All check-ins</button>
-      {!selectedResult && (
-        <div className="assessment-flow-top">
-          <div>
-            <h2 id="assessment-flow-title">{selectedType.title}</h2>
-            <p>Take each question at your own pace. You can go back before submitting.</p>
+  return (
+    <div className={`assessment-page${selectedType ? ' is-in-flow' : ''}`}>
+      <div className="assessment-content">
+        {loadingQuestions ? (
+          <div className="assessment-loading" role="status">Loading check-ins…</div>
+        ) : questionError ? (
+          <div className="assessment-error" role="alert">
+            <AlertTriangle size={17} aria-hidden="true" />
+            <div>
+              <strong>We couldn't load your check-ins.</strong>
+              <p>No answers have been changed. Please try again.</p>
+              <button type="button" className="btn-primary" onClick={loadQuestions}>Try again</button>
+            </div>
           </div>
-          {(() => { const Icon = ICONS[selectedId]; return <span className={`assessment-choice-icon tone-${selectedType.accent}`}><Icon size={17}/></span> })()}
-        </div>
-      )}
-      <AssessmentForm key={selectedId} title={selectedType.displayTitle} assessmentKey={selectedId} questions={questionSets[questionKey]} onSubmit={handleSubmit} result={selectedResult} color={color} onReset={handleReset} onSafetyFollowUp={handleSafetyFollowUp} onTalkAboutResult={returnToChat}/>
-    </section>
-    : <>
-      <div className="assessment-section-head"><div><p>CHOOSE YOUR CHECK-IN</p><h2>What would you like to explore?</h2></div></div>
-      <div className="assessment-choice-grid">{ASSESSMENT_TYPES.map(type => {
-        const Icon = ICONS[type.id], latest = type.id === 'mood' ? phq9Result : gad7Result
-        return <button key={type.id} type="button" className="assessment-choice-card" onClick={() => setSelectedId(type.id)}>
-          <span className={`assessment-choice-icon tone-${type.accent}`}><Icon size={19}/></span><h3>{type.title}</h3><p>{type.description}</p>
-          <span className="assessment-choice-footer"><span>{type.questionCount} short questions · About 2 minutes</span><span className="assessment-choice-cta">{latest ? 'View latest' : 'Start'} <ArrowRight size={13}/></span></span>
-        </button>
-      })}</div>
-      <p className="assessment-disclaimer">These check-ins are optional screening tools, not diagnoses. A score cannot describe your whole experience or determine whether you are safe. You can seek support whatever your result.</p>
-    </>}
-  </div></div>
+        ) : selectedType ? (
+          <section
+            className={`assessment-flow${selectedResult ? ' is-result' : ''}`}
+            aria-labelledby={selectedResult ? 'assessment-result-title' : 'assessment-flow-title'}
+          >
+            <button type="button" className="assessment-back-button" onClick={() => setSelectedId(null)}>
+              <ArrowLeft size={15} /> All check-ins
+            </button>
+            {!selectedResult && (
+              <header className="assessment-flow-heading">
+                <h1 id="assessment-flow-title">{selectedType.title}</h1>
+              </header>
+            )}
+            <AssessmentForm
+              key={selectedId}
+              title={selectedType.displayTitle}
+              assessmentKey={selectedId}
+              questions={questionSets[questionKey]}
+              onSubmit={handleSubmit}
+              result={selectedResult}
+              color={color}
+              onReset={handleReset}
+              onSafetyFollowUp={handleSafetyFollowUp}
+              onTalkAboutResult={returnToChat}
+            />
+          </section>
+        ) : (
+          <>
+            <header className="assessment-page-heading">
+              <h1>Choose a check-in</h1>
+              <p>Pick whichever feels useful today. You can stop at any time.</p>
+            </header>
+            <div className="assessment-choice-grid">
+              {ASSESSMENT_TYPES.map(type => {
+                const Icon = ICONS[type.id]
+                const latest = type.id === 'mood' ? phq9Result : gad7Result
+                return (
+                  <button key={type.id} type="button" className="assessment-choice-card" onClick={() => setSelectedId(type.id)}>
+                    <span className={`assessment-choice-icon tone-${type.accent}`} aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></span>
+                    <span className="assessment-choice-copy">
+                      <span className="assessment-choice-title">{type.title}</span>
+                      <span className="assessment-choice-description">{type.description}</span>
+                      <span className="assessment-choice-meta">{type.questionCount} questions · About 2 minutes</span>
+                    </span>
+                    <span className="assessment-choice-cta">{latest ? 'View result' : 'Start'} <ArrowRight size={15} /></span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="assessment-disclaimer">These check-ins are not diagnoses. Your result is only one part of the picture.</p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
 }

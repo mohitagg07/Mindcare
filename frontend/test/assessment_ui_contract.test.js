@@ -30,6 +30,13 @@ test('result layout removes the severity strip but keeps separate safety follow-
   assert.match(assessmentSource, /Vandrevala Foundation: \+91 9999 666 555/)
 })
 
+test('the check-in hub avoids a duplicate hero and shows a short choice list', () => {
+  assert.doesNotMatch(assessmentSource, /assessment-hero|assessment-trust-row/)
+  assert.match(assessmentSource, /Choose a check-in/)
+  assert.match(assessmentSource, /View result/)
+  assert.match(assessmentSource, /Retake check-in/)
+})
+
 test('assessment occupies its own scroll area and reserves space above the workspace note', () => {
   assert.match(assessmentCss, /\.assessment-page\s*\{[^}]*flex:\s*1 1 0%/s)
   assert.match(assessmentCss, /\.assessment-page\s*\{[^}]*min-height:\s*0/s)
