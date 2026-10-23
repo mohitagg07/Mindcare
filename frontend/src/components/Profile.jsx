@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   UserRound, Mail, AtSign, Clock3, Heart, Sparkles, Check, LoaderCircle,
   ShieldCheck, Palette, BookOpen, Compass, Sun, MessageCircle, CheckCircle2,
-  Save, RefreshCw, Info, Camera, Trash2, CalendarDays,
+  Save, RefreshCw, Info, Camera, Trash2, CalendarDays, Pencil, X,
 } from 'lucide-react'
-import { getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar, deleteMyAccount } from '../api/client'
+import {
+  getMyProfile, updateMyProfile, uploadMyAvatar, deleteMyAvatar, deleteMyAccount,
+  getChatMemories, createChatMemory, updateChatMemory, deleteChatMemory, deleteAllChatMemories,
+} from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import './ProfileMemory.css'
 
@@ -95,6 +98,13 @@ export default function Profile() {
   const [memorySaving, setMemorySaving] = useState(false)
   const [memoryError, setMemoryError] = useState('')
   const [memoryStatus, setMemoryStatus] = useState('')
+  const [memories, setMemories] = useState([])
+  const [memoriesLoading, setMemoriesLoading] = useState(true)
+  const [memoryDraft, setMemoryDraft] = useState('')
+  const [editingMemoryId, setEditingMemoryId] = useState('')
+  const [memoryManagerBusy, setMemoryManagerBusy] = useState(false)
+  const [memoryManagerError, setMemoryManagerError] = useState('')
+  const [memoryManagerStatus, setMemoryManagerStatus] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteText, setDeleteText] = useState('')
   const [deleting, setDeleting] = useState(false)
@@ -117,6 +127,24 @@ export default function Profile() {
       })
       .catch((err) => { if (active) setProfileLoadError(err.message || 'Your profile could not be loaded right now.') })
       .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+    // Reload only when the signed-in identity changes or the user retries.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadRetry, user?.id])
+
+  useEffect(() => {
+    let active = true
+    setMemoriesLoading(true)
+    setMemoryManagerError('')
+    getChatMemories()
+      .then(({ data }) => {
+        if (!active) return
+        setMemories(Array.isArray(data?.memories) ? data.memories : [])
+      })
+      .catch((err) => {
+        if (active) setMemoryManagerError(err.message || 'Your saved notes could not be loaded. Refresh and try again.')
+      })
+      .finally(() => { if (active) setMemoriesLoading(false) })
     return () => { active = false }
     // Reload only when the signed-in identity changes or the user retries.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,6 +238,97 @@ export default function Profile() {
       }
     } finally {
       setMemorySaving(false)
+    }
+  }
+
+  const startMemoryEdit = (memory) => {
+    setEditingMemoryId(memory.id)
+    setMemoryDraft(memory.content)
+    setMemoryManagerError('')
+    setMemoryManagerStatus('')
+  }
+
+  const cancelMemoryEdit = () => {
+    setEditingMemoryId('')
+    setMemoryDraft('')
+    setMemoryManagerError('')
+    setMemoryManagerStatus('')
+  }
+
+  const saveMemoryNote = async () => {
+    const content = memoryDraft.trim().replace(/\s+/g, ' ')
+    if (content.length < 2 || !/[\p{L}\p{N}]/u.test(content)) {
+      setMemoryManagerError('Write a short note with at least one letter or number.')
+      return
+    }
+    if (!editingMemoryId && memories.length >= 20) {
+      setMemoryManagerError('You can keep up to 20 saved notes. Delete one before adding another.')
+      return
+    }
+    setMemoryManagerBusy(true)
+    setMemoryManagerError('')
+    setMemoryManagerStatus('')
+    try {
+      const { data } = editingMemoryId
+        ? await updateChatMemory(editingMemoryId, content)
+        : await createChatMemory(content)
+      const saved = data?.memory
+      if (!saved?.id || typeof saved.content !== 'string') {
+        throw new Error('MindCare could not verify that your note was saved. Reload the page to check its status.')
+      }
+      if (editingMemoryId) {
+        setMemories(current => current.map(item => item.id === editingMemoryId ? saved : item))
+        setMemoryManagerStatus('Saved note updated. Future replies will use it only while saved memory is enabled.')
+      } else {
+        setMemories(current => [saved, ...current.filter(item => item.id !== saved.id)].slice(0, 20))
+        setMemoryManagerStatus('Saved note added. Future replies will use it only while saved memory is enabled.')
+      }
+      setMemoryDraft('')
+      setEditingMemoryId('')
+    } catch (err) {
+      setMemoryManagerError(err.message || 'Your note could not be saved. Your previous note is unchanged.')
+    } finally {
+      setMemoryManagerBusy(false)
+    }
+  }
+
+  const removeMemoryNote = async (memoryId) => {
+    if (memoryManagerBusy) return
+    if (!window.confirm('Delete this saved note? It will no longer be available to future replies.')) return
+    setMemoryManagerBusy(true)
+    setMemoryManagerError('')
+    setMemoryManagerStatus('')
+    try {
+      await deleteChatMemory(memoryId)
+      setMemories(current => current.filter(item => item.id !== memoryId))
+      if (editingMemoryId === memoryId) {
+        setEditingMemoryId('')
+        setMemoryDraft('')
+      }
+      setMemoryManagerStatus('Saved note deleted.')
+    } catch (err) {
+      setMemoryManagerError(err.message || 'The note could not be deleted. It is still shown here until deletion is confirmed.')
+    } finally {
+      setMemoryManagerBusy(false)
+    }
+  }
+
+  const removeAllMemoryNotes = async () => {
+    if (memoryManagerBusy || memories.length === 0) return
+    if (!window.confirm('Delete all saved memory notes? This cannot be undone. Your conversation history will not be deleted.')) return
+    setMemoryManagerBusy(true)
+    setMemoryManagerError('')
+    setMemoryManagerStatus('')
+    try {
+      await deleteAllChatMemories()
+      setMemories([])
+      setEditingMemoryId('')
+      setMemoryDraft('')
+      setMemoryManagerStatus('All saved memory notes have been deleted.')
+    } catch (err) {
+      setMemoryManagerError(err.message || 'Your saved notes could not be deleted. They remain listed here.')
+    } finally {
+      setMemoryManagerBusy(false)
     }
   }
 
@@ -404,6 +523,78 @@ export default function Profile() {
             {memorySaving && <p className="profile-memory-status" role="status">Saving memory preference…</p>}
             {memoryError && <p className="profile-memory-error" role="alert">{memoryError}</p>}
             {memoryStatus && <p className="profile-memory-status" role="status">{memoryStatus}</p>}
+
+            <div className="profile-memory-manager" aria-labelledby="profile-memory-notes-heading">
+              <div className="profile-memory-manager-heading">
+                <div>
+                  <h4 id="profile-memory-notes-heading">Your saved notes</h4>
+                  <p>Review, change, or remove every note MindCare may use across conversations.</p>
+                </div>
+                <span className="profile-memory-count">{memories.length}/20</span>
+              </div>
+
+              <div className="profile-memory-editor">
+                <label htmlFor="profile-memory-draft">{editingMemoryId ? 'Edit saved note' : 'Add a saved note'}</label>
+                <textarea
+                  id="profile-memory-draft"
+                  value={memoryDraft}
+                  maxLength={240}
+                  rows={3}
+                  disabled={memoryManagerBusy}
+                  onChange={event => { setMemoryDraft(event.target.value); setMemoryManagerError(''); setMemoryManagerStatus('') }}
+                  placeholder="For example: I prefer short, practical replies when I feel overwhelmed."
+                  aria-describedby="profile-memory-editor-help"
+                />
+                <div className="profile-memory-editor-actions">
+                  <button
+                    type="button"
+                    className="profile-memory-action profile-memory-action-primary"
+                    onClick={saveMemoryNote}
+                    disabled={memoryManagerBusy || !memoryDraft.trim() || (!editingMemoryId && memories.length >= 20)}
+                  >
+                    <Save size={13} /> {memoryManagerBusy ? 'Saving…' : editingMemoryId ? 'Save changes' : 'Save note'}
+                  </button>
+                  {editingMemoryId && (
+                    <button type="button" className="profile-memory-action" onClick={cancelMemoryEdit} disabled={memoryManagerBusy}>
+                      <X size={13} /> Cancel edit
+                    </button>
+                  )}
+                </div>
+                <small id="profile-memory-editor-help">2–240 characters. MindCare never saves chat messages as long-term notes automatically.</small>
+              </div>
+
+              {memoriesLoading && <p className="profile-memory-status" role="status">Loading your saved notes…</p>}
+              {memoryManagerError && <p className="profile-memory-error" role="alert">{memoryManagerError}</p>}
+              {memoryManagerStatus && <p className="profile-memory-status" role="status">{memoryManagerStatus}</p>}
+              {!memoriesLoading && !memoryManagerError && memories.length === 0 && (
+                <p className="profile-memory-empty">No saved notes yet. Add a note only when you decide you want MindCare to carry it into future replies.</p>
+              )}
+
+              {memories.length > 0 && (
+                <div className="profile-memory-list" role="list" aria-label="Saved memory notes">
+                  {memories.map(memory => (
+                    <article className="profile-memory-note" role="listitem" key={memory.id}>
+                      <p>{memory.content}</p>
+                      <div className="profile-memory-note-actions">
+                        <button type="button" className="profile-memory-action" onClick={() => startMemoryEdit(memory)} disabled={memoryManagerBusy}>
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button type="button" className="profile-memory-action profile-memory-action-danger" onClick={() => removeMemoryNote(memory.id)} disabled={memoryManagerBusy}>
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              <div className="profile-memory-manager-footer">
+                <span>Disabling memory stops these notes being used in replies; it does not delete them.</span>
+                <button type="button" className="profile-memory-action profile-memory-action-danger" onClick={removeAllMemoryNotes} disabled={memoryManagerBusy || memories.length === 0}>
+                  <Trash2 size={13} /> Delete all notes
+                </button>
+              </div>
+            </div>
           </section>
 
           <section className="profile-privacy-banner"><span><ShieldCheck size={18} /></span><div><strong>Your space stays personal.</strong><p>Only share what feels useful. MindCare supports reflection; it does not diagnose or replace professional care.</p></div></section>

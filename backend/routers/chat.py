@@ -591,6 +591,27 @@ async def create_memory_endpoint(req: MemoryCreateRequest, current_user=Depends(
     return {"memory": rows[0]}
 
 
+@router.patch("/chat/memories/{memory_id}")
+async def update_memory_endpoint(memory_id: uuid.UUID, req: MemoryCreateRequest, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    updated = await update_rows(
+        "user_memories",
+        token,
+        {"id": f"eq.{memory_id}", "user_id": f"eq.{uid}"},
+        {"content": req.content},
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return {"memory": updated[0]}
+
+
+@router.delete("/chat/memories")
+async def delete_all_memories_endpoint(current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    deleted = await delete_rows("user_memories", token, {"user_id": f"eq.{uid}"})
+    return {"deleted": True, "deleted_count": len(deleted)}
+
+
 @router.delete("/chat/memories/{memory_id}")
 async def delete_memory_endpoint(memory_id: uuid.UUID, current_user=Depends(get_current_user)):
     uid, token = current_user["id"], current_user["access_token"]
