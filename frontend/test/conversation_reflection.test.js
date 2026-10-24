@@ -37,3 +37,11 @@ test('reflection card has responsive layout, visible focus, and reduced-motion s
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*chat-reflection-launch/)
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)[\s\S]*chat-reflection-actions/)
 })
+
+
+test('reflection action is hidden when this conversation has a safety follow-up flag', () => {
+  assert.match(chat, /conversationNeedsSafetyFollowUp/)
+  assert.match(chat, /!conversationNeedsSafetyFollowUp && messages\.some/)
+  assert.match(chat, /reflectionOpen && !conversationNeedsSafetyFollowUp/)
+  assert.match(chat, /if \(conversationNeedsSafetyFollowUp\) return/)
+})

@@ -82,3 +82,76 @@ def test_reflection_migration_enforces_owner_rls_and_one_row_per_conversation():
     assert "user_id = auth.uid()" in migration
     assert "unique (conversation_id, user_id)" in migration
     assert "create table if not exists public.conversation_reflections" in schema
+
+
+def test_reflection_draft_is_blocked_when_saved_conversation_has_safety_follow_up(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    from auth.dependencies import get_current_user
+    import routers.chat as chat_router
+
+    current = {"id": "11111111-1111-4111-8111-111111111111", "access_token": "test-user-token"}
+    session_id = "33333333-3333-4333-8333-333333333333"
+    calls = []
+
+    async def fake_select(table, token, params):
+        calls.append((table, params))
+        assert token == current["access_token"]
+        assert params["user_id"] == f"eq.{current['id']}"
+        if table == "conversations":
+            assert params["id"] == f"eq.{session_id}"
+            return ([{"id": session_id}], None)
+        assert table == "messages"
+        assert params["conversation_id"] == f"eq.{session_id}"
+        assert "metadata" in params["select"]
+        return ([
+            {"role": "assistant", "content": "Are you in immediate danger right now?", "created_at": "2026-10-24T10:01:00Z", "metadata": {"safety_follow_up_required": True}},
+            {"role": "user", "content": "I need help staying safe.", "created_at": "2026-10-24T10:00:00Z", "metadata": {}},
+        ], None)
+
+    async def forbidden_generate(*args, **kwargs):
+        pytest.fail("An ordinary reflection must not be generated before safety follow-up")
+
+    original = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: current
+    monkeypatch.setattr(chat_router, "select_rows", fake_select)
+    monkeypatch.setattr(groq_service, "generate_reflection", forbidden_generate)
+    try:
+        response = TestClient(app).post(f"/api/chat/reflections/{session_id}/draft")
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original)
+
+    assert response.status_code == 409
+    assert "safety follow-up" in response.json()["detail"].lower()
+    assert [table for table, _ in calls] == ["conversations", "messages"]
+
+
+def test_reflection_draft_does_not_call_model_for_unowned_conversation(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    from auth.dependencies import get_current_user
+    import routers.chat as chat_router
+
+    current = {"id": "11111111-1111-4111-8111-111111111111", "access_token": "test-user-token"}
+    session_id = "33333333-3333-4333-8333-333333333333"
+
+    async def fake_select(table, token, params):
+        assert table == "conversations"
+        assert params == {"select": "id", "id": f"eq.{session_id}", "user_id": f"eq.{current['id']}", "limit": "1"}
+        return ([], None)
+
+    async def forbidden_generate(*args, **kwargs):
+        pytest.fail("An unowned conversation must not be sent to the reflection model")
+
+    original = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: current
+    monkeypatch.setattr(chat_router, "select_rows", fake_select)
+    monkeypatch.setattr(groq_service, "generate_reflection", forbidden_generate)
+    try:
+        response = TestClient(app).post(f"/api/chat/reflections/{session_id}/draft")
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original)
+
+    assert response.status_code == 404

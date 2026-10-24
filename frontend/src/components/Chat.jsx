@@ -117,6 +117,12 @@ export default function Chat() {
   const interacted = useRef(false)
   const isNewChat = messages.length <= 1 && (messages.length === 0 || messages[0]?.role === 'assistant') && !failedTurn
   const canDeleteActiveConversation = canDeleteConversation(messages, failedTurn)
+  const conversationNeedsSafetyFollowUp = messages.some(message =>
+    message.role === 'assistant' && (
+      message.safety_follow_up_required === true ||
+      message.metadata?.safety_follow_up_required === true
+    )
+  )
 
   useEffect(() => {
     reflectionRequestIdRef.current += 1
@@ -260,6 +266,7 @@ export default function Chat() {
   }
 
   const handleToggleReflection = async () => {
+    if (conversationNeedsSafetyFollowUp) return
     if (reflectionOpen) {
       setReflectionOpen(false)
       return
@@ -309,6 +316,19 @@ export default function Chat() {
       if (requestId === reflectionRequestIdRef.current) setReflectionLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!conversationNeedsSafetyFollowUp) return
+    reflectionRequestIdRef.current += 1
+    setReflection(null)
+    setReflectionOpen(false)
+    setReflectionLoaded(false)
+    setReflectionSaved(false)
+    setReflectionDirty(false)
+    setReflectionLoading(false)
+    setReflectionSaving(false)
+    setReflectionError('')
+  }, [conversationNeedsSafetyFollowUp])
 
   const updateReflectionField = (field, value) => {
     setReflection(previous => ({ ...(previous || {}), [field]: value }))
@@ -445,7 +465,7 @@ export default function Chat() {
             <div className="chat-message-list">
               {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} />)}
               {loading && <TypingIndicator />}
-              {(messages.some(message => message.role === 'user') && messages.some(message => message.role === 'assistant')) && (
+              {(!conversationNeedsSafetyFollowUp && messages.some(message => message.role === 'user') && messages.some(message => message.role === 'assistant')) && (
                 <div className="chat-reflection-launch">
                   <div>
                     <strong>Ready to wrap up?</strong>
@@ -463,7 +483,7 @@ export default function Chat() {
                 </div>
               )}
 
-              {reflectionOpen && (
+              {reflectionOpen && !conversationNeedsSafetyFollowUp && (
                 <section className="chat-reflection-card" aria-labelledby="chat-reflection-title">
                   <header className="chat-reflection-heading">
                     <div>

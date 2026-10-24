@@ -617,6 +617,22 @@ async def get_history_endpoint(session_id: uuid.UUID, current_user=Depends(get_c
     return {"session_id": session_id, "history": messages}
 
 
+def _has_safety_follow_up(rows: list[dict]) -> bool:
+    """Block ordinary reflection when a saved assistant turn explicitly required safety follow-up."""
+    for row in rows:
+        if row.get("role") != "assistant":
+            continue
+        metadata = row.get("metadata") or {}
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except (TypeError, ValueError):
+                metadata = {}
+        if isinstance(metadata, dict) and metadata.get("safety_follow_up_required") is True:
+            return True
+    return False
+
+
 @router.post("/chat/reflections/{session_id}/draft")
 async def draft_reflection_endpoint(session_id: uuid.UUID, current_user=Depends(get_current_user)):
     """Generate a non-persisted draft from one owner-verified conversation."""
@@ -634,13 +650,19 @@ async def draft_reflection_endpoint(session_id: uuid.UUID, current_user=Depends(
 
     try:
         rows, _ = await select_rows("messages", token, {
-            "select": "role,content,created_at",
+            "select": "role,content,created_at,metadata",
             "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}",
-            "order": "created_at.desc", "limit": "24",
+            "order": "created_at.desc", "limit": "500",
         })
     except SupabaseError as exc:
         logger.info("Could not load conversation for reflection (%s)", exc.status_code)
         raise HTTPException(status_code=503, detail="Conversation history is unavailable. Please try again.") from exc
+
+    if _has_safety_follow_up(rows):
+        raise HTTPException(
+            status_code=409,
+            detail="This conversation needs its safety follow-up before an ordinary reflection can be created.",
+        )
 
     rows.sort(key=lambda row: (
         str(row.get("created_at") or ""),
@@ -650,7 +672,7 @@ async def draft_reflection_endpoint(session_id: uuid.UUID, current_user=Depends(
         {"role": row["role"], "content": row["content"][:1400]}
         for row in rows
         if row.get("role") in {"user", "assistant"} and isinstance(row.get("content"), str) and row["content"].strip()
-    ]
+    ][-24:]
     if not any(row["role"] == "user" for row in transcript):
         raise HTTPException(status_code=400, detail="Add a message to this conversation before creating a reflection.")
 
