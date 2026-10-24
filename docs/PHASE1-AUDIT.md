@@ -1,5 +1,7 @@
 # MindCare Phase 1 — Safety, scoring and data-integrity audit notes
 
+> **Historical snapshot note (2026-10-25):** The audit below describes the source review from 22 October 2026. Its “what remains” section is historical and should not be treated as a complete live inventory. Subsequent commits added the user-facing memory manager and conversation modes, and CI passed on the later baseline. The public structured assessment scope is PHQ-9-only; GAD-7 backend/schema compatibility is retained. See `CHANGELOG.md` and `docs/MINDCARE_PRODUCT_EXPANSION_ROADMAP.md` for current product-scope notes.
+
 **Target reviewed:** the current public `main` source paths fetched on 22 Oct 2026, including the safety, assessment-idempotency, emotion-input and chat-turn-idempotency changes. The conversation attachment `Mindcare-main.zip` is an older snapshot and was not treated as the target checkout.
 
 ## Behaviors already present in the current branch

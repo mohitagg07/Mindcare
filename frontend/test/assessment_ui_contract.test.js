@@ -44,3 +44,9 @@ test('assessment occupies its own scroll area and reserves space above the works
   assert.match(assessmentCss, /\.assessment-page\s*\{[^}]*overflow-y:\s*auto/s)
   assert.match(assessmentCss, /env\(safe-area-inset-bottom/)
 })
+
+
+test('the public assessment flow is PHQ-9-only and loads independently of legacy GAD-7 data', () => {
+  assert.match(assessmentSource, /data\?\.phq9/)
+  assert.doesNotMatch(assessmentSource, /submitGAD7|data\?\.gad7|gad7Result|setGad7Result/)
+})
