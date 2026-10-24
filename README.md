@@ -2,12 +2,13 @@
 
 ## Personal profile and response preferences
 
-For an existing Supabase project, apply the files in `supabase/migrations/` in filename order. The profile migrations add editable profile fields and owner-only private avatar storage. `20261017_user_memories.sql` adds user-scoped saved memories, `20261017_assessment_integrity.sql` enforces PHQ-9/GAD-7 answer counts and score consistency, and `20261017_z_data_permissions.sql` reapplies least-privilege table grants after all user tables exist. The API calculates age from date of birth and sends only the derived age—not the raw date—to Groq. Profile reads and writes use the signed-in user's access token and RLS.
+For an existing Supabase project, check the applied migration history and apply only missing files from `supabase/migrations/` in the dependency order listed in `START_HERE.md`. Do not rerun already-applied migrations or run the fresh-install schema against an existing database. For a brand-new project, run `supabase/schema.sql`. Keep the fresh schema and migration contract tests aligned as either changes. Profile and application data access uses the signed-in user's JWT and Supabase Row Level Security.
+
 
 
 MindCare is a mental-wellbeing support application built with React + Vite, FastAPI, Groq inference, and Supabase (PostgreSQL + Supabase Auth).
 
-> **Safety notice:** MindCare is a wellness-support prototype, not a medical device, diagnostic tool, or emergency service. The user-facing PHQ-9 is a screening instrument, not a diagnosis. Legacy GAD-7 database fields and API support remain for backward compatibility but are not exposed in the product. Facial-expression labels, text sentiment, and the weighted wellbeing indicator are not clinically validated risk assessments. Do not use them to make clinical decisions.
+> **Safety notice:** MindCare is a wellness-support prototype, not a medical device, diagnostic tool, or emergency service. The user-facing PHQ-9 is a screening instrument, not a diagnosis. Legacy GAD-7 database fields and API support remain for backward compatibility but are not exposed as a new public check-in. Previously saved GAD-7 results remain historical data and may appear in Insights. Facial-expression labels, text sentiment, and the weighted wellbeing indicator are not clinically validated risk assessments. Do not use them to make clinical decisions.
 
 ## Production-oriented stack
 
@@ -32,7 +33,7 @@ New accounts without a preferred display name see a compact “Make this space y
 
 ## Frontend experience
 
-The authenticated workspace includes a responsive side navigation, an account-specific profile and response preferences, a welcoming overview with saved conversation/assessment recovery, a conversational chat layout with quick-start prompts, streamed replies, stop/retry behavior and saved-history navigation, a PHQ-9-only assessment journey, responsive emotion/insights screens, profile-time-zone-aware timestamps, keyboard-visible focus states, and reduced-motion handling. The public landing page includes plain-language privacy and use notices. Those notices are an application summary—not a substitute for a complete legal policy.
+The authenticated workspace includes a responsive side navigation, an account-specific profile and response preferences, a welcoming overview with saved conversation/assessment recovery, a conversational chat layout with quick-start prompts, streamed replies, stop/retry behavior and saved-history navigation, a PHQ-9-only public assessment journey, with legacy GAD-7 endpoints and saved records retained for compatibility, responsive emotion/insights screens, profile-time-zone-aware timestamps, keyboard-visible focus states, and reduced-motion handling. The public landing page includes plain-language privacy and use notices. Those notices are an application summary—not a substitute for a complete legal policy.
 
 ## Project layout
 
