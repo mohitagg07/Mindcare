@@ -131,6 +131,10 @@ export async function sendChatStream(body, { signal, onDelta } = {}) {
   }
 }
 export const getChatHistory = (sid)   => request(`/api/chat/history/${encodeURIComponent(sid)}`)
+export const generateReflectionDraft = (sid) => request(`/api/chat/reflections/${encodeURIComponent(sid)}/draft`, { method: 'POST' })
+export const getConversationReflection = (sid) => request(`/api/chat/reflections/${encodeURIComponent(sid)}`)
+export const saveConversationReflection = (sid, reflection) => request(`/api/chat/reflections/${encodeURIComponent(sid)}`, { method: 'PUT', body: JSON.stringify(reflection) })
+export const deleteConversationReflection = (sid) => request(`/api/chat/reflections/${encodeURIComponent(sid)}`, { method: 'DELETE' })
 export const getChatMemories = () => request('/api/chat/memories')
 export const createChatMemory = (content) => request('/api/chat/memories', { method: 'POST', body: JSON.stringify({ content }) })
 export const updateChatMemory = (memoryId, content) => request(`/api/chat/memories/${encodeURIComponent(memoryId)}`, { method: 'PATCH', body: JSON.stringify({ content }) })
