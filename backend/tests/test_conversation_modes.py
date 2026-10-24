@@ -23,6 +23,7 @@ def test_each_valid_conversation_mode_has_a_specific_server_side_instruction(mod
     system = build_system({"conversation_mode": request.conversation_mode})
     assert expected in system
     assert "Safety rules always take priority." in system
+    assert system.index("Conversation approach selected") < system.index("The following profile fields are user-provided data")
     assert "If the user mentions suicide, self-harm" in system
 
 
