@@ -5,10 +5,11 @@ import json
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from auth.dependencies import get_current_user
 from db.supabase import SupabaseError, select_rows, insert_row, update_rows, delete_rows
@@ -31,6 +32,25 @@ class MemoryCreateRequest(BaseModel):
         if len(value) < 2 or not any(char.isalnum() for char in value):
             raise ValueError("Enter a short memory with at least one letter or number")
         return value
+
+
+class ReflectionSaveRequest(BaseModel):
+    what_i_shared: str = Field(default="", max_length=600)
+    what_i_noticed: str = Field(default="", max_length=600)
+    possible_next_step: str = Field(default="", max_length=400)
+
+    @field_validator("what_i_shared", "what_i_noticed", "possible_next_step", mode="before")
+    @classmethod
+    def normalize_reflection_text(cls, value):
+        if not isinstance(value, str):
+            raise ValueError("Reflection fields must be text")
+        return " ".join(value.split())
+
+    @model_validator(mode="after")
+    def require_reflection_content(self):
+        if not any((self.what_i_shared, self.what_i_noticed, self.possible_next_step)):
+            raise ValueError("Add at least one reflection before saving")
+        return self
 
 
 class ChatRequest(BaseModel):
@@ -595,6 +615,149 @@ async def get_history_endpoint(session_id: uuid.UUID, current_user=Depends(get_c
         0 if row.get("role") == "user" else 1,
     ))
     return {"session_id": session_id, "history": messages}
+
+
+@router.post("/chat/reflections/{session_id}/draft")
+async def draft_reflection_endpoint(session_id: uuid.UUID, current_user=Depends(get_current_user)):
+    """Generate a non-persisted draft from one owner-verified conversation."""
+    uid, token = current_user["id"], current_user["access_token"]
+    session = str(session_id)
+    try:
+        owned, _ = await select_rows("conversations", token, {
+            "select": "id", "id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+        })
+    except SupabaseError as exc:
+        logger.info("Could not verify reflection conversation ownership (%s)", exc.status_code)
+        raise HTTPException(status_code=503, detail="Could not verify this conversation. Please try again.") from exc
+    if not owned:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    try:
+        rows, _ = await select_rows("messages", token, {
+            "select": "role,content,created_at",
+            "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}",
+            "order": "created_at.desc", "limit": "24",
+        })
+    except SupabaseError as exc:
+        logger.info("Could not load conversation for reflection (%s)", exc.status_code)
+        raise HTTPException(status_code=503, detail="Conversation history is unavailable. Please try again.") from exc
+
+    rows.sort(key=lambda row: (
+        str(row.get("created_at") or ""),
+        0 if row.get("role") == "user" else 1,
+    ))
+    transcript = [
+        {"role": row["role"], "content": row["content"][:1400]}
+        for row in rows
+        if row.get("role") in {"user", "assistant"} and isinstance(row.get("content"), str) and row["content"].strip()
+    ]
+    if not any(row["role"] == "user" for row in transcript):
+        raise HTTPException(status_code=400, detail="Add a message to this conversation before creating a reflection.")
+
+    from services.groq_service import generate_reflection
+    try:
+        draft = await generate_reflection(transcript)
+    except Exception as exc:
+        logger.warning("Reflection draft generation failed (%s)", type(exc).__name__)
+        raise HTTPException(status_code=503, detail="Your reflection draft could not be prepared just now. Please try again.") from exc
+    return {"draft": draft}
+
+
+@router.get("/chat/reflections/{session_id}")
+async def get_reflection_endpoint(session_id: uuid.UUID, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    session = str(session_id)
+    try:
+        owned, _ = await select_rows("conversations", token, {
+            "select": "id", "id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+        })
+        if not owned:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        rows, _ = await select_rows("conversation_reflections", token, {
+            "select": "id,conversation_id,what_i_shared,what_i_noticed,possible_next_step,created_at,updated_at",
+            "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+        })
+    except HTTPException:
+        raise
+    except SupabaseError as exc:
+        logger.info("Saved reflection storage unavailable (%s)", exc.status_code)
+        raise HTTPException(status_code=503, detail="Saved reflections are temporarily unavailable. Please try again.") from exc
+    return {"reflection": rows[0] if rows else None}
+
+
+@router.put("/chat/reflections/{session_id}")
+async def save_reflection_endpoint(session_id: uuid.UUID, req: ReflectionSaveRequest, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    session = str(session_id)
+    values = {
+        "what_i_shared": req.what_i_shared,
+        "what_i_noticed": req.what_i_noticed,
+        "possible_next_step": req.possible_next_step,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        owned, _ = await select_rows("conversations", token, {
+            "select": "id", "id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+        })
+        if not owned:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        existing, _ = await select_rows("conversation_reflections", token, {
+            "select": "id", "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+        })
+        if existing:
+            saved = await update_rows("conversation_reflections", token, {
+                "id": f"eq.{existing[0]['id']}", "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}",
+            }, values)
+            if not saved:
+                raise HTTPException(status_code=409, detail="The reflection changed before it could be saved. Please retry.")
+            reflection = saved[0]
+        else:
+            try:
+                inserted = await insert_row("conversation_reflections", token, {
+                    "user_id": uid, "conversation_id": session, **values,
+                })
+                reflection = inserted[0]
+            except SupabaseError as insert_exc:
+                if insert_exc.status_code != 409:
+                    raise
+                existing, _ = await select_rows("conversation_reflections", token, {
+                    "select": "id", "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+                })
+                if not existing:
+                    raise
+                saved = await update_rows("conversation_reflections", token, {
+                    "id": f"eq.{existing[0]['id']}", "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}",
+                }, values)
+                if not saved:
+                    raise HTTPException(status_code=409, detail="The reflection changed before it could be saved. Please retry.")
+                reflection = saved[0]
+    except HTTPException:
+        raise
+    except SupabaseError as exc:
+        logger.info("Reflection save unavailable (%s)", exc.status_code)
+        raise HTTPException(status_code=503, detail="Your reflection could not be saved. Please try again.") from exc
+    return {"reflection": reflection}
+
+
+@router.delete("/chat/reflections/{session_id}")
+async def delete_reflection_endpoint(session_id: uuid.UUID, current_user=Depends(get_current_user)):
+    uid, token = current_user["id"], current_user["access_token"]
+    session = str(session_id)
+    try:
+        owned, _ = await select_rows("conversations", token, {
+            "select": "id", "id": f"eq.{session}", "user_id": f"eq.{uid}", "limit": "1",
+        })
+        if not owned:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        deleted = await delete_rows("conversation_reflections", token, {
+            "conversation_id": f"eq.{session}", "user_id": f"eq.{uid}",
+        })
+    except HTTPException:
+        raise
+    except SupabaseError as exc:
+        logger.info("Reflection delete unavailable (%s)", exc.status_code)
+        raise HTTPException(status_code=503, detail="Your reflection could not be deleted. Please try again.") from exc
+    return {"deleted": True, "deleted_count": len(deleted)}
 
 
 @router.delete("/chat/session/{session_id}")
