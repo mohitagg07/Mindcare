@@ -1,16 +1,12 @@
 # Changelog
 
-## Unreleased — PHQ-9 scope, setup parity and light-glass UI foundation
+## Unreleased — Public assessment scope and setup-documentation alignment
 
 - Aligned the public check-in selector with the PHQ-9-only v1 product decision from the long-term engineering blueprint.
 - Kept GAD-7 endpoints, scoring/storage contracts and existing records for backward compatibility; existing GAD-7 results can still appear as historical Insights, but the public UI does not start new GAD-7 check-ins.
 - Updated the Insights filtering/rendering so legacy GAD-7 history is preserved without presenting GAD-7 as a selectable new check-in.
 - Rewrote the Supabase setup guide to describe the complete existing-project migration sequence and to require checking applied migration history before applying only missing migrations.
 - Added regression coverage for the public assessment catalogue, PHQ-9-only loading and legacy result labels.
-- Added the first shared light-glass design tokens and applied them to the workspace chrome and Home page.
-- Reworked Home into a responsive, luminous welcome hero with restrained animated glass accents while preserving the existing profile nudge, selectable chat starting points, and real recent activity/error states.
-- Switched primary navigation to a light translucent surface with clearer selection, legible account details, and reduced-motion support.
-- Added UI contract tests for the Home hero, real data/action wiring, glass surface and reduced-motion styles.
 
 ## 4.5.1 — Personal name grounding and avatar safety polish (2026-10-13)
 
