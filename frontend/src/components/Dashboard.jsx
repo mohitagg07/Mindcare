@@ -10,6 +10,7 @@ import {
   Footprints,
   MessageCircle,
   RotateCcw,
+  Sparkles,
   UserRound,
 } from 'lucide-react'
 import { api, getAssessmentHistory } from '../api/client'
@@ -173,11 +174,28 @@ export default function Dashboard() {
   return (
     <main className="mcd-page">
       <div className="mcd-content">
-        <header className="mcd-heading">
-          <p className="mcd-date">{today}</p>
-          <h1>{greeting(timezone)}{firstName ? `, ${firstName}` : ''}<span>.</span></h1>
-          <p className="mcd-subtitle">No need to have it all figured out. Start where you are.</p>
-        </header>
+        <section className="mcd-welcome-hero" aria-labelledby="mcd-welcome-title">
+          <div className="mcd-welcome-copy">
+            <div className="mcd-welcome-kicker">
+              <span className="mcd-welcome-kicker-mark"><Sparkles size={13} strokeWidth={1.8} /></span>
+              <span>A LITTLE SPACE, JUST FOR YOU</span>
+            </div>
+            <header className="mcd-heading">
+              <p className="mcd-date">{today}</p>
+              <h1 id="mcd-welcome-title">{greeting(timezone)}{firstName ? `, ${firstName}` : ''}<span>.</span></h1>
+              <p className="mcd-subtitle">No need to have it all figured out. Start right where you are.</p>
+            </header>
+            <p className="mcd-welcome-note"><span className="mcd-welcome-note-dot" />Take your time. There’s no perfect pace.</p>
+          </div>
+          <div className="mcd-welcome-art" aria-hidden="true">
+            <span className="mcd-orbit mcd-orbit-outer" />
+            <span className="mcd-orbit mcd-orbit-middle" />
+            <span className="mcd-orbit mcd-orbit-inner" />
+            <div className="mcd-welcome-orb"><Sparkles size={33} strokeWidth={1.45} /></div>
+            <div className="mcd-float-chip mcd-float-chip-one"><span className="mcd-float-chip-dot" />A moment for you</div>
+            <div className="mcd-float-chip mcd-float-chip-two"><span className="mcd-float-chip-mark"><Check size={12} strokeWidth={2.5} /></span>One step at a time</div>
+          </div>
+        </section>
 
         {!String(user?.display_name || '').trim() && (
           <section className="mcd-setup-nudge" aria-label="Personalize your account">

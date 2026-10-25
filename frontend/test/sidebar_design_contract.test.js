@@ -22,3 +22,11 @@ test('active navigation is clear without gradient tiles or translational animati
   assert.match(css, /border-left:\s*3px solid/)
   assert.doesNotMatch(css, /linear-gradient|translateX|translateY/)
 })
+
+
+test('sidebar uses the shared light-glass surface with readable active navigation', () => {
+  assert.match(css, /background:\s*rgba\(249, 251, 247, \.88\)/)
+  assert.match(css, /backdrop-filter:\s*blur\(28px\)/)
+  assert.match(css, /color:\s*#284a35/)
+  assert.match(css, /prefers-reduced-motion:\s*reduce/)
+})
