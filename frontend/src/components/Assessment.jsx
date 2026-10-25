@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { RotateCcw, AlertTriangle, ChevronRight, ChevronLeft, ArrowLeft, ArrowRight, Heart, Wind } from 'lucide-react'
-import { getQuestions, submitPHQ9, submitGAD7 } from '../api/client'
+import { RotateCcw, AlertTriangle, ChevronRight, ChevronLeft, ArrowLeft, ArrowRight, Heart } from 'lucide-react'
+import { getQuestions, submitPHQ9 } from '../api/client'
 import { useApp } from '../context/AppContext'
 import { ASSESSMENT_TYPES, getAssessmentType } from '../assessment/display.js'
 import './Assessment.css'
@@ -190,8 +190,8 @@ function AssessmentForm({ title, assessmentKey, questions, onSubmit, result, col
 }
 
 export default function Assessment() {
-  const { phq9Result, setPhq9Result, gad7Result, setGad7Result, setPendingChatPrompt, setPendingAssessmentFollowUpId, setActivePage } = useApp()
-  const [questionSets, setQuestionSets] = useState({ phq9: [], gad7: [] })
+  const { phq9Result, setPhq9Result, setPendingChatPrompt, setPendingAssessmentFollowUpId, setActivePage } = useApp()
+  const [questionSets, setQuestionSets] = useState({ phq9: [] })
   const [selectedId, setSelectedId] = useState(null)
   const [loadingQuestions, setLoadingQuestions] = useState(true)
   const [questionError, setQuestionError] = useState('')
@@ -199,22 +199,22 @@ export default function Assessment() {
   const loadQuestions = () => {
     setLoadingQuestions(true); setQuestionError('')
     getQuestions().then(({ data }) => {
-      if (!Array.isArray(data?.phq9) || data.phq9.length !== 9 || !Array.isArray(data?.gad7) || data.gad7.length !== 7) throw new Error('Incomplete check-in questions')
-      setQuestionSets({ phq9: data.phq9, gad7: data.gad7 })
+      if (!Array.isArray(data?.phq9) || data.phq9.length !== 9) throw new Error('Incomplete PHQ-9 questions')
+      setQuestionSets({ phq9: data.phq9 })
     }).catch(() => setQuestionError('We could not load the check-in questions. Your answers have not been changed. Please try again.')).finally(() => setLoadingQuestions(false))
   }
   useEffect(() => { loadQuestions() }, [])
   const selectedType = getAssessmentType(selectedId)
-  const selectedResult = selectedId === 'mood' ? phq9Result : selectedId === 'worry' ? gad7Result : null
-  const questionKey = selectedId === 'mood' ? 'phq9' : 'gad7'
-  const color = selectedId === 'worry' ? '#8973a4' : PRIMARY_COLOR
-  const ICONS = { mood: Heart, worry: Wind }
+  const selectedResult = selectedId === 'mood' ? phq9Result : null
+  const questionKey = 'phq9'
+  const color = PRIMARY_COLOR
+  const ICONS = { mood: Heart }
 
   const handleSubmit = async (answers, submissionId) => {
-    const { data } = selectedId === 'mood' ? await submitPHQ9(answers, submissionId) : await submitGAD7(answers, submissionId)
-    if (selectedId === 'mood') setPhq9Result(data); else setGad7Result(data)
+    const { data } = await submitPHQ9(answers, submissionId)
+    setPhq9Result(data)
   }
-  const handleReset = () => { if (selectedId === 'mood') setPhq9Result(null); else setGad7Result(null) }
+  const handleReset = () => setPhq9Result(null)
   const returnToChat = (savedResult) => {
     setPendingAssessmentFollowUpId(savedResult?.assessment_id || null)
     setPendingChatPrompt("I'd like to reflect on my recent check-in and understand what support might help.")
@@ -271,7 +271,7 @@ export default function Assessment() {
             <div className="assessment-choice-grid">
               {ASSESSMENT_TYPES.map(type => {
                 const Icon = ICONS[type.id]
-                const latest = type.id === 'mood' ? phq9Result : gad7Result
+                const latest = phq9Result
                 return (
                   <button key={type.id} type="button" className="assessment-choice-card" onClick={() => setSelectedId(type.id)}>
                     <span className={`assessment-choice-icon tone-${type.accent}`} aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></span>

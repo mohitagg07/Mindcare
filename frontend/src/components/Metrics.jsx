@@ -11,7 +11,6 @@ import {
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
-import { getAssessmentIdFromInstrument } from '../assessment/display.js'
 
 const EMOTION_COLORS = {
   happy: '#579879', sad: '#6d93ba', angry: '#cd7b70', neutral: '#9ca99c',
@@ -119,7 +118,7 @@ export default function Metrics() {
     if (trajectoryResult.status === 'fulfilled') { setTrajectory(trajectoryResult.value.data); successful += 1 }
     if (assessmentsResult.status === 'fulfilled') {
       const history = assessmentsResult.value.data?.history
-      setAssessments(Array.isArray(history) ? history.filter(row => getAssessmentIdFromInstrument(row.instrument) && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
+      setAssessments(Array.isArray(history) ? history.filter(row => ['PHQ-9', 'GAD-7'].includes(row.instrument) && Number.isFinite(Number(row.score)) && Number.isFinite(Number(row.max_score)) && row.completed_at) : [])
       successful += 1
     }
     if (successful === 0) {
@@ -227,10 +226,10 @@ export default function Metrics() {
 
         <section className="insights-assessment-section" aria-labelledby="insights-assessment-heading">
           <div className="insights-section-heading"><div><span>YOUR CHECK-INS</span><h2 id="insights-assessment-heading">Your check-ins over time</h2></div><span>Results are not diagnoses</span></div>
-          {assessments.length ? <div className="insights-assessment-grid">
-            <AssessmentScoreCard title="Mood & interest check-in" maxScore={27} rows={assessmentRows.mood} timeZone={user?.timezone} />
-            <AssessmentScoreCard title="Worry & tension check-in" maxScore={21} rows={assessmentRows.worry} timeZone={user?.timezone} />
-          </div> : <article className="insights-chart-card"><EmptyChart title="No check-in history yet" description="Your saved check-in results will appear here when you choose to complete one." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Explore check-ins <ArrowUpRight size={14} /></button>} /></article>}
+          {assessmentRows.mood.length > 0 || assessmentRows.worry.length > 0 ? <div className="insights-assessment-grid">
+            {assessmentRows.mood.length > 0 && <AssessmentScoreCard title="Mood & interest check-in" maxScore={27} rows={assessmentRows.mood} timeZone={user?.timezone} />}
+            {assessmentRows.worry.length > 0 && <AssessmentScoreCard title="Past worry & tension check-ins" maxScore={21} rows={assessmentRows.worry} timeZone={user?.timezone} />}
+          </div> : <article className="insights-chart-card"><EmptyChart title="No check-in history yet" description="Your completed PHQ-9 check-ins will appear here when you choose to save one." action={<button className="insights-inline-action" type="button" onClick={() => setActivePage('assessment')}>Explore check-ins <ArrowUpRight size={14} /></button>} /></article>}
           <p className="insights-chart-disclaimer">A score change is only one piece of information and may not reflect how you feel overall. The chart appears after at least two saved results for the same screening.</p>
         </section>
 
