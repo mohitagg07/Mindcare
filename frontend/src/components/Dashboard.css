@@ -10,7 +10,7 @@
   scrollbar-gutter: stable;
 }
 .mcd-content {
-  width: min(1120px, 100%);
+  width: min(1180px, 100%);
   margin: 0 auto;
   padding: clamp(22px, 2.7vw, 36px) clamp(17px, 2.8vw, 36px) 32px;
 }
@@ -28,15 +28,54 @@
 .mcd-setup-nudge > button:hover { border-color:#b6cfb5; background:#f5f9f1; }
 
 .mcd-home-grid { display:grid; grid-template-columns:minmax(0,1.06fr) minmax(300px,.94fr); align-items:stretch; gap:17px; }
-.mcd-start-card, .mcd-activity-card { min-width:0; border:1px solid #dfe6dc; border-radius:17px; background:#fffefa; }
-.mcd-start-card { display:flex; flex-direction:column; align-items:stretch; padding:clamp(20px,2.1vw,27px); background:#f0f5eb; }
+.mcd-start-card, .mcd-activity-card {
+  min-width: 0;
+  border: 1px solid #e0e7dd;
+  border-radius: 18px;
+  background: #fffefa;
+  box-shadow: 0 2px 10px rgba(38, 65, 45, .035), inset 0 1px 0 rgba(255, 255, 255, .92);
+}
+.mcd-start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: clamp(20px, 2.1vw, 27px);
+  border-color: #dce6d8;
+  background: #f0f5eb;
+  box-shadow: 0 3px 12px rgba(42, 72, 47, .045), inset 0 1px 0 rgba(255, 255, 255, .88);
+}
 .mcd-eyebrow { margin:0; color:#748c78; font-size:10px; font-weight:750; line-height:1.4; letter-spacing:.65px; }
 .mcd-start-card h2 { margin:10px 0 0; color:#294638; font:500 clamp(25px,2.2vw,31px)/1.15 'Fraunces','Lora',Georgia,serif; letter-spacing:-.55px; }
 .mcd-start-copy { max-width:390px; margin:9px 0 0; color:#718075; font-size:13px; line-height:1.65; }
-.mcd-intent-list { display:grid; gap:8px; margin:18px 0 15px; }
-.mcd-intent-option { display:flex; width:100%; min-width:0; min-height:60px; align-items:center; gap:11px; padding:10px 12px; border:1px solid #e0e7dc; border-radius:11px; color:#3e5947; background:#fffefa; text-align:left; cursor:pointer; transition:border-color .14s ease,background .14s ease; }
-.mcd-intent-option:hover { border-color:#bdcfba; background:#fff; }
-.mcd-intent-option.is-selected { border-color:#7ea687; background:#f8fbf5; box-shadow:inset 0 0 0 1px rgba(94,143,102,.1); }
+.mcd-intent-list { display: grid; gap: 9px; margin: 20px 0 16px; }
+.mcd-intent-option {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 62px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid #e1e8dd;
+  border-radius: 13px;
+  color: #3e5947;
+  background: #fffefa;
+  box-shadow: 0 1px 3px rgba(39, 67, 45, .025);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.mcd-intent-option:hover {
+  transform: translateY(-1px);
+  border-color: #bdcfba;
+  background: #fff;
+  box-shadow: 0 5px 13px rgba(39, 67, 45, .055);
+}
+.mcd-intent-option.is-selected {
+  border-color: #8ab08d;
+  background: #f7fbf4;
+  box-shadow: inset 0 0 0 1px rgba(94, 143, 102, .12), 0 2px 7px rgba(39, 67, 45, .035);
+}
 .mcd-intent-icon { display:grid; width:35px; height:35px; flex:0 0 35px; place-items:center; border-radius:10px; color:#4d7d59; background:#edf4e9; }
 .mcd-intent-option:nth-child(2) .mcd-intent-icon { color:#776b91; background:#f1eef5; }
 .mcd-intent-option:nth-child(3) .mcd-intent-icon { color:#8d754f; background:#f6f0e3; }
@@ -47,20 +86,72 @@
 .mcd-intent-option.is-selected .mcd-intent-radio { border-color:#4b8059; background:#4b8059; }
 .mcd-start-footer { display:flex; min-height:46px; align-items:center; justify-content:space-between; gap:12px; margin-top:auto; }
 .mcd-start-footer p { margin:0; color:#748176; font-size:11px; line-height:1.5; }
-.mcd-button-primary { display:inline-flex; min-height:42px; flex:0 0 auto; align-items:center; justify-content:center; gap:8px; padding:0 14px; border:1px solid #3d7453; border-radius:9px; color:#fffefa; background:#397653; font:650 12px/1.3 'DM Sans',sans-serif; cursor:pointer; transition:background .14s ease,border-color .14s ease; }
-.mcd-button-primary:hover { border-color:#285e40; background:#2f6849; }
+.mcd-button-primary {
+  display: inline-flex;
+  min-height: 43px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid #3d7453;
+  border-radius: 11px;
+  color: #fffefa;
+  background: #397653;
+  box-shadow: 0 2px 5px rgba(39, 87, 53, .10);
+  font: 650 12px/1.3 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.mcd-button-primary:hover {
+  transform: translateY(-1px);
+  border-color: #285e40;
+  background: #2f6849;
+  box-shadow: 0 5px 12px rgba(39, 87, 53, .13);
+}
+.mcd-button-primary:active { transform: translateY(0); }
 .mcd-button-primary:focus-visible, .mcd-checkin-link:focus-visible, .mcd-intent-option:focus-visible, .mcd-activity-row:focus-visible, .mcd-icon-link:focus-visible { outline:3px solid rgba(71,128,87,.32); outline-offset:3px; }
 .mcd-checkin-link { display:inline-flex; align-self:flex-start; align-items:center; gap:5px; margin-top:13px; padding:11px 0 0; border:0; border-top:1px solid #dce5d8; color:#477257; background:transparent; font:600 11.5px 'DM Sans',sans-serif; text-align:left; cursor:pointer; }
 .mcd-checkin-link:hover { color:#234e36; }
 .mcd-checkin-link svg { flex:0 0 auto; }
-.mcd-activity-card { padding:20px 19px 14px; }
+.mcd-activity-card { padding: 22px 21px 16px; }
 .mcd-card-heading { display:flex; min-width:0; align-items:center; justify-content:space-between; gap:12px; }
-.mcd-card-heading h2 { margin:6px 0 0; color:#294538; font:500 22px/1.2 'Fraunces','Lora',Georgia,serif; letter-spacing:-.3px; }
-.mcd-icon-link { display:grid; width:32px; height:32px; flex:0 0 auto; place-items:center; border:1px solid #e4e9df; border-radius:9px; color:#63856c; background:#fff; cursor:pointer; }
-.mcd-icon-link:hover { border-color:#c8d9c8; background:#f2f7ef; }
+.mcd-card-heading h2 { margin: 7px 0 0; color: #294538; font: 500 23px/1.22 'Fraunces', 'Lora', Georgia, serif; letter-spacing: -.35px; }
+.mcd-icon-link {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #e1e8dd;
+  border-radius: 10px;
+  color: #63856c;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(39, 67, 45, .025);
+  cursor: pointer;
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+.mcd-icon-link:hover { border-color: #c8d9c8; background: #f2f7ef; box-shadow: 0 3px 8px rgba(39, 67, 45, .05); }
 .mcd-activity-list { margin-top:13px; }
-.mcd-activity-row { display:flex; width:100%; min-width:0; align-items:center; gap:9px; padding:12px 0; border:0; border-top:1px solid #edf0e9; color:inherit; background:transparent; text-align:left; cursor:pointer; }
-.mcd-activity-row:hover .mcd-activity-copy strong { color:#397854; }
+.mcd-activity-row {
+  display: flex;
+  width: calc(100% + 16px);
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  margin-inline: -8px;
+  padding: 12px 8px;
+  border: 0;
+  border-top: 1px solid #edf0e9;
+  border-radius: 10px;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .16s ease;
+}
+.mcd-activity-row:hover { background: #f6f9f3; }
+.mcd-activity-row:hover .mcd-activity-copy strong { color: #397854; }
 .mcd-activity-type { display:grid; width:34px; height:34px; flex:0 0 34px; place-items:center; border:1px solid #dce8d9; border-radius:10px; color:#50815b; background:#f0f6ec; }
 .mcd-activity-type.is-checkin { border-color:#dfe6eb; color:#67849b; background:#f1f5f8; }
 .mcd-activity-copy { display:flex; min-width:0; flex:1; flex-direction:column; gap:4px; }
@@ -81,7 +172,9 @@
 .mcd-activity-skeleton span:nth-child(3) { width:72%; }
 .mcd-partial-warning { margin:8px 0 0; color:#756c5e; font-size:11px; line-height:1.6; }
 .mcd-partial-warning button { padding:0; border:0; color:#477257; background:transparent; font:inherit; font-weight:700; cursor:pointer; }
-.mcd-page button:focus-visible { outline:3px solid rgba(71,128,87,.32); outline-offset:3px; }
+.mcd-page button:focus-visible { outline: 3px solid rgba(71, 128, 87, .34); outline-offset: 3px; }
+.mcd-setup-nudge { border-radius: 14px; box-shadow: 0 2px 8px rgba(39, 67, 45, .025); }
+.mcd-setup-nudge > button { transition: border-color .16s ease, background-color .16s ease; }
 @keyframes mcd-shimmer { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
 @media(max-width:1020px) {
   .mcd-content { padding-right:22px; padding-left:22px; }
@@ -103,7 +196,7 @@
   .mcd-start-card { padding:20px; }
   .mcd-start-card h2 { font-size:27px; }
   .mcd-intent-option { min-height:59px; }
-  .mcd-activity-card { padding:17px 16px 12px; }
+  .mcd-activity-card { padding: 18px 17px 13px; }
   .mcd-card-heading h2 { font-size:20px; }
   .mcd-start-footer { align-items:flex-start; flex-direction:column; }
   .mcd-start-footer .mcd-button-primary { width:100%; }
@@ -117,6 +210,7 @@
   .mcd-activity-row time { font-size:10px; }
 }
 @media(prefers-reduced-motion:reduce) {
-  .mcd-activity-skeleton span { animation:none; }
-  .mcd-button-primary,.mcd-intent-option { transition:none; }
+  .mcd-activity-skeleton span { animation: none; }
+  .mcd-button-primary, .mcd-intent-option, .mcd-activity-row, .mcd-icon-link, .mcd-setup-nudge > button { transition: none; }
+  .mcd-button-primary:hover, .mcd-intent-option:hover { transform: none; }
 }

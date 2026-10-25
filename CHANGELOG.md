@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Home interaction and layout polish
+
+- Kept the existing guided-start Home structure and copy; did not add a new hero, floating labels, decorative artwork or global blur effects.
+- Refined desktop content width, card elevation, typography rhythm and choice-card interaction states.
+- Improved recent-activity row hover feedback while preserving real activity, loading, retry and empty states.
+- Preserved responsive layouts, keyboard focus indicators and reduced-motion behavior.
+- Added a contract test to guard the intentionally restrained Home visual direction.
+
 ## Unreleased — Public assessment scope and setup-documentation alignment
 
 - Aligned the public check-in selector with the PHQ-9-only v1 product decision from the long-term engineering blueprint.

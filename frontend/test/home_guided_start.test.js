@@ -36,3 +36,12 @@ test('Home choices expose selected state and keep responsive keyboard affordance
   assert.match(styles, /@media\s*\(max-width:\s*760px\)/)
   assert.match(styles, /prefers-reduced-motion/)
 })
+
+
+test('Home keeps a restrained surface system rather than adding a decorative hero treatment', () => {
+  assert.doesNotMatch(dashboard, /mcd-welcome-hero|mcd-welcome-art|mcd-orbit|mcd-float-chip/)
+  assert.doesNotMatch(styles, /backdrop-filter|\.mcd-welcome-hero|\.mcd-float-chip/)
+  assert.match(styles, /\.mcd-start-card, \.mcd-activity-card/)
+  assert.match(styles, /\.mcd-intent-option:hover/)
+  assert.match(styles, /\.mcd-activity-row:hover/)
+})
