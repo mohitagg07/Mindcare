@@ -59,3 +59,19 @@ test('the frontend loads two type families and keeps page routes lazy-loaded', (
     assert.match(app, new RegExp('const ' + route + ' = lazy'))
   }
 })
+
+
+test('Profile and Insights CSS are route-owned instead of global', () => {
+  const globalCss = readFileSync(resolve(here, '../src/index.css'), 'utf8')
+  const profileCss = readFileSync(resolve(here, '../src/components/Profile.css'), 'utf8')
+  const metricsCss = readFileSync(resolve(here, '../src/components/Metrics.css'), 'utf8')
+  const profileSource = readFileSync(resolve(here, '../src/components/Profile.jsx'), 'utf8')
+  const metricsSource = readFileSync(resolve(here, '../src/components/Metrics.jsx'), 'utf8')
+  assert.doesNotMatch(globalCss, /\.profile-page|\.profile-main-grid|\.insights-page|\.insights-chart-card/)
+  assert.match(profileCss, /\.profile-page/)
+  assert.doesNotMatch(profileCss, /\.insights-page|\.insights-chart-card/)
+  assert.match(metricsCss, /\.insights-page|\.insights-chart-card/)
+  assert.doesNotMatch(metricsCss, /\.profile-page|\.profile-main-grid/)
+  assert.match(profileSource, /Profile\.css/)
+  assert.match(metricsSource, /Metrics\.css/)
+})

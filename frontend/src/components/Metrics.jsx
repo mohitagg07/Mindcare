@@ -11,6 +11,7 @@ import {
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import './Metrics.css'
 
 const EMOTION_COLORS = {
   happy: '#579879', sad: '#6d93ba', angry: '#cd7b70', neutral: '#9ca99c',

@@ -10,6 +10,7 @@ import {
 } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import './ProfileMemory.css'
+import './Profile.css'
 
 const SUPPORT_STYLES = [
   { id: 'gentle', title: 'Gentle & reassuring', description: 'A little warmth first, with calm guidance when you want it.', icon: Heart },
