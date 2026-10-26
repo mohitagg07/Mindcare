@@ -14,6 +14,7 @@ import {
   deleteConversationAndStartFresh,
   startNewConversation,
 } from '../chat/conversationLifecycle.js'
+import './ChatPhase3.css'
 
 const QUICK_STARTS = [
   { icon: Wind, title: 'I feel anxious', text: "I've been feeling anxious lately", tint: 'sage' },

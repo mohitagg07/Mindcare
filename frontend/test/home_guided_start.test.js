@@ -75,3 +75,14 @@ test('Profile and Insights CSS are route-owned instead of global', () => {
   assert.match(profileSource, /Profile\.css/)
   assert.match(metricsSource, /Metrics\.css/)
 })
+
+
+test('Chat page styles load with the lazy Chat component rather than the global stylesheet', () => {
+  const globalCss = readFileSync(resolve(here, '../src/index.css'), 'utf8')
+  const chatCss = readFileSync(resolve(here, '../src/components/ChatPhase3.css'), 'utf8')
+  const chatSource = readFileSync(resolve(here, '../src/components/Chat.jsx'), 'utf8')
+  assert.doesNotMatch(globalCss, /\.chat-mode-bar|\.chat-welcome|\.chat-notice|\.chat-checkin-invite/)
+  assert.match(chatCss, /\.chat-mode-bar/)
+  assert.match(chatCss, /\.chat-welcome/)
+  assert.match(chatSource, /ChatPhase3\.css/)
+})
