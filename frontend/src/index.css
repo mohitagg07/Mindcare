@@ -263,7 +263,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 .mc-page-frame > * { min-width: 0; }
 .mc-bottom-note { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; min-height: 29px; padding: 5px 16px 7px; border-top: 1px solid rgba(224,230,221,.68); color: #94a096; background: #f8f9f5; font-size: 9.5px; letter-spacing: .03px; }
 .mc-sidebar-scrim { display: none; }
-@keyframes overviewSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
 .assistant-avatar { border: 1px solid #d5e8d8; color: #438565; background: linear-gradient(145deg,#eff7ed,#deeedc); }
 .user-avatar { border: 1px solid #d1e1d5; color: #3c7856; background: #e8f1e8; }
 .spin-icon { animation: spin .9s linear infinite; }
@@ -305,8 +305,8 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
   .mc-topbar-heading strong { max-width: 43vw; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .overview-art-ring.ring-two, .mc-loader, .chat-typing i, .spin-icon { animation: none !important; }
-  .mc-nav-item, .overview-action-card, .overview-primary-action, .overview-secondary-action, .chat-prompt-card { transition: none !important; }
+  .mc-loader, .chat-typing i, .spin-icon { animation: none !important; }
+  .mc-nav-item, .chat-prompt-card { transition: none !important; }
 }
 .assessment-record-icon { color: #607f9a; border-color: #dbe7ee; background: #eff5f8; }
 
@@ -530,7 +530,7 @@ button, input, textarea { font-family: inherit; }
   .mc-private-pill { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chat-prompt-card,.overview-action-card,.overview-session-card,.mc-nav-item { transition: none !important; }
+  .chat-prompt-card,.mc-nav-item { transition: none !important; }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -629,8 +629,8 @@ button, input, textarea { font-family: inherit; }
 .mc-auth-mobile-mark { width: 38px; height: 38px; object-fit: cover; border-radius: 11px; }
 .mc-loading-mark { overflow: hidden; background: #f3f0e5; }
 .mc-loading-mark img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.mc-user-avatar.has-photo, .mc-topbar-avatar.has-photo, .home-avatar.has-photo { overflow: hidden; padding: 0; }
-.mc-user-avatar img, .mc-topbar-avatar img, .home-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.mc-user-avatar.has-photo, .mc-topbar-avatar.has-photo { overflow: hidden; padding: 0; }
+.mc-user-avatar img, .mc-topbar-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 @media (max-width: 720px) {
   .mc-auth-brand-lockup { width: min(100%, 340px); }
 }
