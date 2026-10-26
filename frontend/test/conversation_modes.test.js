@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path'
 const here = dirname(fileURLToPath(import.meta.url))
 const chat = readFileSync(resolve(here, '../src/components/Chat.jsx'), 'utf8')
 const context = readFileSync(resolve(here, '../src/context/AppContext.jsx'), 'utf8')
-const styles = readFileSync(resolve(here, '../src/index.css'), 'utf8')
+const styles = readFileSync(resolve(here, '../src/components/ChatPhase3.css'), 'utf8')
 
 test('chat shows four accessible conversation modes', () => {
   for (const label of ['Just listen', 'Explore', 'Next step', 'Reflect']) assert.match(chat, new RegExp(label))

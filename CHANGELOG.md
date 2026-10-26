@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Route-specific CSS and first-load efficiency
+
+- Kept Profile, Insights, and Chat page styles in their lazy route chunks rather than the global entry stylesheet.
+- Consolidated web typography to DM Sans and Fraunces variable families.
+- Reduced the initial CSS build payload from 163.14 KB raw / 33.81 KB gzip to 139.10 KB raw / 29.43 KB gzip after Profile and Insights CSS splitting, before the additional Chat CSS split.
+- Updated the conversation-mode regression test to validate the component-owned stylesheet.
+
 ## Unreleased — Frontend typography and loading foundation
 
 - Consolidated typography to DM Sans for interface text and Fraunces for editorial headings, including inline expression-page headings.
