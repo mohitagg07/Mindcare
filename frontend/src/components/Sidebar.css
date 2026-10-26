@@ -3,7 +3,7 @@
 .mc-side-brand { display:flex; align-items:center; gap:10px; min-height:48px; flex:0 0 auto; margin:0 3px 20px; padding:0 5px 16px; border-bottom:1px solid rgba(231,242,233,.13); }
 .mc-side-mark { width:34px; height:34px; flex:0 0 34px; overflow:hidden; border-radius:10px; background:#f4f1e8; }
 .mc-side-mark img { display:block; width:100%; height:100%; object-fit:cover; }
-.mc-side-wordmark { color:#f9fcf8; font:600 23px/1 'Fraunces','Lora',Georgia,serif; letter-spacing:-.7px; }
+.mc-side-wordmark { color:#f9fcf8; font:600 23px/1 'Fraunces','Fraunces',Georgia,serif; letter-spacing:-.7px; }
 .mc-side-wordmark span { color:#d6b184; }
 .mc-side-close { display:none; width:34px; height:34px; flex:0 0 34px; place-items:center; margin-left:auto; border:0; border-radius:9px; color:#eaf0eb; background:rgba(255,255,255,.08); cursor:pointer; }
 .mc-side-nav { display:flex; min-height:0; flex:1 1 auto; flex-direction:column; gap:4px; overflow-y:auto; overscroll-behavior:contain; padding:0 0 10px; }

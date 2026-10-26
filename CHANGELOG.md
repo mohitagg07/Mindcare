@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Frontend typography and loading foundation
+
+- Consolidated typography to DM Sans for interface text and Fraunces for editorial headings, including inline expression-page headings.
+- Reduced Google Fonts from four families to two variable font families, retaining `display=swap` and existing preconnect hints.
+- Preserved existing route-level lazy loading and application behavior.
+- Added a regression contract for the two-family type system and route-loading boundary.
+
 ## Unreleased — Home interaction and layout polish
 
 - Kept the existing guided-start Home structure and copy; did not add a new hero, floating labels, decorative artwork or global blur effects.

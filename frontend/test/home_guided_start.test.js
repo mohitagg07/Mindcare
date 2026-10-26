@@ -45,3 +45,17 @@ test('Home keeps a restrained surface system rather than adding a decorative her
   assert.match(styles, /\.mcd-intent-option:hover/)
   assert.match(styles, /\.mcd-activity-row:hover/)
 })
+
+
+test('the frontend loads two type families and keeps page routes lazy-loaded', () => {
+  const html = readFileSync(resolve(here, '../index.html'), 'utf8')
+  const app = readFileSync(resolve(here, '../src/App.jsx'), 'utf8')
+  const globalCss = readFileSync(resolve(here, '../src/index.css'), 'utf8')
+  assert.match(html, /family=DM\+Sans/)
+  assert.match(html, /family=Fraunces/)
+  assert.doesNotMatch(html, /family=(?:Lora|Manrope)/)
+  assert.doesNotMatch(globalCss, /Lora|Manrope/)
+  for (const route of ['Chat', 'Assessment', 'EmotionDetector', 'Dashboard', 'Metrics', 'Profile']) {
+    assert.match(app, new RegExp('const ' + route + ' = lazy'))
+  }
+})

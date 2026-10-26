@@ -34,7 +34,7 @@
 .chat-loading-caption { display: flex; align-items: center; gap: 7px; margin-top: 21px; color: #758b79; font-size: 11px; }
 .chat-history-error { width: min(560px,100%); margin: clamp(30px,8vh,90px) auto; padding: 28px; border: 1px solid #eadfd3; border-radius: 20px; background: #fffdf9; text-align: center; }
 .chat-state-icon { display: grid; width: 43px; height: 43px; place-items: center; margin: 0 auto 13px; border: 1px solid #efdfd0; border-radius: 14px; color: #a56e52; background: #fff4e9; }
-.chat-history-error h2 { margin: 0; color: #314d3b; font: 500 23px/1.25 'Fraunces','Lora',Georgia,serif; }
+.chat-history-error h2 { margin: 0; color: #314d3b; font: 500 23px/1.25 'Fraunces','Fraunces',Georgia,serif; }
 .chat-history-error p { margin: 9px 0 18px; color: #79877b; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .chat-history-error > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .chat-memory-backdrop { position: fixed; z-index: 130; inset: 0; display: grid; align-items: center; justify-items: center; overflow-y: auto; padding: 22px; background: rgba(15,38,28,.46); backdrop-filter: blur(9px); animation: chatMemoryFade .18s ease-out; }
@@ -43,7 +43,7 @@
 .chat-memory-heading-icon { display: grid; width: 41px; height: 41px; flex: 0 0 41px; place-items: center; border: 1px solid #d9e9d8; border-radius: 14px; color: #43815c; background: #edf6e9; }
 .chat-memory-heading > div:nth-child(2) { min-width: 0; flex: 1; }
 .chat-memory-heading > div:nth-child(2) > span { color: #86a088; font-size: 8px; font-weight: 850; letter-spacing: 1.6px; }
-.chat-memory-heading h2 { margin: 4px 0 4px; color: #294736; font: 500 25px/1.2 'Fraunces','Lora',Georgia,serif; letter-spacing: -.4px; }
+.chat-memory-heading h2 { margin: 4px 0 4px; color: #294736; font: 500 25px/1.2 'Fraunces','Fraunces',Georgia,serif; letter-spacing: -.4px; }
 .chat-memory-heading p { margin: 0; color: #7e8e80; font-size: 11px; line-height: 1.6; }
 .chat-memory-close { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid #e4eae1; border-radius: 11px; color: #829082; background: white; cursor: pointer; }
 .chat-memory-privacy { display: flex; flex: 0 0 auto; gap: 9px; margin: 16px 20px 0; padding: 11px 12px; border: 1px solid #e2eadc; border-radius: 13px; color: #76927a; background: #f7faf3; }
