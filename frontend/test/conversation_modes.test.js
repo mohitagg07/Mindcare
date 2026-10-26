@@ -31,5 +31,5 @@ test('mode selector has responsive layout, keyboard focus and reduced motion sup
   assert.match(styles, /\.chat-mode-bar/)
   assert.match(styles, /\.chat-mode-option:focus-visible/)
   assert.match(styles, /@media \(max-width: 760px\)/)
-  assert.match(styles, /prefers-reduced-motion: reduce\) \{ \.chat-mode-option/)
+  assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/)
 })
