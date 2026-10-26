@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Remove retired global UI styles
+
+- Removed old Home/Overview visual rules no longer referenced by active page components.
+- Kept the current guided Home implementation and workspace shell intact.
+- Added a regression test against reintroducing retired global Home/Overview styles.
+
 ## Unreleased — Route-specific CSS and first-load efficiency
 
 - Kept Profile, Insights, and Chat page styles in their lazy route chunks rather than the global entry stylesheet.

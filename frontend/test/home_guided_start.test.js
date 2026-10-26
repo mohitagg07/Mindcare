@@ -86,3 +86,11 @@ test('Chat page styles load with the lazy Chat component rather than the global 
   assert.match(chatCss, /\.chat-welcome/)
   assert.match(chatSource, /ChatPhase3\.css/)
 })
+
+
+test('the global stylesheet excludes retired Home/Overview visual systems', () => {
+  const globalCss = readFileSync(resolve(here, '../src/index.css'), 'utf8')
+  const dashboard = readFileSync(resolve(here, '../src/components/Dashboard.jsx'), 'utf8')
+  assert.doesNotMatch(globalCss, /\.overview-hero|\.overview-action-card|\.home-hero|\.home-tool-card|@keyframes homeOrbit/)
+  assert.match(dashboard, /mcd-home-grid/)
+})
