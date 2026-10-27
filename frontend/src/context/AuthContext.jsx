@@ -11,17 +11,17 @@ async function readResponse(response) {
 }
 
 async function enrichWithProfile(accessToken, baseUser) {
-  if (!accessToken || !baseUser) return baseUser
+  if (!accessToken || !baseUser) return { user: baseUser, status: 'idle' }
   try {
     const response = await fetch(`${API}/api/auth/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
-    if (!response.ok) return baseUser
+    if (!response.ok) return { user: baseUser, status: 'error' }
     const profile = await response.json()
-    return { ...baseUser, ...profile }
+    return { user: { ...baseUser, ...profile }, status: 'ready' }
   } catch {
-    // An unavailable profile must never prevent a valid sign-in.
-    return baseUser
+    // Authentication remains valid; profile loading can be retried explicitly.
+    return { user: baseUser, status: 'error' }
   }
 }
 
@@ -44,6 +44,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(() => localStorage.getItem('mc_token') || null)
   const [loading, setLoading] = useState(true)
+  const [profileStatus, setProfileStatus] = useState('idle')
   const [authFlow, setAuthFlow] = useState('normal')
   const [authNotice, setAuthNotice] = useState(null)
   const [authEmail, setAuthEmail] = useState(() => localStorage.getItem('mc_pending_email') || '')
@@ -88,9 +89,11 @@ export function AuthProvider({ children }) {
           })
           if (!response.ok) throw new Error('The authentication callback did not create a valid session.')
           const currentUser = await response.json()
-          const enrichedUser = await enrichWithProfile(incomingAccessToken, currentUser)
+          setProfileStatus('loading')
+          const profileResult = await enrichWithProfile(incomingAccessToken, currentUser)
           if (!cancelled) {
-            setUser(enrichedUser)
+            setUser(profileResult.user)
+            setProfileStatus(profileResult.status)
             setToken(incomingAccessToken)
             if (flowType === 'signup') {
               localStorage.removeItem('mc_pending_email')
@@ -104,6 +107,7 @@ export function AuthProvider({ children }) {
           if (!cancelled) {
             setUser(null)
             setToken(null)
+            setProfileStatus('idle')
             setAuthFlow('normal')
             setAuthNotice({ type: 'error', message: error.message || 'The link could not be verified. Please request a new one.' })
           }
@@ -137,16 +141,22 @@ export function AuthProvider({ children }) {
         }
         if (!response.ok) throw new Error('Session could not be restored')
         const currentUser = await response.json()
-        const enrichedUser = await enrichWithProfile(activeToken, currentUser)
-        if (!cancelled) { setUser(enrichedUser); setToken(activeToken) }
+        setProfileStatus('loading')
+        const profileResult = await enrichWithProfile(activeToken, currentUser)
+        if (!cancelled) {
+          setUser(profileResult.user)
+          setProfileStatus(profileResult.status)
+          setToken(activeToken)
+        }
       } catch {
         if (invalidSession) {
           clearTokens()
-          if (!cancelled) { setToken(null); setUser(null) }
+          if (!cancelled) { setToken(null); setUser(null); setProfileStatus('idle') }
         } else if (!cancelled) {
           // Keep a stored session through temporary network/server failures.
           setUser(null)
           setToken(localStorage.getItem('mc_token'))
+          setProfileStatus('idle')
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -155,7 +165,7 @@ export function AuthProvider({ children }) {
 
     restoreSession()
     const onExpired = () => {
-      setUser(null); setToken(null); setAuthFlow('normal')
+      setUser(null); setToken(null); setProfileStatus('idle'); setAuthFlow('normal')
       setAuthNotice({ type: 'error', message: 'Your session expired. Please sign in again.' })
       localStorage.removeItem('mc_active_session')
       setLoading(false)
@@ -175,9 +185,11 @@ export function AuthProvider({ children }) {
       saveTokens(data)
       setToken(data.access_token)
       const baseUser = { id: data.user_id, username: data.username, email: data.email }
+      setProfileStatus('loading')
       setUser(baseUser)
-      enrichWithProfile(data.access_token, baseUser).then(enriched => {
-        if (enriched) setUser(enriched)
+      enrichWithProfile(data.access_token, baseUser).then(profileResult => {
+        setUser(profileResult.user)
+        setProfileStatus(profileResult.status)
       })
       localStorage.removeItem('mc_pending_email')
       setAuthEmail('')
@@ -200,9 +212,11 @@ export function AuthProvider({ children }) {
     saveTokens(data)
     setToken(data.access_token)
     const baseUser = { id: data.user_id, username: data.username, email: data.email }
+    setProfileStatus('loading')
     setUser(baseUser)
-    enrichWithProfile(data.access_token, baseUser).then(enriched => {
-      if (enriched) setUser(enriched)
+    enrichWithProfile(data.access_token, baseUser).then(profileResult => {
+      setUser(profileResult.user)
+      setProfileStatus(profileResult.status)
     })
     localStorage.removeItem('mc_pending_email')
     setAuthEmail('')
@@ -258,7 +272,7 @@ export function AuthProvider({ children }) {
     try {
       if (stored) await fetch(`${API}/api/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${stored}` } })
     } catch { /* Clear the local session even when the network is unavailable. */ }
-    setUser(null); setToken(null); setAuthFlow('normal')
+    setUser(null); setToken(null); setProfileStatus('idle'); setAuthFlow('normal')
     clearTokens()
   }
 
@@ -267,7 +281,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, loading, authFlow, authNotice, authEmail,
+      user, token, loading, profileStatus, setProfileStatus, authFlow, authNotice, authEmail,
       login, register, logout, forgotPassword, resendConfirmation, updatePassword, signInWithGoogle,
       clearAuthNotice, setAuthFlow, syncProfile, isAuthed: !!user,
     }}>

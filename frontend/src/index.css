@@ -4,6 +4,9 @@
 @tailwind utilities;
 
 :root {
+  --mc-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mc-font-display: Georgia, "Times New Roman", serif;
+
   --bg-base:     #F8F6F2;
   --bg-page:     #F3F1ED;
   --bg-card:     #FFFFFF;
@@ -37,7 +40,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: var(--mc-font-ui);
     background: var(--bg-page);
     color: var(--text-1);
     -webkit-font-smoothing: antialiased;
@@ -90,7 +93,7 @@
     width: 100%; padding: 11px 15px;
     background: var(--bg-elevated); border: 1.5px solid var(--border-md);
     border-radius: 10px; color: var(--text-1);
-    font-size: 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-family: var(--mc-font-ui);
     outline: none; transition: all 0.2s;
   }
   .input-field::placeholder { color: var(--text-4); }
@@ -147,7 +150,7 @@
 }
 
 @layer utilities {
-  .font-display { font-family: 'Fraunces', serif; }
+  .font-display { font-family: var(--mc-font-display); }
 }
 
 @keyframes typingBounce { 0%,80%,100%{transform:translateY(0);opacity:0.4;} 40%{transform:translateY(-5px);opacity:1;} }
@@ -206,7 +209,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 
 .mc-loading-screen { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: radial-gradient(circle at 50% 35%, #e8f1e9 0, #f8f9f5 48%, #f3f4ee 100%); }
 .mc-loading-mark { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 20px; color: white; background: linear-gradient(145deg, #387e69, #173e35); box-shadow: 0 12px 26px rgba(31, 87, 70, .18); }
-.mc-loading-title { font: 700 25px/1 'Fraunces', Georgia, serif; color: var(--mc-ink); letter-spacing: -.8px; }
+.mc-loading-title { font: 700 25px/1 var(--mc-font-display); color: var(--mc-ink); letter-spacing: -.8px; }
 .mc-loading-title span, .mc-brand-name span { color: #d4a26b; }
 .mc-loading-screen p { font-size: 13px; color: var(--mc-muted); }
 .mc-loader { display: block; width: 23px; height: 23px; margin-top: 8px; border: 2px solid #d6e3da; border-top-color: var(--mc-green); border-radius: 50%; animation: spin .8s linear infinite; }
@@ -217,7 +220,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 .mc-brand { display: flex; align-items: center; gap: 11px; min-height: 51px; padding: 0 8px 22px; border-bottom: 1px solid rgba(255,255,255,.1); }
 .mc-brand-mark { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 42px; border-radius: 15px; color: white; background: linear-gradient(145deg, #5ca889, #33705d); box-shadow: 0 8px 18px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.23); }
 .mc-brand-copy { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
-.mc-brand-name { color: #fff; font: 700 22px/.95 'Fraunces', Georgia, serif; letter-spacing: -.6px; }
+.mc-brand-name { color: #fff; font: 700 22px/.95 var(--mc-font-display); letter-spacing: -.6px; }
 .mc-brand-caption { color: rgba(224,240,228,.48); font-size: 8px; letter-spacing: 1.3px; font-weight: 700; white-space: nowrap; }
 .mc-sidebar-close { display: none; margin-left: auto; border: 0; background: rgba(255,255,255,.08); color: rgba(255,255,255,.8); width: 36px; height: 36px; border-radius: 11px; place-items: center; cursor: pointer; }
 .mc-sidebar-intro { display: flex; align-items: center; gap: 8px; margin: 22px 9px 21px; padding: 10px 12px; border-radius: 11px; background: rgba(255,255,255,.055); color: rgba(239,248,240,.7); font-size: 11px; letter-spacing: .1px; }
@@ -255,7 +258,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 .mc-topbar-left, .mc-topbar-actions { display: flex; min-width: 0; align-items: center; gap: 13px; }
 .mc-topbar-heading { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
 .mc-topbar-heading span { color: #7b9084; font-size: 9px; font-weight: 800; letter-spacing: 1.6px; }
-.mc-topbar-heading strong { overflow: hidden; color: #223a33; text-overflow: ellipsis; white-space: nowrap; font: 600 16px/1.25 'Fraunces', Georgia, serif; }
+.mc-topbar-heading strong { overflow: hidden; color: #223a33; text-overflow: ellipsis; white-space: nowrap; font: 600 16px/1.25 var(--mc-font-display); }
 .mc-menu-button { display: none; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border: 1px solid var(--mc-line); border-radius: 12px; color: var(--mc-ink-soft); background: white; cursor: pointer; }
 .mc-private-pill { display: flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #dce9df; border-radius: 999px; color: #497760; background: #f0f7f0; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
 .mc-topbar-avatar { width: 37px; height: 37px; flex-basis: 37px; border: 1px solid #c9dfcd; background: linear-gradient(145deg, #e3eee3, #bfdcc5); }
@@ -318,7 +321,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 .legal-dialog-icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid #dce9dc; border-radius: 14px; background: #eff6ed; color: #438663; }
 .legal-dialog-title-wrap { flex: 1; min-width: 0; }
 .legal-dialog-eyebrow { color: #53856b; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
-.legal-dialog-header h2 { margin: 6px 0 0; color: #183d35; font: 700 clamp(22px,4vw,27px)/1.2 'Fraunces',Georgia,serif; }
+.legal-dialog-header h2 { margin: 6px 0 0; color: #183d35; font: 700 clamp(22px,4vw,27px)/1.2 var(--mc-font-display); }
 .legal-close { display: grid; flex: 0 0 36px; width: 36px; height: 36px; place-items: center; border: 1px solid #e1e8df; border-radius: 11px; background: #fff; color: #607268; cursor: pointer; }
 .legal-dialog-copy { display: grid; gap: 14px; margin-top: 22px; font-size: 13px; line-height: 1.75; }
 .legal-dialog-copy p { margin: 0; }
@@ -442,7 +445,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 }
 
 html, body, #root { min-height: 100%; }
-body { font-family: 'DM Sans', system-ui, sans-serif; letter-spacing: -.01em; }
+body { font-family: var(--mc-font-ui); letter-spacing: -.01em; }
 button, input, textarea { font-family: inherit; }
 ::selection { color: #163e30; background: #d3ebd6; }
 
@@ -484,7 +487,7 @@ button, input, textarea { font-family: inherit; }
 .mc-topbar { min-height: 78px; padding: 14px clamp(20px,2.4vw,36px); border-color: rgba(220,228,217,.88); background: rgba(255,255,251,.91); box-shadow: 0 4px 20px rgba(37,67,48,.018); }
 .mc-topbar-heading { gap: 4px; }
 .mc-topbar-heading span { color: #7b9b86; font-size: 9px; letter-spacing: 1.8px; }
-.mc-topbar-heading strong { font-family: 'Fraunces','Fraunces',Georgia,serif; font-size: 19px; font-weight: 500; letter-spacing: -.3px; }
+.mc-topbar-heading strong { font-family: var(--mc-font-display); font-size: 19px; font-weight: 500; letter-spacing: -.3px; }
 .mc-private-pill { padding: 9px 13px; color: #4f8867; background: #f0f7ed; border-color: #dbeadd; font-size: 10px; }
 .mc-topbar-avatar { width: 40px; height: 40px; flex-basis: 40px; }
 .mc-page-frame { isolation: isolate; }

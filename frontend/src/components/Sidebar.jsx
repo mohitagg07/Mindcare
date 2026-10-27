@@ -14,7 +14,7 @@ const NAV = [
   { id: 'profile', icon: UserRound, label: 'Profile' },
 ]
 
-export default function Sidebar({ currentPage, onNavigate, onClose }) {
+export default function Sidebar({ currentPage, onNavigate, onClose, onPrefetch }) {
   const { user, logout } = useAuth()
   const initial = (user?.display_name || user?.username || user?.email || 'U')
     .trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
@@ -30,7 +30,15 @@ export default function Sidebar({ currentPage, onNavigate, onClose }) {
         {NAV.map(({ id, icon: Icon, label }) => {
           const active = currentPage === id
           return (
-            <button key={id} type="button" onClick={() => onNavigate(id)} className={`mc-side-item${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}>
+            <button
+              key={id}
+              type="button"
+              onClick={() => onNavigate(id)}
+              onMouseEnter={() => onPrefetch?.(id)}
+              onFocus={() => onPrefetch?.(id)}
+              className={`mc-side-item${active ? ' is-active' : ''}`}
+              aria-current={active ? 'page' : undefined}
+            >
               <Icon className="mc-side-item-icon" size={19} strokeWidth={1.8} aria-hidden="true" />
               <span>{label}</span>
             </button>

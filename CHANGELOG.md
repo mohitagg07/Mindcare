@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Natural typography and fewer blocking waits
+
+- Removed Google Fonts stylesheet and preconnect requests; the UI now uses the native system sans-serif and Georgia display stack.
+- Standardized local font tokens across Home, Talk, Check-in, Insights, Profile, onboarding and Reflect.
+- Prefetches lazy page bundles when navigation is hovered or keyboard-focused, so intended transitions can start before selection.
+- Reuses the authenticated profile response instead of immediately requesting the same profile again after startup; failed loads remain retryable.
+- Added regression coverage for local font loading, route prefetch and the profile loading boundary.
+
 ## Unreleased — Remove retired global UI styles
 
 - Removed old Home/Overview visual rules no longer referenced by active page components.
@@ -9,13 +17,13 @@
 ## Unreleased — Route-specific CSS and first-load efficiency
 
 - Kept Profile, Insights, and Chat page styles in their lazy route chunks rather than the global entry stylesheet.
-- Consolidated web typography to DM Sans and Fraunces variable families.
+- Replaced hosted fonts with local system typography to avoid external font-network waits.
 - Reduced the initial CSS build payload from 163.14 KB raw / 33.81 KB gzip to 139.10 KB raw / 29.43 KB gzip after Profile and Insights CSS splitting, before the additional Chat CSS split.
 - Updated the conversation-mode regression test to validate the component-owned stylesheet.
 
 ## Unreleased — Frontend typography and loading foundation
 
-- Consolidated typography to DM Sans for interface text and Fraunces for editorial headings, including inline expression-page headings.
+- Standardized local system typography across pages; no font downloads are required.
 - Reduced Google Fonts from four families to two variable font families, retaining `display=swap` and existing preconnect hints.
 - Preserved existing route-level lazy loading and application behavior.
 - Added a regression contract for the two-family type system and route-loading boundary.

@@ -17,7 +17,7 @@
 .assessment-flow-heading h1 {
   margin: 0;
   color: #294536;
-  font: 500 clamp(23px, 2.6vw, 29px)/1.25 'Fraunces', 'Fraunces', Georgia, serif;
+  font: 500 clamp(23px, 2.6vw, 29px)/1.25 var(--mc-font-display);
   letter-spacing: -.45px;
 }
 .assessment-page-heading p { margin: 8px 0 0; color: #718176; font-size: 13px; line-height: 1.65; }
@@ -58,7 +58,7 @@
 }
 .assessment-choice-icon.tone-lilac { color: #796a93; background: #f1eef5; }
 .assessment-choice-copy { display: grid; min-width: 0; gap: 4px; }
-.assessment-choice-title { color: #2b4636; font: 500 17px/1.3 'Fraunces', 'Fraunces', Georgia, serif; }
+.assessment-choice-title { color: #2b4636; font: 500 17px/1.3 var(--mc-font-display); }
 .assessment-choice-description { color: #6f7f73; font-size: 12px; line-height: 1.55; }
 .assessment-choice-meta { color: #899589; font-size: 10.5px; line-height: 1.45; }
 .assessment-choice-cta {
@@ -83,7 +83,7 @@
   border: 0;
   color: #52735c;
   background: transparent;
-  font: 600 12px/1.3 'DM Sans', system-ui, sans-serif;
+  font: 600 12px/1.3 var(--mc-font-ui);
   cursor: pointer;
 }
 .assessment-back-button:hover { color: #284d36; }
@@ -100,7 +100,7 @@
 .assessment-question-text {
   margin: 0;
   color: #263f31;
-  font: 500 clamp(20px, 2.8vw, 24px)/1.45 'Fraunces', 'Fraunces', Georgia, serif;
+  font: 500 clamp(20px, 2.8vw, 24px)/1.45 var(--mc-font-display);
   letter-spacing: -.2px;
   overflow-wrap: anywhere;
 }
@@ -151,7 +151,7 @@
   padding: 10px 16px;
   border: 1px solid transparent;
   border-radius: 10px;
-  font: 650 12px/1.2 'DM Sans', system-ui, sans-serif;
+  font: 650 12px/1.2 var(--mc-font-ui);
   cursor: pointer;
   transition: background .14s ease, border-color .14s ease;
 }
@@ -168,7 +168,7 @@
 .assessment-result-summary.is-safety-follow-up { border-left-color: #bd6b60; background: #fbefeb; }
 .assessment-result-copy { min-width: 0; }
 .assessment-result-overline { margin: 0 0 6px; color: #617a65; font-size: 11px; font-weight: 650; }
-.assessment-result-copy h2 { margin: 0; color: #294536; font: 500 22px/1.3 'Fraunces', 'Fraunces', Georgia, serif; overflow-wrap: anywhere; }
+.assessment-result-copy h2 { margin: 0; color: #294536; font: 500 22px/1.3 var(--mc-font-display); overflow-wrap: anywhere; }
 .assessment-result-summary.is-safety-follow-up .assessment-result-copy h2 { color: #8e3e3e; }
 .assessment-result-copy > p:last-child { margin: 7px 0 0; color: #5f7163; font-size: 12.5px; line-height: 1.65; }
 .assessment-result-disclaimer { margin: 0; color: #788579; font-size: 12px; line-height: 1.55; }

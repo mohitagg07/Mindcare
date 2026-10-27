@@ -16,8 +16,8 @@
   --clay-pale: #f2e3d8;
   --blue: #628390;
   --blue-pale: #e3ebec;
-  --serif: 'Fraunces', Georgia, serif;
-  --sans: 'DM Sans', system-ui, sans-serif;
+  --serif: var(--mc-font-display);
+  --sans: var(--mc-font-ui);
   isolation: isolate;
   position: relative;
   overflow: clip;

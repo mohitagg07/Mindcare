@@ -118,7 +118,7 @@ export default function EmotionDetector() {
             <Scan size={20} color="var(--teal)"/>
           </div>
           <div style={{ flex:1 }}>
-            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Fraunces,serif' }}>Expression Estimate</h2>
+            <h2 style={{ fontSize:19, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'var(--mc-font-display)' }}>Expression Estimate</h2>
             <p style={{ fontSize:12, color:'var(--text-4)', marginTop:3 }}>Optional visual estimate · not a measure of mental health</p>
             <p style={{ fontSize:11, color:'var(--text-3)', marginTop:5, lineHeight:1.6 }}>The camera stays off until you enable it. Images are submitted for analysis only when you choose to capture or upload one.</p>
           </div>
@@ -234,7 +234,7 @@ export default function EmotionDetector() {
                     <div style={{ flex:1, minWidth:110 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
                         <span style={{ fontSize:24 }}>{dominant.emoji}</span>
-                        <h3 style={{ fontSize:22, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Fraunces,serif', letterSpacing:'-0.3px' }}>{dominant.label}</h3>
+                        <h3 style={{ fontSize:22, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'var(--mc-font-display)', letterSpacing:'-0.3px' }}>{dominant.label}</h3>
                       </div>
                       <p style={{ fontSize:12, color:'var(--text-3)', margin:0, lineHeight:1.5 }}>{dominant.desc}</p>
                       <div style={{ marginTop:9, display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:99, background:dominant.color+'12', border:`1px solid ${dominant.color}28` }}>
@@ -279,7 +279,7 @@ export default function EmotionDetector() {
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, gap:14, textAlign:'center', background:'#fff', border:'1px solid var(--border)', borderRadius:18, padding:24, boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
                 <div style={{ width:58, height:58, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', background:'var(--amber-dim)', border:'1px solid rgba(192,116,54,0.20)' }}><Info size={24} color="var(--amber)"/></div>
                 <div>
-                  <p style={{ fontSize:16, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'Fraunces,serif' }}>No expression estimate</p>
+                  <p style={{ fontSize:16, fontWeight:700, color:'var(--text-1)', margin:0, fontFamily:'var(--mc-font-display)' }}>No expression estimate</p>
                   <p style={{ fontSize:13, color:'var(--text-4)', marginTop:7, lineHeight:1.65, maxWidth:280 }}>{result.note || 'Vision analysis is currently unavailable. No estimate was made.'}</p>
                   <p style={{ fontSize:12, color:'var(--text-3)', marginTop:8 }}>Check the Groq API configuration and try again later.</p>
                 </div>
@@ -294,7 +294,7 @@ export default function EmotionDetector() {
                   </div>
                 </div>
                 <div>
-                  <p style={{ fontSize:15, fontWeight:600, color:'var(--text-1)', margin:0, fontFamily:'Fraunces,serif' }}>No capture yet</p>
+                  <p style={{ fontSize:15, fontWeight:600, color:'var(--text-1)', margin:0, fontFamily:'var(--mc-font-display)' }}>No capture yet</p>
                   <p style={{ fontSize:13, color:'var(--text-4)', marginTop:6, maxWidth:200, lineHeight:1.6 }}>With your consent, submit a photo for an uncertain expression estimate</p>
                 </div>
                 <div style={{ display:'flex', gap:7, flexWrap:'wrap', justifyContent:'center', opacity:0.5 }}>

@@ -16,7 +16,7 @@
 }
 .mcd-heading { margin-bottom: 23px; }
 .mcd-date { margin: 0 0 8px; color: #78877c; font-size: 12px; font-weight: 550; }
-.mcd-heading h1 { margin: 0; color: #244337; font: 500 clamp(29px, 2.6vw, 38px)/1.12 'Fraunces','Fraunces',Georgia,serif; letter-spacing: -.9px; }
+.mcd-heading h1 { margin: 0; color: #244337; font: 500 clamp(29px, 2.6vw, 38px)/1.12 var(--mc-font-display); letter-spacing: -.9px; }
 .mcd-heading h1 span { color: #c58f60; }
 .mcd-subtitle { margin: 8px 0 0; color: #748278; font-size: 13px; line-height: 1.6; }
 .mcd-setup-nudge { display:flex; min-width:0; align-items:center; gap:11px; margin:0 0 16px; padding:12px 14px; border:1px solid #e1e8dc; border-radius:12px; background:#fffefa; }
@@ -24,7 +24,7 @@
 .mcd-setup-nudge > div { display:flex; min-width:0; flex:1; flex-direction:column; gap:3px; }
 .mcd-setup-nudge strong { color:#3c5b46; font-size:12px; font-weight:700; }
 .mcd-setup-nudge p { margin:0; color:#748278; font-size:11.5px; line-height:1.55; }
-.mcd-setup-nudge > button { display:inline-flex; flex:0 0 auto; align-items:center; gap:6px; padding:8px 10px; border:1px solid #dce6d9; border-radius:9px; color:#447454; background:#fff; font:650 11px 'DM Sans',sans-serif; cursor:pointer; }
+.mcd-setup-nudge > button { display:inline-flex; flex:0 0 auto; align-items:center; gap:6px; padding:8px 10px; border:1px solid #dce6d9; border-radius:9px; color:#447454; background:#fff; font:650 11px var(--mc-font-ui); cursor:pointer; }
 .mcd-setup-nudge > button:hover { border-color:#b6cfb5; background:#f5f9f1; }
 
 .mcd-home-grid { display:grid; grid-template-columns:minmax(0,1.06fr) minmax(300px,.94fr); align-items:stretch; gap:17px; }
@@ -45,7 +45,7 @@
   box-shadow: 0 3px 12px rgba(42, 72, 47, .045), inset 0 1px 0 rgba(255, 255, 255, .88);
 }
 .mcd-eyebrow { margin:0; color:#748c78; font-size:10px; font-weight:750; line-height:1.4; letter-spacing:.65px; }
-.mcd-start-card h2 { margin:10px 0 0; color:#294638; font:500 clamp(25px,2.2vw,31px)/1.15 'Fraunces','Fraunces',Georgia,serif; letter-spacing:-.55px; }
+.mcd-start-card h2 { margin:10px 0 0; color:#294638; font:500 clamp(25px,2.2vw,31px)/1.15 var(--mc-font-display); letter-spacing:-.55px; }
 .mcd-start-copy { max-width:390px; margin:9px 0 0; color:#718075; font-size:13px; line-height:1.65; }
 .mcd-intent-list { display: grid; gap: 9px; margin: 20px 0 16px; }
 .mcd-intent-option {
@@ -99,7 +99,7 @@
   color: #fffefa;
   background: #397653;
   box-shadow: 0 2px 5px rgba(39, 87, 53, .10);
-  font: 650 12px/1.3 'DM Sans', sans-serif;
+  font: 650 12px/1.3 var(--mc-font-ui);
   cursor: pointer;
   transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
@@ -111,12 +111,12 @@
 }
 .mcd-button-primary:active { transform: translateY(0); }
 .mcd-button-primary:focus-visible, .mcd-checkin-link:focus-visible, .mcd-intent-option:focus-visible, .mcd-activity-row:focus-visible, .mcd-icon-link:focus-visible { outline:3px solid rgba(71,128,87,.32); outline-offset:3px; }
-.mcd-checkin-link { display:inline-flex; align-self:flex-start; align-items:center; gap:5px; margin-top:13px; padding:11px 0 0; border:0; border-top:1px solid #dce5d8; color:#477257; background:transparent; font:600 11.5px 'DM Sans',sans-serif; text-align:left; cursor:pointer; }
+.mcd-checkin-link { display:inline-flex; align-self:flex-start; align-items:center; gap:5px; margin-top:13px; padding:11px 0 0; border:0; border-top:1px solid #dce5d8; color:#477257; background:transparent; font:600 11.5px var(--mc-font-ui); text-align:left; cursor:pointer; }
 .mcd-checkin-link:hover { color:#234e36; }
 .mcd-checkin-link svg { flex:0 0 auto; }
 .mcd-activity-card { padding: 22px 21px 16px; }
 .mcd-card-heading { display:flex; min-width:0; align-items:center; justify-content:space-between; gap:12px; }
-.mcd-card-heading h2 { margin: 7px 0 0; color: #294538; font: 500 23px/1.22 'Fraunces', 'Fraunces', Georgia, serif; letter-spacing: -.35px; }
+.mcd-card-heading h2 { margin: 7px 0 0; color: #294538; font: 500 23px/1.22 var(--mc-font-display); letter-spacing: -.35px; }
 .mcd-icon-link {
   display: grid;
   width: 34px;
@@ -160,9 +160,9 @@
 .mcd-activity-row time { flex:0 0 auto; color:#748278; font-size:10.5px; white-space:nowrap; }
 .mcd-activity-chevron { flex:0 0 auto; color:#a2afa3; }
 .mcd-activity-empty { padding:19px 1px 13px; border-top:1px solid #edf0e9; }
-.mcd-empty-title { margin:0; color:#435d4b; font:500 16px/1.25 'Fraunces','Fraunces',Georgia,serif; }
+.mcd-empty-title { margin:0; color:#435d4b; font:500 16px/1.25 var(--mc-font-display); }
 .mcd-activity-empty > p:nth-child(2) { max-width:275px; margin:7px 0 12px; color:#748278; font-size:12px; line-height:1.65; }
-.mcd-activity-empty > button, .mcd-activity-message > button { display:inline-flex; align-items:center; gap:6px; padding:5px 0; border:0; color:#427456; background:transparent; font:650 12px 'DM Sans',sans-serif; cursor:pointer; }
+.mcd-activity-empty > button, .mcd-activity-message > button { display:inline-flex; align-items:center; gap:6px; padding:5px 0; border:0; color:#427456; background:transparent; font:650 12px var(--mc-font-ui); cursor:pointer; }
 .mcd-activity-empty > button:hover, .mcd-activity-message > button:hover { color:#234d35; }
 .mcd-activity-message { padding:20px 0 13px; border-top:1px solid #edf0e9; }
 .mcd-activity-message p { margin:0 0 8px; color:#68796c; font-size:12px; line-height:1.6; }

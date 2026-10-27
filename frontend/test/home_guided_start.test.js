@@ -47,18 +47,43 @@ test('Home keeps a restrained surface system rather than adding a decorative her
 })
 
 
-test('the frontend loads two type families and keeps page routes lazy-loaded', () => {
+test('the frontend uses local system typography and keeps page routes lazy-loaded', () => {
   const html = readFileSync(resolve(here, '../index.html'), 'utf8')
   const app = readFileSync(resolve(here, '../src/App.jsx'), 'utf8')
   const globalCss = readFileSync(resolve(here, '../src/index.css'), 'utf8')
-  assert.match(html, /family=DM\+Sans/)
-  assert.match(html, /family=Fraunces/)
-  assert.doesNotMatch(html, /family=(?:Lora|Manrope)/)
-  assert.doesNotMatch(globalCss, /Lora|Manrope/)
+  const pageStyles = [
+    '../src/components/Dashboard.css',
+    '../src/components/Sidebar.css',
+    '../src/components/Assessment.css',
+    '../src/components/ChatPhase3.css',
+    '../src/components/Profile.css',
+    '../src/pages/Landing.css',
+    '../src/components/IdentityOnboarding.css',
+    '../src/components/Metrics.css',
+  ].map(path => readFileSync(resolve(here, path), 'utf8'))
+  const emotion = readFileSync(resolve(here, '../src/components/EmotionDetector.jsx'), 'utf8')
+  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/)
+  assert.match(globalCss, /--mc-font-ui:\s*-apple-system/)
+  assert.match(globalCss, /--mc-font-display:\s*Georgia/)
+  assert.doesNotMatch(globalCss, /Fraunces|DM Sans|Lora|Manrope/)
+  for (const css of pageStyles) assert.doesNotMatch(css, /Fraunces|DM Sans|Lora|Manrope/)
+  assert.match(emotion, /fontFamily:'var\(--mc-font-display\)'/)
   for (const route of ['Chat', 'Assessment', 'EmotionDetector', 'Dashboard', 'Metrics', 'Profile']) {
     assert.match(app, new RegExp('const ' + route + ' = lazy'))
   }
 })
+
+test('the workspace prefetches lazy routes on navigation intent and avoids a second successful profile read', () => {
+  const app = readFileSync(resolve(here, '../src/App.jsx'), 'utf8')
+  const sidebar = readFileSync(resolve(here, '../src/components/Sidebar.jsx'), 'utf8')
+  const auth = readFileSync(resolve(here, '../src/context/AuthContext.jsx'), 'utf8')
+  assert.match(app, /function prefetchPage\(page\)/)
+  assert.match(sidebar, /onMouseEnter=\{\(\) => onPrefetch\?\.\(id\)\}/)
+  assert.match(sidebar, /onFocus=\{\(\) => onPrefetch\?\.\(id\)\}/)
+  assert.match(auth, /profileStatus, setProfileStatus/)
+  assert.match(app, /if \(profileStatus === 'ready'\)/)
+  assert.match(app, /if \(profileStatus === 'error' && identityRetry === 0\)/)
+}))
 
 
 test('Profile and Insights CSS are route-owned instead of global', () => {

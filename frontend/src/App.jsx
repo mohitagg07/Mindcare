@@ -8,12 +8,26 @@ import IdentityOnboarding from './components/IdentityOnboarding'
 import { getMyProfile } from './api/client'
 import { AlertCircle, Menu, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react'
 
-const Chat = lazy(() => import('./components/Chat'))
-const Assessment = lazy(() => import('./components/Assessment'))
-const EmotionDetector = lazy(() => import('./components/EmotionDetector'))
-const Dashboard = lazy(() => import('./components/Dashboard'))
-const Metrics = lazy(() => import('./components/Metrics'))
-const Profile = lazy(() => import('./components/Profile'))
+const pageLoaders = {
+  chat: () => import('./components/Chat'),
+  assessment: () => import('./components/Assessment'),
+  emotion: () => import('./components/EmotionDetector'),
+  dashboard: () => import('./components/Dashboard'),
+  metrics: () => import('./components/Metrics'),
+  profile: () => import('./components/Profile'),
+}
+
+const Chat = lazy(pageLoaders.chat)
+const Assessment = lazy(pageLoaders.assessment)
+const EmotionDetector = lazy(pageLoaders.emotion)
+const Dashboard = lazy(pageLoaders.dashboard)
+const Metrics = lazy(pageLoaders.metrics)
+const Profile = lazy(pageLoaders.profile)
+
+function prefetchPage(page) {
+  const loadPage = pageLoaders[page]
+  if (loadPage) loadPage().catch(() => {})
+}
 
 const pageMeta = {
   dashboard: { eyebrow: 'HOME', title: 'A little room for you' },
@@ -64,7 +78,7 @@ function Workspace() {
 }
 
 function AuthenticatedApp() {
-  const { user, syncProfile, logout } = useAuth()
+  const { user, syncProfile, logout, profileStatus, setProfileStatus } = useAuth()
   const { activePage, setActivePage } = useApp()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [identityState, setIdentityState] = useState('loading')
@@ -73,6 +87,28 @@ function AuthenticatedApp() {
 
   useEffect(() => {
     let active = true
+
+    // AuthContext already fetched this profile. Reuse the result instead of making
+    // the same request again as soon as the workspace mounts.
+    if (profileStatus === 'ready') {
+      const currentProfile = user || {}
+      setIdentityProfile(currentProfile)
+      const hasPreferredName = Boolean(String(currentProfile.display_name || '').trim())
+      setIdentityState(hasPreferredName ? 'ready' : 'setup')
+      return () => { active = false }
+    }
+
+    if (profileStatus === 'loading') {
+      setIdentityState('loading')
+      return () => { active = false }
+    }
+
+    if (profileStatus === 'error' && identityRetry === 0) {
+      setIdentityState('error')
+      return () => { active = false }
+    }
+
+    // Explicit retry only: do not fire a duplicate request automatically after auth.
     setIdentityState('loading')
     getMyProfile()
       .then(({ data }) => {
@@ -80,18 +116,17 @@ function AuthenticatedApp() {
         const currentProfile = data || {}
         setIdentityProfile(currentProfile)
         syncProfile?.(currentProfile)
+        setProfileStatus('ready')
         const hasPreferredName = Boolean(String(currentProfile.display_name || '').trim())
         setIdentityState(hasPreferredName ? 'ready' : 'setup')
       })
       .catch(() => {
-        // Identity is required before entering the workspace. Never silently bypass onboarding
-        // when the profile API is unavailable; offer retry and sign-out instead.
         if (active) setIdentityState('error')
       })
     return () => { active = false }
-    // syncProfile is a merge helper recreated by AuthContext; retry changes only when requested.
+    // syncProfile is a merge helper recreated by AuthContext; the profile status owns the load boundary.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, identityRetry])
+  }, [user?.id, identityRetry, profileStatus])
 
   const completeIdentitySetup = (savedProfile) => {
     setIdentityProfile(savedProfile || {})
@@ -134,7 +169,7 @@ function AuthenticatedApp() {
     <div className="mc-app-shell">
       {sidebarOpen && <button className="mc-sidebar-scrim" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
       <div className={`mc-sidebar-wrap${sidebarOpen ? ' is-open' : ''}`}>
-        <Sidebar currentPage={activePage} onNavigate={navigate} onClose={() => setSidebarOpen(false)} />
+        <Sidebar currentPage={activePage} onNavigate={navigate} onPrefetch={prefetchPage} onClose={() => setSidebarOpen(false)} />
       </div>
       <main className="mc-main">
         <header className="mc-topbar">

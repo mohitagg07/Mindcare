@@ -3,11 +3,11 @@
 .mc-side-brand { display:flex; align-items:center; gap:10px; min-height:48px; flex:0 0 auto; margin:0 3px 20px; padding:0 5px 16px; border-bottom:1px solid rgba(231,242,233,.13); }
 .mc-side-mark { width:34px; height:34px; flex:0 0 34px; overflow:hidden; border-radius:10px; background:#f4f1e8; }
 .mc-side-mark img { display:block; width:100%; height:100%; object-fit:cover; }
-.mc-side-wordmark { color:#f9fcf8; font:600 23px/1 'Fraunces','Fraunces',Georgia,serif; letter-spacing:-.7px; }
+.mc-side-wordmark { color:#f9fcf8; font:600 23px/1 var(--mc-font-display); letter-spacing:-.7px; }
 .mc-side-wordmark span { color:#d6b184; }
 .mc-side-close { display:none; width:34px; height:34px; flex:0 0 34px; place-items:center; margin-left:auto; border:0; border-radius:9px; color:#eaf0eb; background:rgba(255,255,255,.08); cursor:pointer; }
 .mc-side-nav { display:flex; min-height:0; flex:1 1 auto; flex-direction:column; gap:4px; overflow-y:auto; overscroll-behavior:contain; padding:0 0 10px; }
-.mc-side-item { display:flex; min-width:0; min-height:45px; align-items:center; gap:12px; padding:0 12px; border:0; border-radius:9px; color:rgba(239,246,240,.76); background:transparent; text-align:left; font:500 13px/1.3 'DM Sans',system-ui,sans-serif; cursor:pointer; transition:background .14s ease,color .14s ease; }
+.mc-side-item { display:flex; min-width:0; min-height:45px; align-items:center; gap:12px; padding:0 12px; border:0; border-radius:9px; color:rgba(239,246,240,.76); background:transparent; text-align:left; font:500 13px/1.3 var(--mc-font-ui); cursor:pointer; transition:background .14s ease,color .14s ease; }
 .mc-side-item:hover { color:#fff; background:rgba(255,255,255,.065); }
 .mc-side-item.is-active { padding-left:9px; border-left:3px solid #a8d2ae; color:#fff; background:rgba(255,255,255,.095); font-weight:650; }
 .mc-side-item-icon { flex:0 0 19px; color:rgba(231,242,233,.72); }
