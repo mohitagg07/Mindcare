@@ -83,7 +83,7 @@ test('the workspace prefetches lazy routes on navigation intent and avoids a sec
   assert.match(auth, /profileStatus, setProfileStatus/)
   assert.match(app, /if \(profileStatus === 'ready'\)/)
   assert.match(app, /if \(profileStatus === 'error' && identityRetry === 0\)/)
-}))
+})
 
 
 test('Profile and Insights CSS are route-owned instead of global', () => {
