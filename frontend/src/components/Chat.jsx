@@ -4,12 +4,11 @@ import { v4 as uuidv4 } from 'uuid'
 import {
   Send, Plus, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
   ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle, RefreshCw,
-  Copy, Check,
-  ClipboardCheck, ArrowRight, Compass, Footprints,
+  Copy, Check, Square, ClipboardCheck, ArrowRight, Compass, Footprints,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { sendChat, clearSession, getChatHistory } from '../api/client.js'
+import { sendChatStream, clearSession, getChatHistory } from '../api/client.js'
 import {
   canDeleteConversation,
   deleteConversationAndStartFresh,
@@ -101,6 +100,21 @@ function TypingIndicator() {
   )
 }
 
+function StreamingMessage({ content }) {
+  return (
+    <article className="chat-message from-assistant" aria-label="MindCare response in progress">
+      <div className="chat-avatar assistant-avatar"><Heart size={15} fill="currentColor" /></div>
+      <div className="chat-message-stack">
+        <div className="chat-message-meta"><span>MindCare</span><span>Writing a response</span></div>
+        <div className="chat-bubble chat-streaming-bubble" aria-live="polite" aria-atomic="false">
+          <ReactMarkdown>{content}</ReactMarkdown>
+          <span className="chat-stream-cursor" aria-hidden="true" />
+        </div>
+      </div>
+    </article>
+  )
+}
+
 export default function Chat() {
   const { user } = useAuth()
   const {
@@ -116,7 +130,9 @@ export default function Chat() {
   const [notice, setNotice] = useState('')
   const [failedTurn, setFailedTurn] = useState(null)
   const [copiedMessageId, setCopiedMessageId] = useState(null)
+  const [streamedResponse, setStreamedResponse] = useState('')
   const scrollAreaRef = useRef(null)
+  const streamControllerRef = useRef(null)
   const shouldAutoScrollRef = useRef(true)
   const inputRef = useRef(null)
   const interacted = useRef(false)
@@ -166,7 +182,7 @@ export default function Chat() {
     // Keep scrolling scoped to the chat viewport and only follow new messages when
     // the reader was already near the bottom. Older messages remain readable.
     area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
-  }, [messages, loading])
+  }, [messages, loading, streamedResponse])
 
   useEffect(() => {
     const textarea = inputRef.current
@@ -191,8 +207,11 @@ export default function Chat() {
       addMessage({ role: 'user', content: text })
     }
     setLoading(true)
+    setStreamedResponse('')
+    const controller = new AbortController()
+    streamControllerRef.current = controller
     try {
-      const { data } = await sendChat({
+      const { data } = await sendChatStream({
         session_id: sessionId,
         client_turn_id: clientTurnId,
         message: text,
@@ -201,7 +220,11 @@ export default function Chat() {
         // The backend reads canonical saved assessment data for pending safety follow-up.
         // Avoid sending questionnaire scores again from client-side state.
         emotion: currentEmotion?.confidence > 0 && currentEmotion?.emotion !== 'unavailable' ? currentEmotion.emotion : null,
+      }, {
+        signal: controller.signal,
+        onDelta: (delta) => setStreamedResponse(previous => previous + delta),
       })
+      setStreamedResponse('')
       if (data.session_id && data.session_id !== sessionId) setSessionId(data.session_id)
       addMessage({
         role: 'assistant', content: data.response, rag_used: data.rag_used,
@@ -216,11 +239,15 @@ export default function Chat() {
       ].filter(Boolean)
       setNotice(feedback.join(' '))
     } catch (error) {
-      // Keep the failed user bubble visible. Retry reuses this same UUID, so a server
-      // that already saved the answer can return it instead of storing a duplicate turn.
+      // Partial streamed text is never treated as a completed/saved assistant message.
+      // A retry keeps the same turn ID, so a reply saved before a disconnect can be replayed.
+      setStreamedResponse('')
       setFailedTurn({ clientTurnId, text, assessmentFollowUpId, conversationMode: selectedConversationMode })
-      setNotice(`MindCare couldn't confirm a response. ${error.message || 'Check your connection, then retry the same message.'}`)
+      setNotice(controller.signal.aborted
+        ? 'Response stopped before MindCare confirmed it was saved. Retry the same message to check or continue the turn.'
+        : `MindCare couldn't confirm a response. ${error.message || 'Check your connection, then retry the same message.'}`)
     } finally {
+      if (streamControllerRef.current === controller) streamControllerRef.current = null
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
@@ -231,6 +258,8 @@ export default function Chat() {
     setInput('')
     setFailedTurn(null)
     setCopiedMessageId(null)
+    setStreamedResponse('')
+    streamControllerRef.current?.abort()
     setNotice('')
   }
 
@@ -352,7 +381,7 @@ export default function Chat() {
                   copied={copiedMessageId === msg.id}
                 />
               ))}
-              {loading && <TypingIndicator />}
+              {loading && (streamedResponse ? <StreamingMessage content={streamedResponse} /> : <TypingIndicator />)}
             </div>
           )}
         </div>
@@ -381,9 +410,21 @@ export default function Chat() {
             placeholder="Write what’s on your mind…"
             disabled={loading || historyLoading || Boolean(failedTurn)}
           />
-          <button type="submit" disabled={!input.trim() || loading || historyLoading || Boolean(failedTurn)} aria-label="Send message" className="chat-send-button">
-            {loading ? <LoaderCircle size={18} className="spin-icon" /> : <Send size={17} />}
-          </button>
+          {loading ? (
+            <button
+              type="button"
+              className="chat-stop-button"
+              onClick={() => streamControllerRef.current?.abort()}
+              aria-label="Stop response"
+              title="Stop response"
+            >
+              <Square size={14} fill="currentColor" />
+            </button>
+          ) : (
+            <button type="submit" disabled={!input.trim() || historyLoading || Boolean(failedTurn)} aria-label="Send message" className="chat-send-button">
+              <Send size={17} />
+            </button>
+          )}
         </form>
         <div className="chat-composer-meta">
           <span><kbd>Enter</kbd> to send <span className="meta-separator">·</span> <kbd>Shift + Enter</kbd> for a new line</span>

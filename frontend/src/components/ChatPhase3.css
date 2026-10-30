@@ -180,3 +180,26 @@
 @media (prefers-reduced-motion: reduce) {
   .chat-message-action { transition: none; }
 }
+
+/* Live response: a quiet cursor and a clear, keyboard-accessible stop control. */
+.chat-streaming-bubble { min-height: 48px; }
+.chat-stream-cursor {
+  display: inline-block; width: 2px; height: 1.1em; margin-left: 3px;
+  vertical-align: -2px; border-radius: 2px; background: #6ca17a;
+  animation: chatCursorPulse 1s steps(2, start) infinite;
+}
+@keyframes chatCursorPulse { to { visibility: hidden; } }
+.chat-stop-button {
+  display: grid; width: 45px; height: 45px; flex: 0 0 45px; place-items: center;
+  border: 1px solid #ead6d2; border-radius: 15px; color: #a85e54;
+  background: #fff8f6; cursor: pointer; transition: background .16s ease, border-color .16s ease;
+}
+.chat-stop-button:hover { border-color: #d8aaa3; background: #fff0ed; }
+.chat-stop-button:focus-visible { outline: 3px solid rgba(71,128,87,.32); outline-offset: 2px; }
+@media (max-width: 767px) {
+  .chat-stop-button { width: 40px; height: 40px; flex-basis: 40px; border-radius: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-stream-cursor { animation: none; }
+  .chat-stop-button { transition: none; }
+}
