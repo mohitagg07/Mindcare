@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import {
   Send, Plus, Trash2, Heart, UserRound, BookOpen, AlertCircle, Sparkles,
   ShieldCheck, ArrowUpRight, MessageCircle, Wind, Moon, Brain, LoaderCircle, RefreshCw,
+  Copy, Check,
   ClipboardCheck, ArrowRight, Compass, Footprints,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
@@ -39,7 +40,7 @@ function formatTime(value, timeZone) {
   }
 }
 
-function Message({ msg, timeZone }) {
+function Message({ msg, timeZone, onCopy, copied }) {
   const isUser = msg.role === 'user'
   return (
     <article className={`chat-message ${isUser ? 'from-user' : 'from-assistant'}`}>
@@ -66,6 +67,20 @@ function Message({ msg, timeZone }) {
           <div className="chat-message-badges">
             {(msg.rag_used || msg.metadata?.rag_used) && <span><BookOpen size={12} /> Knowledge resources used</span>}
             {(msg.safety_follow_up_required || msg.metadata?.safety_follow_up_required || msg.crisis_detected || msg.metadata?.crisis_detected) && <span className="safety-badge"><AlertCircle size={12} /> Safety check-in included</span>}
+          </div>
+        )}
+        {!isUser && (
+          <div className="chat-message-actions">
+            <button
+              type="button"
+              className="chat-message-action"
+              onClick={() => onCopy?.(msg)}
+              aria-label={copied ? 'Response copied' : 'Copy MindCare response'}
+              title={copied ? 'Copied to clipboard' : 'Copy response'}
+            >
+              {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+              <span>{copied ? 'Copied' : 'Copy response'}</span>
+            </button>
           </div>
         )}
       </div>
@@ -100,7 +115,9 @@ export default function Chat() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [notice, setNotice] = useState('')
   const [failedTurn, setFailedTurn] = useState(null)
+  const [copiedMessageId, setCopiedMessageId] = useState(null)
   const scrollAreaRef = useRef(null)
+  const shouldAutoScrollRef = useRef(true)
   const inputRef = useRef(null)
   const interacted = useRef(false)
   const isNewChat = messages.length <= 1 && (messages.length === 0 || messages[0]?.role === 'assistant') && !failedTurn
@@ -110,6 +127,8 @@ export default function Chat() {
     let alive = true
     interacted.current = false
     setNotice('')
+    setCopiedMessageId(null)
+    shouldAutoScrollRef.current = true
     replaceMessages([])
     setHistoryLoading(true)
     getChatHistory(sessionId)
@@ -143,11 +162,18 @@ export default function Chat() {
 
   useEffect(() => {
     const area = scrollAreaRef.current
-    if (!area) return
-    // Keep scrolling scoped to the chat viewport; scrollIntoView can scroll outer
-    // containers too and caused the workspace header/sidebar to visually collide.
+    if (!area || !shouldAutoScrollRef.current) return
+    // Keep scrolling scoped to the chat viewport and only follow new messages when
+    // the reader was already near the bottom. Older messages remain readable.
     area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
+
+  useEffect(() => {
+    const textarea = inputRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`
+  }, [input])
 
   const handleSend = async (providedText, retryTurn = null) => {
     const text = (providedText ?? input).trim()
@@ -157,6 +183,7 @@ export default function Chat() {
     const selectedConversationMode = retryTurn?.conversationMode || conversationMode || 'listen'
     if (!retryTurn && pendingAssessmentFollowUpId) setPendingAssessmentFollowUpId(null)
     interacted.current = true
+    shouldAutoScrollRef.current = true
     setNotice('')
     setFailedTurn(null)
     if (!retryTurn) {
@@ -203,6 +230,7 @@ export default function Chat() {
     interacted.current = false
     setInput('')
     setFailedTurn(null)
+    setCopiedMessageId(null)
     setNotice('')
   }
 
@@ -232,6 +260,17 @@ export default function Chat() {
       setNotice(error?.status === 404
         ? 'This conversation was not found in saved history. Nothing was deleted, and your current view has been kept.'
         : `MindCare couldn't delete this conversation. ${error?.message || 'Please try again.'}`)
+    }
+  }
+
+  const handleCopyMessage = async (message) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable')
+      await navigator.clipboard.writeText(message.content)
+      setCopiedMessageId(message.id)
+      setNotice('')
+    } catch {
+      setNotice('Your browser could not copy this response. You can still select the text and copy it manually.')
     }
   }
 
@@ -271,7 +310,14 @@ export default function Chat() {
         </div>
       </div>
 
-      <div ref={scrollAreaRef} className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}>
+      <div
+        ref={scrollAreaRef}
+        className={`chat-scroll-area${isNewChat ? ' is-new-chat' : ''}`}
+        onScroll={(event) => {
+          const { scrollTop, scrollHeight, clientHeight } = event.currentTarget
+          shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 120
+        }}
+      >
         <div className="chat-content-column">
           {isNewChat ? (
             <div className="chat-welcome animate-fade-up">
@@ -297,7 +343,15 @@ export default function Chat() {
             </div>
           ) : (
             <div className="chat-message-list">
-              {messages.map(msg => <Message key={msg.id} msg={msg} timeZone={user?.timezone} />)}
+              {messages.map(msg => (
+                <Message
+                  key={msg.id}
+                  msg={msg}
+                  timeZone={user?.timezone}
+                  onCopy={handleCopyMessage}
+                  copied={copiedMessageId === msg.id}
+                />
+              ))}
               {loading && <TypingIndicator />}
             </div>
           )}
@@ -320,11 +374,7 @@ export default function Chat() {
             value={input}
             rows={1}
             maxLength={2000}
-            onChange={(event) => {
-              setInput(event.target.value)
-              event.target.style.height = 'auto'
-              event.target.style.height = `${Math.min(event.target.scrollHeight, 140)}px`
-            }}
+            onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend() }
             }}
