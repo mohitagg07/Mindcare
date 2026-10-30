@@ -8,6 +8,7 @@ import uuid
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from auth.dependencies import get_current_user
@@ -571,6 +572,308 @@ async def chat_endpoint(req: ChatRequest, current_user=Depends(get_current_user)
         "idempotency_status": ("saved" if persistence_status == "saved" else "not_saved") if req.client_turn_id is not None else "not_requested",
     }
 
+
+
+def _chat_sse_event(event: dict) -> str:
+    """Encode one JSON event for the browser's EventSource-style stream parser."""
+    return f"data: {json.dumps(event, ensure_ascii=False, separators=(',', ':'))}\n\n"
+
+
+async def _replay_as_stream(payload: dict):
+    """Replay a persisted turn through the same stream contract as a live response."""
+    response = str(payload.get("response") or "")
+    if response:
+        yield _chat_sse_event({"type": "delta", "text": response})
+    yield _chat_sse_event({"type": "done", "data": payload})
+
+
+@router.post("/chat/stream")
+async def chat_stream_endpoint(req: ChatRequest, current_user=Depends(get_current_user)):
+    """Stream the assistant's tokens, then confirm the saved turn in a final event.
+
+    Safety routing and owner-scoped context loading happen before the response starts,
+    so validation and safety-state failures retain normal HTTP status codes. Once the
+    stream begins, generation/persistence failures are sent as explicit SSE error events.
+    """
+    uid, token = current_user["id"], current_user["access_token"]
+    started = time.perf_counter()
+
+    from services.fusion_service import (
+        compute_risk_score, get_recommendations, check_crisis, SAFETY_CHECK_RESPONSE,
+    )
+
+    safety_detected, safety_source = check_crisis(req.message)
+    if req.client_turn_id is not None:
+        try:
+            saved_turn = await load_saved_turn(uid, token, req.client_turn_id, expected_message=req.message)
+        except HTTPException:
+            if not safety_detected:
+                raise
+            logger.warning("Stream idempotency lookup unavailable for a safety-triggered message; delivering safety guidance anyway")
+        else:
+            if saved_turn is not None:
+                return StreamingResponse(
+                    _replay_as_stream(_replay_turn_payload(saved_turn)),
+                    media_type="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+                )
+
+    pending_assessment_id = None
+    if not safety_detected:
+        pending_assessment_id = await _pending_phq9_safety_follow_up(uid, token, fail_closed=True)
+    if not safety_detected and pending_assessment_id:
+        safety_detected, safety_source = True, "saved_positive_phq9_item9"
+
+    if safety_detected:
+        session_id, persisted = await _best_effort_persist_safety_turn(
+            req, uid, token, SAFETY_CHECK_RESPONSE, safety_source,
+        )
+        if not persisted and req.client_turn_id is not None:
+            try:
+                saved_turn = await load_saved_turn(uid, token, req.client_turn_id, expected_message=req.message)
+            except HTTPException:
+                logger.warning("Could not verify a concurrent safety-stream retry; delivering safety guidance")
+            else:
+                if saved_turn is not None:
+                    if session_id != saved_turn["conversation_id"]:
+                        try:
+                            await delete_rows("conversations", token, {
+                                "id": f"eq.{session_id}", "user_id": f"eq.{uid}",
+                            })
+                        except SupabaseError as cleanup_exc:
+                            logger.info("Could not remove duplicate safety stream session (%s)", cleanup_exc.status_code)
+                    return StreamingResponse(
+                        _replay_as_stream(_replay_turn_payload(saved_turn)),
+                        media_type="text/event-stream",
+                        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+                    )
+        if persisted:
+            if pending_assessment_id is None:
+                pending_assessment_id = await _pending_phq9_safety_follow_up(uid, token)
+            if pending_assessment_id:
+                await _mark_phq9_safety_follow_up_presented(uid, token, pending_assessment_id)
+
+        safety_payload = {
+            "session_id": session_id,
+            "response": SAFETY_CHECK_RESPONSE,
+            "risk": compute_risk_score(),
+            "recommendations": get_recommendations(),
+            "crisis_detected": False,
+            "safety_follow_up_required": True,
+            "safety_signal_source": safety_source,
+            "rag_used": False,
+            "agent_tools_used": [],
+            "trajectory": {
+                "trend": "unknown",
+                "available": False,
+                "note": "Experimental composite trajectory is disabled pending validation.",
+            },
+            "persistence_status": "saved" if persisted else "not_saved",
+            "persistence_warning": None if persisted else (
+                "This safety response was shown but could not be saved to conversation history. "
+                "Check your connection before relying on history being complete."
+            ),
+            "idempotency_status": (
+                "saved" if persisted else "not_saved"
+            ) if req.client_turn_id is not None else "not_requested",
+        }
+        return StreamingResponse(
+            _replay_as_stream(safety_payload),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    # Match the normal endpoint's owner-scoped session/profile/history preparation.
+    session_id = str(req.session_id or uuid.uuid4())
+    session_ready = False
+    context_warnings: list[str] = []
+    history: list[dict] = []
+    profile_context = None
+
+    try:
+        conversations, _ = await select_rows("conversations", token, {
+            "select": "id", "id": f"eq.{session_id}",
+            "user_id": f"eq.{uid}", "limit": "1",
+        })
+        if conversations:
+            session_ready = True
+        else:
+            try:
+                await insert_row("conversations", token, {
+                    "id": session_id, "user_id": uid,
+                    "title": req.message[:80].strip() or "New conversation",
+                })
+                session_ready = True
+            except SupabaseError as exc:
+                if exc.status_code == 409:
+                    session_id = str(uuid.uuid4())
+                    await insert_row("conversations", token, {
+                        "id": session_id, "user_id": uid,
+                        "title": req.message[:80].strip() or "New conversation",
+                    })
+                    session_ready = True
+                else:
+                    raise
+    except SupabaseError as exc:
+        logger.warning("Stream conversation session unavailable (%s)", exc.message)
+        session_id = str(uuid.uuid4())
+        context_warnings.append(
+            "I couldn't connect to your saved conversation, so this reply may not include earlier messages."
+        )
+
+    if session_ready:
+        try:
+            profile_rows, _ = await select_rows("profiles", token, {
+                "select": "display_name,username,pronouns,support_style,focus_areas,memory_enabled",
+                "id": f"eq.{uid}", "limit": "1",
+            })
+            profile_context = profile_rows[0] if profile_rows else None
+        except SupabaseError as profile_exc:
+            logger.info("Stream profile personalization unavailable (%s)", profile_exc.message)
+            context_warnings.append("I couldn't load your saved response preferences for this reply.")
+
+        try:
+            history_rows, _ = await select_rows("messages", token, {
+                "select": "role,content,created_at", "conversation_id": f"eq.{session_id}",
+                "user_id": f"eq.{uid}", "order": "created_at.desc", "limit": "12",
+            })
+            history = [
+                {"role": row["role"], "content": row["content"]}
+                for row in reversed(history_rows)
+            ]
+        except SupabaseError as history_exc:
+            logger.warning("Stream conversation history unavailable (%s)", history_exc.message)
+            context_warnings.append(
+                "I couldn't load earlier messages, so this reply may miss some previous context."
+            )
+
+        memory_enabled = _memory_enabled_from_profile(profile_context)
+        memory_rows = await _load_saved_memories(
+            uid, token, enabled=memory_enabled, context_warnings=context_warnings,
+        )
+        if memory_rows is not None:
+            profile_context = {**(profile_context or {}), "saved_memories": memory_rows}
+
+    context = {
+        "emotion": req.emotion if req.emotion else None,
+        "conversation_mode": req.conversation_mode,
+    }
+    if req.assessment_follow_up_id is not None:
+        context["assessment_follow_up"] = await _load_assessment_follow_up(
+            uid, token, req.assessment_follow_up_id,
+        )
+
+    async def stream_events():
+        try:
+            from services.groq_service import stream_reply
+
+            tools_used: list[str] = []
+            response_parts: list[str] = []
+            final_meta = None
+            async for event in stream_reply(
+                req.message, context=context, history=history, rag_context=None, profile=profile_context,
+            ):
+                if event.get("type") == "delta" and isinstance(event.get("text"), str):
+                    response_parts.append(event["text"])
+                    yield _chat_sse_event({"type": "delta", "text": event["text"]})
+                elif event.get("type") == "meta":
+                    final_meta = event
+                    tools_used = event.get("tools_used", []) if isinstance(event.get("tools_used"), list) else []
+
+            response = final_meta.get("response") if isinstance(final_meta, dict) else "".join(response_parts)
+            if not isinstance(response, str) or not response.strip():
+                raise RuntimeError("MindCare did not receive a complete response from the model")
+
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            persistence_status = "not_saved"
+            persistence_warning = None
+            if session_ready:
+                try:
+                    rows = build_message_rows(
+                        session_id=session_id, user_id=uid, request=req, response=response,
+                        risk_score=None, latency_ms=latency_ms, safety_follow_up_required=False,
+                        rag_used=("search_wellness_knowledge" in tools_used), safety_source=None,
+                    )
+                    await insert_row("messages", token, rows)
+                    persistence_status = "saved"
+                    try:
+                        await update_rows("conversations", token, {
+                            "id": f"eq.{session_id}", "user_id": f"eq.{uid}",
+                        }, {"risk_level": None, "risk_score": None, "trajectory_trend": None})
+                    except SupabaseError as exc:
+                        logger.warning("Stream messages saved but legacy indicator fields could not be cleared (%s)", exc.message)
+                        context_warnings.append(
+                            "The reply was saved, but an old experimental indicator could not be cleared."
+                        )
+                except SupabaseError as exc:
+                    if req.client_turn_id is not None and exc.status_code == 409:
+                        saved_turn = await load_saved_turn(
+                            uid, token, req.client_turn_id, expected_message=req.message,
+                        )
+                        if saved_turn is not None:
+                            if session_id != saved_turn["conversation_id"]:
+                                try:
+                                    await delete_rows("conversations", token, {
+                                        "id": f"eq.{session_id}", "user_id": f"eq.{uid}",
+                                    })
+                                except SupabaseError as cleanup_exc:
+                                    logger.info("Could not remove duplicate chat stream session (%s)", cleanup_exc.status_code)
+                            payload = _replay_turn_payload(saved_turn)
+                            yield _chat_sse_event({"type": "done", "data": payload})
+                            return
+                        raise HTTPException(
+                            status_code=503,
+                            detail="MindCare could not verify a concurrent message retry. Please retry shortly.",
+                        ) from exc
+                    logger.warning("Stream response generated but persistence failed (%s)", exc.message)
+                    persistence_warning = (
+                        "This reply was generated but could not be saved to conversation history. "
+                        "Check your connection before relying on history being complete."
+                    )
+            else:
+                persistence_warning = (
+                    "This reply was generated without a confirmed saved conversation. "
+                    "It may not appear in history."
+                )
+
+            payload = {
+                "session_id": session_id,
+                "response": response,
+                "risk": compute_risk_score(),
+                "recommendations": get_recommendations(),
+                "crisis_detected": False,
+                "safety_follow_up_required": False,
+                "rag_used": "search_wellness_knowledge" in tools_used,
+                "agent_tools_used": tools_used,
+                "trajectory": {
+                    "trend": "unknown",
+                    "available": False,
+                    "note": "Experimental composite trajectory is disabled pending validation.",
+                },
+                "context_status": "full" if not context_warnings else "partial",
+                "context_warnings": context_warnings,
+                "persistence_status": persistence_status,
+                "persistence_warning": persistence_warning,
+                "idempotency_status": (
+                    "saved" if persistence_status == "saved" else "not_saved"
+                ) if req.client_turn_id is not None else "not_requested",
+            }
+            yield _chat_sse_event({"type": "done", "data": payload})
+        except Exception as exc:
+            logger.exception("Chat stream failed for user=%s (%s)", uid[:8], type(exc).__name__)
+            yield _chat_sse_event({
+                "type": "error",
+                "message": "MindCare could not complete and confirm this response. Please retry the same message.",
+            })
+
+    return StreamingResponse(
+        stream_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 @router.get("/chat/history/{session_id}")
 async def get_history_endpoint(session_id: uuid.UUID, current_user=Depends(get_current_user)):
