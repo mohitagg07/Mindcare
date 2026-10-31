@@ -45,9 +45,8 @@
 .mc-side-user-name{color:#f4f8f3;font-size:12px}
 .mc-side-user-email{color:#dce8dc;font-size:10.5px}
 .mc-side-privacy{color:#dce8dc;font-size:11px}
-.mc-side-item{min-height:44px}
 .mc-side-close,.mc-side-signout{min-width:42px;min-height:42px}
 @media(hover:hover) and (pointer:fine){
- .mc-side-item{transition:transform .15s ease,background-color .15s ease,color .15s ease}
- .mc-side-item:hover{transform:translateX(2px)}
+ .mc-side-item{transition:background-color .15s ease,color .15s ease}
+ .mc-side-item:hover{background:rgba(255,255,255,.085)}
 }

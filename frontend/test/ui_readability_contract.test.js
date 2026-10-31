@@ -18,7 +18,7 @@ test('shared workspace type tokens and reduced-motion support are present', () =
 
 test('functional small copy is darker across the main routes', () => {
   const checks = [
-    ['../src/pages/Landing.css', '.mc-faq-item p { color: #4c5b4f; font-size: 12px; }'],
+    ['../src/pages/Landing.css', '.mc-landing .mc-faq-item p{color:#4c5b4f;font-size:12px}'],
     ['../src/components/IdentityOnboarding.css', '.mc-identity-help { color: #536257; font-size: 11.5px; }'],
     ['../src/components/Sidebar.css', '.mc-side-user-email { color: #dce8dc; font-size: 10.5px; }'],
     ['../src/components/Dashboard.css', '.mcd-intent-copy small { color: #4d5d50; font-size: 12px;'],
@@ -33,9 +33,9 @@ test('functional small copy is darker across the main routes', () => {
 
 test('mobile-facing chrome avoids expensive backdrop blur', () => {
   const checks = [
-    ['../src/pages/Landing.css', '.mc-header-inner, .mc-landing .mc-product-window, .mc-landing .mc-site-nav { -webkit-backdrop-filter: none;'],
-    ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar, .mc-identity-panel { backdrop-filter: none;'],
-    ['../src/components/ChatPhase3.css', '.chat-panel-header { background: #fffefa; backdrop-filter: none;'],
+    ['../src/pages/Landing.css', '.mc-landing .mc-header-inner,.mc-landing .mc-product-window,.mc-landing .mc-site-nav{-webkit-backdrop-filter:none;'],
+    ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar,.mc-identity-panel{backdrop-filter:none;'],
+    ['../src/components/ChatPhase3.css', '.chat-panel-header{background:#fffefa;backdrop-filter:none;'],
     ['../src/components/Profile.css', '.profile-savebar { background: #fffefa; backdrop-filter: none;'],
   ]
   for (const [path, expected] of checks) assert.ok(read(path).includes(expected), path)
