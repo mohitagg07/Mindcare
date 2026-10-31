@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const read = path => readFileSync(resolve(here, path), 'utf8')
+const compact = value => value.replaceAll(' ', '').replaceAll('\n', '').replaceAll('\t', '').replaceAll('\r', '')
 
 test('shared workspace type tokens and reduced-motion support are present', () => {
   const css = read('../src/index.css')
@@ -18,32 +19,35 @@ test('shared workspace type tokens and reduced-motion support are present', () =
 
 test('functional small copy is darker across the main routes', () => {
   const checks = [
-    ['../src/pages/Landing.css', '.mc-landing .mc-faq-item p', 'color:#4c5b4f;', 'font-size:12px'],
-    ['../src/components/IdentityOnboarding.css', '.mc-identity-help', 'color:#536257;', 'font-size:11.5px'],
-    ['../src/components/Sidebar.css', '.mc-side-user-email', 'color:#dce8dc;', 'font-size:10.5px'],
-    ['../src/components/Dashboard.css', '.mcd-intent-copy small', 'color:#4d5d50;', 'font-size:12px'],
-    ['../src/components/ChatPhase3.css', '.chat-mode-option', 'color:#43574a;', 'min-height:40px'],
-    ['../src/components/Assessment.css', '.assessment-choice-meta', 'color:#4c5d50;', 'font-size:11.5px'],
-    ['../src/components/Metrics.css', '.insights-footer-note', 'color:#4e5f52;', 'font-size:11.5px'],
-    ['../src/components/Profile.css', '.profile-field small', 'color:#4d5f52;', 'font-size:11.5px'],
-    ['../src/components/ProfileMemory.css', '.profile-memory-editor small', 'color:#4d5f52;', 'font-size:11.5px'],
+    ['../src/pages/Landing.css', '.mc-landing .mc-faq-item p', 'color: #4c5b4f;', 'font-size: 12px'],
+    ['../src/components/IdentityOnboarding.css', '.mc-identity-help', 'color: #536257;', 'font-size: 11.5px'],
+    ['../src/components/Sidebar.css', '.mc-side-user-email', 'color: #dce8dc;', 'font-size: 10.5px'],
+    ['../src/components/Dashboard.css', '.mcd-intent-copy small', 'color: #4d5d50;', 'font-size: 12px'],
+    ['../src/components/ChatPhase3.css', '.chat-mode-option', 'color: #43574a;', 'min-height: 40px'],
+    ['../src/components/Assessment.css', '.assessment-choice-meta', 'color: #4c5d50;', 'font-size: 11.5px'],
+    ['../src/components/Metrics.css', '.insights-footer-note', 'color: #4e5f52;', 'font-size: 11.5px'],
+    ['../src/components/Profile.css', '.profile-field small', 'color: #4d5f52;', 'font-size: 11.5px'],
+    ['../src/components/ProfileMemory.css', '.profile-memory-editor small', 'color: #4d5f52;', 'font-size: 11.5px'],
   ]
   for (const [path, selector, color, size] of checks) {
-    const css = read(path)
-    assert.ok(css.includes(selector) && css.includes(color) && css.includes(size), path)
+    const css = compact(read(path))
+    assert.ok(css.includes(compact(selector)), path + ' selector')
+    assert.ok(css.includes(compact(color)), path + ' contrast')
+    assert.ok(css.includes(compact(size)), path + ' size')
   }
 })
 
 test('mobile-facing chrome avoids expensive backdrop blur', () => {
   const checks = [
-    ['../src/pages/Landing.css', '.mc-landing .mc-header-inner', '-webkit-backdrop-filter:none'],
-    ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar', 'backdrop-filter:none'],
-    ['../src/components/ChatPhase3.css', '.chat-panel-header', 'backdrop-filter:none'],
-    ['../src/components/Profile.css', '.profile-savebar', 'backdrop-filter:none'],
+    ['../src/pages/Landing.css', '.mc-landing .mc-header-inner', ['-webkit-backdrop-filter: none;', 'backdrop-filter: none;']],
+    ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar', ['backdrop-filter: none;', '-webkit-backdrop-filter: none;']],
+    ['../src/components/ChatPhase3.css', '.chat-panel-header', ['backdrop-filter: none;', '-webkit-backdrop-filter: none;']],
+    ['../src/components/Profile.css', '.profile-savebar', ['backdrop-filter: none;', '-webkit-backdrop-filter: none;']],
   ]
-  for (const [path, selector, declaration] of checks) {
-    const css = read(path)
-    assert.ok(css.includes(selector) && css.includes(declaration), path)
+  for (const [path, selector, declarations] of checks) {
+    const css = compact(read(path))
+    assert.ok(css.includes(compact(selector)), path + ' selector')
+    for (const declaration of declarations) assert.ok(css.includes(compact(declaration)), path + ' blur removal')
   }
 })
 
@@ -57,5 +61,5 @@ test('expression estimate reuses shared animation and camera status has a single
 
 test('insights graph axis labels are dark and large enough to read', () => {
   const metrics = read('../src/components/Metrics.jsx')
-  assert.equal((metrics.match(/fill: '#526257', fontSize: 11/g) || []).length, 4)
+  assert.equal(metrics.split("fill: '#526257', fontSize: 11").length - 1, 4)
 })
