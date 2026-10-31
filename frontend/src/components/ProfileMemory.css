@@ -156,3 +156,8 @@
 }
 .profile-memory-manager-footer span { flex: 1 1 240px; }
 
+/* Saved memory controls remain readable without relying on pale green text. */
+.profile-memory-count { color: #31583e; font-size: 11.5px; }
+.profile-memory-editor small { color: #4d5f52; font-size: 11.5px; }
+.profile-memory-action { color: #304b39; font-size: 11.5px; min-height: 40px; }
+.profile-memory-action-danger { color: #7d3933; }

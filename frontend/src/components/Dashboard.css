@@ -214,3 +214,20 @@
   .mcd-button-primary, .mcd-intent-option, .mcd-activity-row, .mcd-icon-link, .mcd-setup-nudge > button { transition: none; }
   .mcd-button-primary:hover, .mcd-intent-option:hover { transform: none; }
 }
+
+/* Home copy and activity metadata: higher contrast without changing layout. */
+.mcd-eyebrow{color:#4c654f;font-size:10.5px}
+.mcd-setup-nudge p{color:#4e5e51;font-size:12px}
+.mcd-intent-copy small{color:#4d5d50;font-size:12px;line-height:1.5}
+.mcd-start-footer p{color:#4e5e51;font-size:12px}
+.mcd-activity-copy small{color:#4e5e51;font-size:12px}
+.mcd-activity-row time{color:#4e5e51;font-size:11.5px}
+.mcd-partial-warning{color:#594d3b;font-size:12px}
+.mcd-button-primary,.mcd-activity-row{min-height:44px}
+.mcd-intent-option{transition:transform .16s ease,border-color .16s ease,background-color .16s ease}
+.mcd-intent-option:active{transform:scale(.99)}
+@media(max-width:760px){
+ .mcd-intent-copy small,.mcd-start-footer p,.mcd-activity-copy small{font-size:12px}
+ .mcd-activity-row time{font-size:11.5px}
+}
+@media(prefers-reduced-motion:reduce){.mcd-intent-option{transition:none}}

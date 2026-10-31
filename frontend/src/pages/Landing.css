@@ -43,7 +43,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 18px;
   border: 1px solid rgba(255,255,255,.82); border-radius: 18px;
   background: rgba(251,250,245,.82); box-shadow: 0 8px 26px rgba(39,58,42,.055), inset 0 1px 0 rgba(255,255,255,.8);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08); backdrop-filter: blur(20px) saturate(1.08);
+  
 }
 .mc-landing .mc-landing-brand { display: inline-flex; align-items: center; gap: 9px; min-width: max-content; text-decoration: none; }
 .mc-landing .mc-brand-mark { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(27,69,57,.12); border-radius: 12px 12px 12px 4px; background: #e6eadc; }
@@ -91,9 +91,9 @@
 .mc-landing .mc-bottomline-rule { flex: 1; height: 1px; background: rgba(27,48,43,.1); }
 
 .mc-landing .mc-preview-scene { min-width: 0; min-height: 460px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; animation: mc-enter-up .7s .12s both cubic-bezier(.2,.7,.2,1); }
-.mc-landing .mc-preview-caption { display: inline-flex; align-items: center; align-self: flex-start; gap: 8px; padding: 7px 11px; border: 1px solid rgba(255,255,255,.83); border-radius: 999px; color: #5c7863; background: rgba(255,254,249,.67); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 9px; font-weight: 700; }
+.mc-landing .mc-preview-caption { display: inline-flex; align-items: center; align-self: flex-start; gap: 8px; padding: 7px 11px; border: 1px solid rgba(255,255,255,.83); border-radius: 999px; color: #5c7863; background: rgba(255,254,249,.67);  font-size: 9px; font-weight: 700; }
 .mc-landing .mc-preview-caption-mark { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 50%; color: #47785a; background: #e5eee1; }
-.mc-landing .mc-product-window { width: min(100%, 445px); margin-left: auto; overflow: hidden; border: 1px solid rgba(255,255,255,.9); border-radius: 18px 18px 18px 5px; background: rgba(255,254,249,.88); box-shadow: 0 20px 60px rgba(42,60,44,.105), 0 4px 14px rgba(42,60,44,.04), inset 0 1px 0 rgba(255,255,255,.96); -webkit-backdrop-filter: blur(20px) saturate(1.08); backdrop-filter: blur(20px) saturate(1.08); transform: rotate(-.6deg); transition: transform .35s ease, box-shadow .35s ease; }
+.mc-landing .mc-product-window { width: min(100%, 445px); margin-left: auto; overflow: hidden; border: 1px solid rgba(255,255,255,.9); border-radius: 18px 18px 18px 5px; background: rgba(255,254,249,.88); box-shadow: 0 12px 30px rgba(42,60,44,.09), 0 3px 10px rgba(42,60,44,.035), inset 0 1px 0 rgba(255,255,255,.96);  transform: rotate(-.6deg); transition: transform .35s ease, box-shadow .35s ease; }
 .mc-landing .mc-product-window:hover { transform: rotate(0); box-shadow: 0 24px 64px rgba(42,60,44,.12), 0 4px 14px rgba(42,60,44,.04); }
 .mc-landing .mc-product-topbar { display: flex; align-items: center; gap: 9px; padding: 13px 15px; color: #f8f7ef; background: linear-gradient(110deg,#183d32,#2d6d56); }
 .mc-landing .mc-product-mark { display: grid; width: 31px; height: 31px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(255,255,255,.17); border-radius: 10px; background: rgba(255,255,255,.1); }
@@ -143,7 +143,7 @@
 .mc-landing .mc-feature-art-frame { position: relative; height: 130px; flex: 0 0 auto; overflow: hidden; isolation: isolate; border-bottom: 1px solid rgba(47,73,54,.08); background: #e7eee1; }
 .mc-landing .mc-feature-art-svg { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .45s cubic-bezier(.2,.7,.2,1); }
 .mc-landing .mc-feature-card:hover .mc-feature-art-svg { transform: scale(1.025); }
-.mc-landing .mc-feature-art-label { position: absolute; z-index: 1; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px; max-width: calc(100% - 20px); padding: 6px 8px; border: 1px solid rgba(255,255,249,.78); border-radius: 999px; color: #48624f; background: rgba(255,253,247,.83); backdrop-filter: blur(9px); font-size: 8px; font-weight: 700; line-height: 1.2; }
+.mc-landing .mc-feature-art-label { position: absolute; z-index: 1; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px; max-width: calc(100% - 20px); padding: 6px 8px; border: 1px solid rgba(255,255,249,.78); border-radius: 999px; color: #48624f; background: rgba(255,253,247,.83);  font-size: 8px; font-weight: 700; line-height: 1.2; }
 .mc-landing .mc-feature-amber .mc-feature-art-label { color: #9a6248; }
 .mc-landing .mc-feature-blue .mc-feature-art-label { color: #507783; }
 .mc-landing .mc-feature-content { display: flex; flex: 1; flex-direction: column; min-width: 0; padding: 17px 18px 15px; }
@@ -276,7 +276,7 @@
   .mc-landing .mc-brand-mark { width: 34px; height: 34px; border-radius: 11px 11px 11px 4px; }
   .mc-landing .mc-brand-name { font-size: 19px; }
   .mc-landing .mc-mobile-menu-toggle { display: grid; width: 37px; height: 37px; flex: 0 0 auto; place-items: center; border: 1px solid #dce0d4; border-radius: 10px; color: var(--forest); background: rgba(255,254,249,.9); cursor: pointer; }
-  .mc-landing .mc-site-nav { position: absolute; top: calc(100% + 5px); right: 10px; left: 10px; display: none; align-items: stretch; flex-direction: column; gap: 0; padding: 8px 13px 13px; border: 1px solid rgba(255,255,255,.85); border-radius: 14px; background: rgba(251,250,245,.97); box-shadow: 0 14px 25px rgba(27,48,43,.1); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+  .mc-landing .mc-site-nav { position: absolute; top: calc(100% + 5px); right: 10px; left: 10px; display: none; align-items: stretch; flex-direction: column; gap: 0; padding: 8px 13px 13px; border: 1px solid rgba(255,255,255,.85); border-radius: 14px; background: rgba(251,250,245,.97); box-shadow: 0 14px 25px rgba(27,48,43,.1);  }
   .mc-landing .mc-site-nav.is-open { display: flex; }
   .mc-landing .mc-site-nav > a, .mc-landing .mc-nav-signin { padding: 11px 2px; font-size: 12px; text-align: left; }
   .mc-landing .mc-nav-cta { align-self: flex-start; margin-top: 6px; }
@@ -401,3 +401,59 @@
   .mc-landing *, .mc-landing *::before, .mc-landing *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .mc-landing .mc-product-window, .mc-landing .mc-feature-card, .mc-landing .mc-feature-art-svg { transform: none !important; }
 }
+
+/* Readability pass: editorial copy is dark enough to read on a phone. */
+.mc-landing .mc-eyebrow{color:#405d49;font-size:10.5px}
+.mc-landing .mc-hero-lede{color:#4d5e51}
+.mc-landing .mc-text-link{color:#314e3c;font-size:12px}
+.mc-landing .mc-hero-note p{color:#45584a;font-size:12px}
+.mc-landing .mc-hero-note strong{color:#294a36}
+.mc-landing .mc-hero-bottomline{color:#536256;font-size:9.5px}
+.mc-landing .mc-preview-caption{color:#405847;background:#fffefa;font-size:10.5px}
+.mc-landing .mc-product-branding span{color:#f1f6ee;font-size:9.5px}
+.mc-landing .mc-preview-label{color:#fffefa;font-size:9px}
+.mc-landing .mc-preview-step-count{color:#405548;font-size:9.5px}
+.mc-landing .mc-preview-choice{color:#405748;font-size:10px}
+.mc-landing .mc-product-message p{color:#3e5144;font-size:11.5px}
+.mc-landing .mc-message-author{color:#405a47;font-size:9.5px}
+.mc-landing .mc-preview-followups>summary{color:#405747;font-size:10.5px}
+.mc-landing .mc-preview-followup{color:#485c4d;font-size:10px}
+.mc-landing .mc-preview-followup-note{color:#4b5e50;font-size:10.5px}
+.mc-landing .mc-product-footnote{color:#536256;font-size:9.5px}
+.mc-landing .mc-feature-body{color:#4a5c4f;font-size:12.5px}
+.mc-landing .mc-feature-explore{color:#315d43;font-size:11px}
+.mc-landing .mc-feature-art-label{color:#3d5645;font-size:9.5px}
+.mc-landing .mc-feature-rail-footer>p{color:#4f6153;font-size:10px}
+.mc-landing .mc-journey-number{color:#415847;font-size:10.5px}
+.mc-landing .mc-journey-card-title{color:#2f4938;font-size:11.5px}
+.mc-landing .mc-journey-panel-kicker{color:#4a604e;font-size:9.5px}
+.mc-landing .mc-journey-panel-body{color:#4b5e50;font-size:12px}
+.mc-landing .mc-journey-example-label{color:#536457;font-size:9.5px}
+.mc-landing .mc-journey-question>div>span{color:#526357;font-size:9.5px}
+.mc-landing .mc-journey-question p{color:#334c3b;font-size:11.5px}
+.mc-landing .mc-journey-footer{color:#536357;font-size:9.5px}
+.mc-landing .mc-care-copy>p:not(.mc-eyebrow){color:#48594c;font-size:13px}
+.mc-landing .mc-help-kicker{color:#8c573d;font-size:9.5px}
+.mc-landing .mc-help-note>p:not(.mc-help-kicker){color:#4b5d50;font-size:12px}
+.mc-landing .mc-help-link{color:#315d45;font-size:10.5px}
+.mc-landing .mc-faq-item summary{color:#293f32;font-size:12.5px}
+.mc-landing .mc-faq-item p{color:#4c5b4f;font-size:12px}
+.mc-landing .mc-final-cta>p:not(.mc-eyebrow){color:#e7efe7;font-size:12px}
+.mc-landing .mc-footer-brand>p{color:#e1ebe2;font-size:11.5px}
+.mc-landing .mc-footer-heading{color:#d7e4d8;font-size:10px}
+.mc-landing .mc-footer-links a,.mc-landing .mc-footer-links button{color:#e5eee5;font-size:11.5px}
+.mc-landing .mc-footer-bottom{color:#d5e0d6;font-size:9.5px}
+.mc-landing .mc-button{transition:transform .16s ease,background-color .16s ease,box-shadow .16s ease}
+.mc-landing .mc-button:active{transform:scale(.985)}
+@media(hover:hover) and (pointer:fine){
+ .mc-landing .mc-journey-card{transition:transform .18s ease,border-color .18s ease,background-color .18s ease}
+ .mc-landing .mc-journey-card:hover{transform:translateY(-2px)}
+ .mc-landing .mc-faq-item summary:hover{color:#2f6b49}
+}
+@media(max-width:767px){
+ .mc-landing .mc-hero-note p{font-size:12.5px}
+ .mc-landing .mc-feature-body,.mc-landing .mc-faq-item p,.mc-landing .mc-help-note>p:not(.mc-help-kicker){font-size:12.5px}
+ .mc-landing .mc-preview-label,.mc-landing .mc-preview-step-count,.mc-landing .mc-message-author{font-size:9.5px}
+ .mc-landing .mc-header-inner,.mc-landing .mc-product-window,.mc-landing .mc-site-nav{-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+@media(prefers-reduced-motion:reduce){.mc-landing .mc-button,.mc-landing .mc-journey-card{transition:none}}

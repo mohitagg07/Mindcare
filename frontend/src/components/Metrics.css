@@ -9,3 +9,28 @@
 .insights-side-card{ padding: 15px; border-radius: 16px; }.insights-trend{ max-width: 118px; font-size: 9px; }.insights-chart-wrap .recharts-responsive-container{ min-height: 205px; }.insights-distribution-grid{ grid-template-columns: 1fr; }.insights-empty-cta{ align-items: flex-start; flex-wrap: wrap; padding: 14px; }.insights-empty-cta > div{ min-width: calc(100% - 60px); }.insights-empty-cta button{ width: 100%; justify-content: center; }}
 @media (max-width: 390px) {.insights-header{ flex-wrap: wrap; }}
 @media (prefers-reduced-motion: reduce) {.insights-bar-track > span{ transition: none !important; }}
+
+/* Insights: darker supporting text and labels that survive narrow screens. */
+.insights-eyebrow { color: #405d48; font-size: 10.5px; }
+.insights-refresh-time { color: #4d5f52; font-size: 11px; }
+.insight-stat-top { color: #405748; font-size: 12px; }
+.insight-stat-card p { color: #4d5f52; font-size: 11.5px; }
+.insights-section-heading > div > span { color: #405d48; font-size: 10.5px; }
+.insights-section-heading > span { color: #4e5e51; font-size: 11.5px; }
+.insights-card-heading p { color: #4e5f52; font-size: 11.5px; }
+.insights-trend { color: #405a47; font-size: 10.5px; }
+.insights-chart-disclaimer { color: #4d5f52; font-size: 11.5px; }
+.insight-empty-chart p { color: #4d5f52; font-size: 12px; }
+.insights-session-row strong { color: #304b39; font-size: 12px; }
+.insights-session-row small { color: #4e5f52; font-size: 11px; }
+.insights-bar-row > div:first-child { color: #465d4b; font-size: 12px; }
+.insights-small-print { color: #4d5f52; font-size: 11.5px; }
+.insights-footer-note { color: #4e5f52; font-size: 11.5px; }
+.insights-error { color: #75443d; font-size: 12px; }
+.insights-inline-action { min-height: 42px; font-size: 12px; }
+.insights-refresh { min-height: 42px; }
+@media (max-width: 690px) {
+  .insights-section-heading > span, .insights-card-heading p, .insights-chart-disclaimer,
+  .insights-small-print, .insights-footer-note { font-size: 11.5px; }
+  .insights-section-heading > div > span { font-size: 10.5px; }
+}

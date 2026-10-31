@@ -214,3 +214,16 @@
   .assessment-choice-card, .assessment-option, .assessment-progress-fill, .assessment-nav-button { transition: none !important; }
   .assessment-submit-spinner { animation-duration: 1.8s; }
 }
+
+/* Guided check-in: readable helper copy and confident touch states. */
+.assessment-choice-card { transition: transform .16s ease, border-color .16s ease, background-color .16s ease; }
+.assessment-choice-description { color: #4c5e50; font-size: 12.5px; }
+.assessment-choice-meta { color: #4c5d50; font-size: 11.5px; }
+.assessment-disclaimer { color: #4e5e51; font-size: 12px; }
+.assessment-progress-labels { color: #43574a; font-size: 12px; }
+.assessment-submit-hint { color: #4e5f52; font-size: 12px; }
+.assessment-result-overline { color: #405e47; font-size: 11.5px; }
+.assessment-nav-button, .assessment-choice-card, .assessment-option { min-height: 44px; }
+.assessment-option-label { color: #304b39; }
+@media (hover: hover) and (pointer: fine) { .assessment-choice-card:hover { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .assessment-choice-card { transition: none; } }

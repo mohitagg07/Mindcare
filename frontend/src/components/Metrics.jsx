@@ -71,8 +71,8 @@ function AssessmentScoreCard({ title, maxScore, rows, timeZone }) {
         <ResponsiveContainer width="100%" height={190}>
           <LineChart data={chartRows} margin={{ top: 12, right: 12, bottom: 2, left: -18 }}>
             <CartesianGrid stroke="#e9eee5" strokeDasharray="4 5" vertical={false} />
-            <XAxis dataKey="shortDate" tick={{ fill: '#849286', fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={18} />
-            <YAxis domain={[0, maxScore]} ticks={[0, Math.round(maxScore / 3), Math.round(maxScore * 2 / 3), maxScore]} tick={{ fill: '#849286', fontSize: 9 }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="shortDate" tick={{ fill: '#526257', fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={18} />
+            <YAxis domain={[0, maxScore]} ticks={[0, Math.round(maxScore / 3), Math.round(maxScore * 2 / 3), maxScore]} tick={{ fill: '#526257', fontSize: 11 }} axisLine={false} tickLine={false} />
             <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ''} formatter={value => [`${value} of ${maxScore}`, 'Score']} contentStyle={{ border: '1px solid #e1e9df', borderRadius: 12, background: '#fffefa', fontSize: 11 }} />
             <Line type="linear" dataKey="score" stroke="#6183a1" strokeWidth={2.5} dot={{ r: 3.5, fill: '#6183a1', stroke: '#fffefa', strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={false} />
           </LineChart>
@@ -201,8 +201,8 @@ export default function Metrics() {
                   <AreaChart data={points} margin={{ top: 10, right: 10, bottom: 0, left: -18 }}>
                     <defs><linearGradient id="mindcarePersonalSignal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#5a9b7d" stopOpacity={0.23} /><stop offset="100%" stopColor="#5a9b7d" stopOpacity={0.015} /></linearGradient></defs>
                     <CartesianGrid stroke="#e9eee5" strokeDasharray="4 5" vertical={false} />
-                    <XAxis dataKey="time" tick={{ fill: '#93a097', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={22} />
-                    <YAxis domain={[-100, 100]} ticks={[-100, -50, 0, 50, 100]} tick={{ fill: '#93a097', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="time" tick={{ fill: '#526257', fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={22} />
+                    <YAxis domain={[-100, 100]} ticks={[-100, -50, 0, 50, 100]} tick={{ fill: '#526257', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <ReferenceLine y={0} stroke="#cad8ca" strokeDasharray="4 4" />
                     <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ''} formatter={value => [`${value > 0 ? '+' : ''}${value} index points`, 'Exploratory signal']} contentStyle={{ border: '1px solid #e1e9df', borderRadius: 14, background: '#fffefa', boxShadow: '0 12px 28px rgba(36,72,50,.1)', fontSize: 12 }} />
                     <Area type="monotone" dataKey="signal" stroke="#438666" strokeWidth={2.5} fill="url(#mindcarePersonalSignal)" activeDot={{ r: 5, stroke: '#fffefa', strokeWidth: 3 }} dot={{ r: 2.5, fill: '#438666', stroke: '#fffefa', strokeWidth: 1.5 }} isAnimationActive animationDuration={600} />
