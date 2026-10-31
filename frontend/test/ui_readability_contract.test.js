@@ -23,7 +23,7 @@ test('functional small copy is darker across the main routes', () => {
     ['../src/components/Sidebar.css', '.mc-side-user-email{color:#dce8dc;font-size:10.5px}'],
     ['../src/components/Dashboard.css', '.mcd-intent-copy small{color:#4d5d50;font-size:12px'],
     ['../src/components/ChatPhase3.css', '.chat-mode-option{color:#43574a;font-size:12px;min-height:40px}'],
-    ['../src/components/Assessment.css', '.assessment-choice-meta{color:#4c5d50;font-size:11.5px}'],
+    ['../src/components/Assessment.css', '.assessment-choice-meta{color:#4c5d50;font-size:11.5px;'],
     ['../src/components/Metrics.css', '.insights-footer-note{color:#4e5f52;font-size:11.5px}'],
     ['../src/components/Profile.css', '.profile-field small{color:#4d5f52;font-size:11.5px'],
     ['../src/components/ProfileMemory.css', '.profile-memory-editor small{color:#4d5f52;font-size:11.5px}'],
@@ -39,7 +39,7 @@ test('mobile-facing chrome avoids expensive backdrop blur', () => {
     ['../src/pages/Landing.css', '.mc-landing .mc-header-inner,.mc-landing .mc-product-window,.mc-landing .mc-site-nav{-webkit-backdrop-filter:none;'],
     ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar,.mc-identity-panel{backdrop-filter:none;'],
     ['../src/components/ChatPhase3.css', '.chat-panel-header{background:#fffefa;backdrop-filter:none;'],
-    ['../src/components/Profile.css', '.profile-savebar{background:#fffefa;backdrop-filter:none;'],
+    ['../src/components/Profile.css', '.profile-savebar{background:#fffefa;backdrop-filter:none;-webkit-backdrop-filter:none;'],
   ]
   for (const [path, expected] of checks) assert.ok(read(path).includes(expected), path)
 })
