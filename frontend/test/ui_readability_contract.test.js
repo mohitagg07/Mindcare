@@ -39,10 +39,10 @@ test('functional small copy is darker across the main routes', () => {
 
 test('mobile-facing chrome avoids expensive backdrop blur', () => {
   const checks = [
-    ['../src/pages/Landing.css', '.mc-landing .mc-header-inner', ['-webkit-backdrop-filter: none;', 'backdrop-filter: none;']],
-    ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar', ['backdrop-filter: none;', '-webkit-backdrop-filter: none;']],
-    ['../src/components/ChatPhase3.css', '.chat-panel-header', ['backdrop-filter: none;', '-webkit-backdrop-filter: none;']],
-    ['../src/components/Profile.css', '.profile-savebar', ['backdrop-filter: none;', '-webkit-backdrop-filter: none;']],
+    ['../src/pages/Landing.css', '.mc-landing .mc-header-inner', ['-webkit-backdrop-filter: none', 'backdrop-filter: none']],
+    ['../src/components/IdentityOnboarding.css', '.mc-identity-brandbar', ['backdrop-filter: none', '-webkit-backdrop-filter: none']],
+    ['../src/components/ChatPhase3.css', '.chat-panel-header', ['backdrop-filter: none', '-webkit-backdrop-filter: none']],
+    ['../src/components/Profile.css', '.profile-savebar', ['backdrop-filter: none', '-webkit-backdrop-filter: none']],
   ]
   for (const [path, selector, declarations] of checks) {
     const css = compact(read(path))
