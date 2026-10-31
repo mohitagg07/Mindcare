@@ -29,7 +29,7 @@ test('functional small copy is darker across the main routes', () => {
     ['../src/components/ProfileMemory.css', '.profile-memory-editor small{color:#4d5f52;font-size:11.5px}'],
   ]
   for (const [path, expected] of checks) {
-    const normalized = read(path).replace(/\\s+/g, '')
+    const normalized = read(path).replace(/\s+/g, '')
     assert.ok(normalized.includes(expected), path)
   }
 })
@@ -41,7 +41,7 @@ test('mobile-facing chrome avoids expensive backdrop blur', () => {
     ['../src/components/ChatPhase3.css', '.chat-panel-header{background:#fffefa;backdrop-filter:none;'],
     ['../src/components/Profile.css', '.profile-savebar{background:#fffefa;backdrop-filter:none;-webkit-backdrop-filter:none;'],
   ]
-  for (const [path, expected] of checks) assert.ok(read(path).includes(expected), path)
+  for (const [path, expected] of checks) { const normalized = read(path).replace(/\s+/g, ''); assert.ok(normalized.includes(expected), path) }
 })
 
 test('expression estimate reuses shared animation and camera status has a single solid surface', () => {
