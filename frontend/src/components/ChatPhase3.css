@@ -262,3 +262,40 @@
  .chat-prompt-card:hover:not(:disabled){transform:translateY(-2px)}
 }
 @media(prefers-reduced-motion:reduce){.chat-prompt-card,.chat-mode-option,.chat-message-action{transition:none}}
+
+/* Chat final type scale across history, memory management, messages and composer. */
+.chat-history-trigger,.chat-memory-trigger{color:#315d43;font-size:11.5px}
+.chat-history-panel-heading span,.chat-history-panel-state{color:#4e6052;font-size:11.5px}
+.chat-history-item-main strong{font-size:12px}
+.chat-history-item-main small{color:#526257;font-size:11.5px}
+.chat-history-current{color:#315d40;font-size:10.5px}
+.chat-loading-caption{color:#506253;font-size:11.5px}
+.chat-memory-heading>div:nth-child(2)>span{color:#426149;font-size:10.5px}
+.chat-memory-heading p,.chat-memory-privacy p{color:#4d5e51;font-size:11.5px}
+.chat-memory-privacy strong{color:#315a40;font-size:11.5px}
+.chat-memory-form>label{color:#304c39;font-size:12px}
+.chat-memory-form>label span,.chat-memory-form-footer small{color:#526357;font-size:11.5px;line-height:1.45}
+.chat-memory-primary,.chat-memory-secondary{font-size:11.5px}
+.chat-memory-alert,.chat-memory-success{font-size:11.5px;line-height:1.5}
+.chat-memory-list-heading{font-size:12px}
+.chat-memory-list-heading span{color:#526357;font-size:11px}
+.chat-memory-item p,.chat-memory-empty p{color:#43594a;font-size:11.5px}
+.chat-memory-loading,.chat-memory-footer{color:#506253;font-size:11px}
+.chat-delivery-status{color:#4d6052;font-size:11.5px}
+.chat-message-actions button,.chat-message-action{color:#4d6052;font-size:11.5px}
+.chat-title-lockup p{color:#4f6053;font-size:11.5px}
+.chat-secure-label{font-size:11px}
+.chat-welcome-kicker{font-size:11px}
+.chat-welcome-note{color:#4c5d50;font-size:11.5px}
+.chat-message-meta{color:#536257;font-size:11px}
+.chat-message-meta span:first-child,.chat-message-badges span{font-size:11px}
+.chat-notice{font-size:11.5px}
+.chat-composer-meta{color:#4f6053;font-size:11px;line-height:1.45}
+.chat-checkin-invite-copy p,.chat-checkin-invite>button{font-size:11.5px}
+.chat-mode-label,.chat-mode-option{font-size:12px}
+@media(max-width:767px){
+ .chat-title-lockup p,.chat-composer-meta{font-size:11px}
+ .chat-history-item-main small,.chat-memory-form>label span,.chat-memory-form-footer small{font-size:11px}
+ .chat-message-meta,.chat-delivery-status{font-size:10.5px}
+ .chat-memory-primary,.chat-memory-secondary,.chat-message-actions button{font-size:11px}
+}

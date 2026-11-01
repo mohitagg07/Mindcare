@@ -457,3 +457,75 @@
  .mc-landing .mc-header-inner,.mc-landing .mc-product-window,.mc-landing .mc-site-nav{-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 @media(prefers-reduced-motion:reduce){.mc-landing .mc-button,.mc-landing .mc-journey-card{transition:none}}
+
+/* Final landing-page type scale, including compact-phone rules. */
+.mc-landing .mc-site-nav>a{font-size:12px}
+.mc-landing .mc-eyebrow{font-size:11px}
+.mc-landing .mc-hero-actions .mc-text-link{font-size:12px}
+.mc-landing .mc-hero-note p,.mc-landing .mc-hero-note strong{font-size:12.5px}
+.mc-landing .mc-hero-bottomline{color:#536256;font-size:10.5px}
+.mc-landing .mc-preview-caption{font-size:11px}
+.mc-landing .mc-product-branding span{color:#f1f6ee;font-size:10.5px}
+.mc-landing .mc-preview-label{color:#fffefa;font-size:10px}
+.mc-landing .mc-preview-step-count{font-size:10.5px}
+.mc-landing .mc-preview-choice{font-size:10.5px}
+.mc-landing .mc-product-message p{font-size:11.5px}
+.mc-landing .mc-message-author{font-size:10px}
+.mc-landing .mc-preview-followups>summary{font-size:11px}
+.mc-landing .mc-preview-followup{font-size:10.5px}
+.mc-landing .mc-preview-followup-note{font-size:11px}
+.mc-landing .mc-product-footnote{font-size:10.5px}
+.mc-landing .mc-feature-art-label{font-size:10.5px}
+.mc-landing .mc-feature-body{font-size:12.5px}
+.mc-landing .mc-feature-explore{font-size:11.5px}
+.mc-landing .mc-feature-rail-footer>p{color:#4f6153;font-size:10.5px}
+.mc-landing .mc-how-heading>p:not(.mc-eyebrow){color:#4b5e50;font-size:12.5px}
+.mc-landing .mc-journey-number{font-size:11px}
+.mc-landing .mc-journey-card-title{font-size:12px}
+.mc-landing .mc-journey-panel-kicker{font-size:10.5px}
+.mc-landing .mc-journey-panel-body{font-size:12px}
+.mc-landing .mc-journey-example-label{font-size:10.5px}
+.mc-landing .mc-journey-question>div>span{color:#526357;font-size:10.5px}
+.mc-landing .mc-journey-question p{font-size:11.5px}
+.mc-landing .mc-journey-footer{font-size:10.5px}
+.mc-landing .mc-care-copy>p:not(.mc-eyebrow){font-size:12.5px}
+.mc-landing .mc-help-kicker{font-size:10.5px}
+.mc-landing .mc-help-note>p:not(.mc-help-kicker){font-size:12px}
+.mc-landing .mc-help-link{font-size:11.5px}
+.mc-landing .mc-faq-item summary{font-size:12.5px}
+.mc-landing .mc-faq-item p{font-size:12px}
+.mc-landing .mc-final-cta>p:not(.mc-eyebrow){font-size:12px}
+.mc-landing .mc-footer-brand>p{font-size:11.5px}
+.mc-landing .mc-footer-heading{font-size:10.5px}
+.mc-landing .mc-footer-links a,.mc-landing .mc-footer-links button{font-size:11.5px}
+.mc-landing .mc-footer-bottom{color:#d5e0d6;font-size:10.5px}
+@media(max-width:767px){
+ .mc-landing .mc-site-nav>a{font-size:12px}
+ .mc-landing .mc-eyebrow{font-size:11px}
+ .mc-landing .mc-hero-actions .mc-text-link{font-size:12px}
+ .mc-landing .mc-hero-note p,.mc-landing .mc-hero-note strong{font-size:12.5px}
+ .mc-landing .mc-preview-caption{font-size:11px}
+ .mc-landing .mc-product-branding span{font-size:10.5px}
+ .mc-landing .mc-preview-label{font-size:10px}
+ .mc-landing .mc-preview-step-count,.mc-landing .mc-preview-choice{font-size:10.5px}
+ .mc-landing .mc-product-message p{font-size:11.5px}
+ .mc-landing .mc-message-author{font-size:10px}
+ .mc-landing .mc-preview-followups>summary{font-size:11px}
+ .mc-landing .mc-preview-followup{font-size:10.5px}
+ .mc-landing .mc-preview-followup-note{font-size:11px}
+ .mc-landing .mc-product-footnote,.mc-landing .mc-feature-art-label{font-size:10.5px}
+ .mc-landing .mc-feature-body,.mc-landing .mc-faq-item p,.mc-landing .mc-help-note>p:not(.mc-help-kicker){font-size:12.5px}
+ .mc-landing .mc-feature-explore,.mc-landing .mc-help-link{font-size:11.5px}
+ .mc-landing .mc-feature-rail-footer>p{font-size:10.5px}
+ .mc-landing .mc-how-heading>p:not(.mc-eyebrow),.mc-landing .mc-journey-panel-body{font-size:12px}
+ .mc-landing .mc-journey-card-title{font-size:12px}
+ .mc-landing .mc-journey-panel-kicker,.mc-landing .mc-journey-example-label,.mc-landing .mc-journey-question>div>span,.mc-landing .mc-journey-footer{font-size:10.5px}
+ .mc-landing .mc-journey-question p{font-size:11.5px}
+ .mc-landing .mc-care-copy>p:not(.mc-eyebrow){font-size:12.5px}
+ .mc-landing .mc-help-kicker{font-size:10.5px}
+ .mc-landing .mc-faq-item summary{font-size:12.5px}
+ .mc-landing .mc-final-cta>p:not(.mc-eyebrow){font-size:12px}
+ .mc-landing .mc-footer-heading{font-size:10.5px}
+ .mc-landing .mc-footer-links a,.mc-landing .mc-footer-links button{font-size:11.5px}
+ .mc-landing .mc-footer-bottom{font-size:10.5px}
+}

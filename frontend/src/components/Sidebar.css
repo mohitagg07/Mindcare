@@ -50,3 +50,9 @@
  .mc-side-item{transition:background-color .15s ease,color .15s ease}
  .mc-side-item:hover{background:rgba(255,255,255,.085)}
 }
+
+/* Sidebar final minimums for compact desktop and mobile navigation. */
+.mc-side-user-name{color:#f4f8f3;font-size:12px}
+.mc-side-user-email{color:#e6efe7;font-size:11.5px}
+.mc-side-privacy{color:#dce8dc;font-size:11.5px}
+@media(max-width:767px){.mc-side-user-email,.mc-side-privacy{font-size:11px}}

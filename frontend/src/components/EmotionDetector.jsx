@@ -38,7 +38,7 @@ function ConfRing({ value, color, size = 80 }) {
         <circle cx="34" cy="34" r={r} fill="none" stroke={color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={dash} strokeLinecap="round" style={{ transform:'rotate(-90deg)', transformOrigin:'34px 34px', transition:'stroke-dashoffset 1s ease' }}/>
         <text x="34" y="39" textAnchor="middle" fontSize="13" fontWeight="700" fill={color}>{Math.round(value * 100)}%</text>
       </svg>
-      <span style={{ fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px' }}>REPORTED SCORE</span>
+      <span style={{ fontSize:11.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.8px' }}>REPORTED SCORE</span>
     </div>
   )
 }
@@ -54,7 +54,7 @@ function CamFrame({ active, live = false }) {
       {active && <div style={{ position:'absolute', left:0, right:0, height:2, top:'50%', opacity:0.6, background:'linear-gradient(90deg, transparent, var(--teal), transparent)', animation:'scanLine 2s ease-in-out infinite' }}/>}
       {live && <div style={{ position:'absolute', top:10, right:44, display:'flex', alignItems:'center', gap:4, padding:'2px 7px', borderRadius:6, background:'rgba(255,255,255,.97)' }}>
         <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--teal)', animation:'pulse 1.5s infinite' }}/>
-        <span style={{ fontSize:10.5, fontWeight:700, color:'var(--teal)', letterSpacing:'1px' }}>CAMERA ON</span>
+        <span style={{ fontSize:11.5, fontWeight:700, color:'var(--teal)', letterSpacing:'1px' }}>CAMERA ON</span>
       </div>}
     </div>
   )
@@ -224,7 +224,7 @@ export default function EmotionDetector() {
 
                 <div style={{ background:'#fff', border:`1.5px solid ${dominant.color}28`, borderRadius:18, padding:'20px 18px', position:'relative', overflow:'hidden', boxShadow:'0 2px 16px rgba(26,35,50,0.08)' }}>
                   <div style={{ position:'absolute', top:-20, right:-20, width:100, height:100, borderRadius:'50%', background:dominant.color+'08', filter:'blur(20px)', pointerEvents:'none' }}/>
-                  <p style={{ fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:14, opacity:0.8 }}>MODEL’S TOP LABEL · UNCERTAIN</p>
+                  <p style={{ fontSize:11.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:14, opacity:0.8 }}>MODEL’S TOP LABEL · UNCERTAIN</p>
 
                   <div style={{ display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
                     <div style={{ width:72, height:72, borderRadius:18, flexShrink:0, background:dominant.color+'12', border:`1.5px solid ${dominant.color}28`, display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -246,7 +246,7 @@ export default function EmotionDetector() {
                 </div>
 
                 <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:16, padding:16, boxShadow:'0 1px 4px rgba(26,35,50,0.05)' }}>
-                  <p style={{ fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:12 }}>MODEL SCORE BREAKDOWN</p>
+                  <p style={{ fontSize:11.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:12 }}>MODEL SCORE BREAKDOWN</p>
                   <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                     {scores.map(([emotion, score]) => {
                       const meta = EMOTION_META[emotion] ?? { color:'var(--text-3)', label:emotion, emoji:'🙂' }

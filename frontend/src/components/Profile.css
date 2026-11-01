@@ -47,3 +47,23 @@
   .profile-savebar { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 @media (prefers-reduced-motion: reduce) { .profile-support-option { transition: none; } }
+
+/* Profile final minimums after older phone-size overrides. */
+.profile-eyebrow,.profile-section-kicker{color:#405d48;font-size:11px}
+.profile-completion-top,.profile-selected-count{color:#315d40;font-size:11px}
+.profile-completion-card small{color:#4d5e51;font-size:11.5px}
+.profile-avatar-options>span,.profile-identity-side{font-size:11.5px}
+.profile-panel-heading p{color:#4c5e51;font-size:12px}
+.profile-field>span em{color:#536257;font-size:11px}
+.profile-field small,.profile-support-copy small{color:#4d5f52;font-size:11.5px;line-height:1.55}
+.profile-focus-chip strong{color:#304b39;font-size:11.5px}
+.profile-focus-chip small{color:#4f6053;font-size:11px;line-height:1.45}
+.profile-focus-footnote,.profile-privacy-banner p{color:#4e5f52;font-size:11.5px;line-height:1.55}
+.profile-privacy-banner strong{color:#2f5139;font-size:11.5px}
+.profile-savebar>div:first-child{color:#4e5f52;font-size:11px}
+.profile-loading-note,.profile-photo-remove{font-size:11.5px}
+@media(max-width:767px){
+ .profile-field small,.profile-support-copy small,.profile-privacy-banner p,.profile-focus-footnote,.profile-panel-heading p{font-size:11.5px}
+ .profile-focus-chip strong,.profile-focus-chip small{font-size:11px}
+ .profile-savebar>div:first-child{font-size:11px}
+}

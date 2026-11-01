@@ -682,3 +682,41 @@ button, input, textarea { font-family: inherit; }
   html { scroll-behavior:auto!important; }
   *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
 }
+
+/* Route-wide minimum readable type scale. Rules follow all legacy responsive overrides. */
+.mc-app-shell .mc-brand-caption{color:#e4eee5;font-size:10.5px;letter-spacing:1px}
+.mc-app-shell .mc-nav-label{color:rgba(240,248,241,.88);font-size:11px;letter-spacing:1.2px}
+.mc-app-shell .mc-nav-detail{color:rgba(238,246,239,.9);font-size:12px;line-height:1.4}
+.mc-app-shell .mc-user-email{color:rgba(235,244,236,.88);font-size:11px}
+.mc-app-shell .mc-sidebar-help{color:#e4eee5;font-size:11.5px}
+.mc-app-shell .mc-topbar-heading span{color:#42584a;font-size:11px;letter-spacing:1.1px}
+.mc-app-shell .mc-private-pill{color:#315b40;font-size:11.5px}
+.mc-app-shell .mc-bottom-note{color:#4e5f52;font-size:11.5px;line-height:1.45}
+.mc-app-shell .mc-privacy-card p{font-size:11.5px}
+.mc-app-shell .mc-privacy-card span{color:rgba(226,239,228,.9);font-size:11px;line-height:1.5}
+.mc-auth-root .mc-auth-panel-head p{color:#536257;font-size:13px}
+.mc-auth-root .mc-auth-label{color:#304637;font-size:12.5px}
+.mc-auth-root .mc-auth-link{font-size:12px}
+.mc-auth-root .mc-auth-divider small{color:#526357;font-size:10.5px;letter-spacing:1px}
+.mc-auth-root .mc-auth-switch{color:#4c5d50;font-size:12.5px}
+.mc-auth-root .mc-auth-switch .mc-auth-link{font-size:12.5px}
+.mc-auth-root .mc-auth-error,.mc-auth-root .mc-auth-notice{font-size:12px;line-height:1.55}
+.mc-auth-root .mc-auth-strength>span{color:#4b5d50;font-size:11.5px}
+.mc-auth-root .mc-auth-privacy-note,.mc-auth-root .mc-auth-password-hint{color:#4d5e51;font-size:12px}
+.mc-auth-root .mc-auth-confirmation .mc-auth-muted{color:#536257;font-size:11.5px}
+.mc-auth-root .mc-auth-secondary-link,.mc-auth-root .mc-auth-back{color:#315f43;font-size:12px}
+.mc-auth-root .mc-auth-professional-note{color:#56665a;font-size:11.5px}
+.legal-dialog .legal-dialog-eyebrow{color:#42664d;font-size:11px;letter-spacing:1.2px}
+.legal-dialog .legal-dialog-footer span{color:#536257;font-size:11.5px}
+@media(max-width:767px){
+ .mc-app-shell .mc-brand-caption{font-size:10px}
+ .mc-app-shell .mc-nav-label{font-size:10.5px}
+ .mc-app-shell .mc-nav-detail{font-size:11.5px}
+ .mc-app-shell .mc-user-email{font-size:11px}
+ .mc-app-shell .mc-sidebar-help,.mc-app-shell .mc-bottom-note{font-size:11px}
+ .mc-app-shell .mc-topbar-heading span{font-size:10.5px}
+ .mc-auth-root .mc-auth-panel-head p{font-size:12.5px}
+ .mc-auth-root .mc-auth-switch,.mc-auth-root .mc-auth-switch .mc-auth-link{font-size:12px}
+ .mc-auth-root .mc-auth-professional-note{font-size:11px}
+ .legal-dialog .legal-dialog-footer span{font-size:11px}
+}

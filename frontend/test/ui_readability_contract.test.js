@@ -63,3 +63,32 @@ test('insights graph axis labels are dark and large enough to read', () => {
   const metrics = read('../src/components/Metrics.jsx')
   assert.equal(metrics.split("fill: '#526257', fontSize: 11").length - 1, 4)
 })
+
+test('every page family has a final readable helper-text rule', () => {
+  const checks = [
+    ['../src/index.css', '.mc-auth-root .mc-auth-divider small', 'font-size:10.5px'],
+    ['../src/index.css', '.legal-dialog .legal-dialog-eyebrow', 'font-size:11px'],
+    ['../src/pages/Landing.css', '.mc-landing .mc-preview-followup', 'font-size:10.5px'],
+    ['../src/pages/Landing.css', '.mc-landing .mc-journey-card-title', 'font-size:12px'],
+    ['../src/components/IdentityOnboarding.css', '.mc-identity-wordmark small', 'font-size:11px'],
+    ['../src/components/IdentityOnboarding.css', '.mc-identity-intro>p', 'font-size:12.5px'],
+    ['../src/components/Sidebar.css', '.mc-side-user-email', 'font-size:11.5px'],
+    ['../src/components/Dashboard.css', '.mcd-eyebrow', 'font-size:11.5px'],
+    ['../src/components/ChatPhase3.css', '.chat-history-current', 'font-size:10.5px'],
+    ['../src/components/ChatPhase3.css', '.chat-memory-form>label span', 'font-size:11.5px'],
+    ['../src/components/Assessment.css', '.assessment-choice-meta', 'font-size:11.5px'],
+    ['../src/components/Metrics.css', '.insights-section-heading>div>span', 'font-size:11px'],
+    ['../src/components/Profile.css', '.profile-focus-chip small', 'font-size:11px'],
+    ['../src/components/ProfileMemory.css', '.profile-memory-editor small', 'font-size:11.5px'],
+  ]
+  for (const [path, selector, size] of checks) {
+    const css = read(path).replaceAll(' ', '')
+    assert.ok(css.includes(selector.replaceAll(' ', '')), path + ' selector')
+    assert.ok(css.includes(size), path + ' type size')
+  }
+})
+
+test('reflection inline microcopy no longer uses 10.5px status labels', () => {
+  const emotion = read('../src/components/EmotionDetector.jsx')
+  assert.equal(emotion.includes('fontSize:10.5'), false)
+})

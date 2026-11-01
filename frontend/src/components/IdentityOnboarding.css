@@ -211,3 +211,34 @@
  .mc-identity-focus{min-height:38px;font-size:11.5px}
 }
 @media(max-width:767px){.mc-identity-brandbar,.mc-identity-panel{-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* Final onboarding type scale after compact-phone overrides. */
+.mc-identity-wordmark small{color:#536357;font-size:11px}
+.mc-identity-private{font-size:11.5px}
+.mc-identity-kicker{font-size:11px}
+.mc-identity-intro>p{color:#4d5e51;font-size:12.5px;line-height:1.6}
+.mc-identity-promise>div>span{color:#536257;font-size:11.5px}
+.mc-identity-progress-head{font-size:11px}
+.mc-identity-step-copy{font-size:12px}
+.mc-identity-label{font-size:12px}
+.mc-identity-label>span{font-size:11.5px}
+.mc-identity-help{color:#536257;font-size:11.5px;line-height:1.55}
+.mc-identity-style-copy strong{font-size:12px}
+.mc-identity-style-copy small{color:#526257;font-size:11.5px;line-height:1.45}
+.mc-identity-focus-heading strong{font-size:11.5px}
+.mc-identity-focus-heading span{color:#536257;font-size:11px}
+.mc-identity-focus{font-size:11.5px}
+.mc-identity-memory-note{color:#4c6051;font-size:11.5px;line-height:1.55}
+.mc-identity-error{font-size:11.5px}
+.mc-identity-back,.mc-identity-continue{font-size:12px}
+.mc-identity-footnote{color:#536257;font-size:11px;line-height:1.5}
+@media(max-width:767px){
+ .mc-identity-wordmark small{font-size:10.5px}
+ .mc-identity-intro>p{font-size:12px}
+ .mc-identity-progress-head{font-size:10.5px}
+ .mc-identity-step-copy,.mc-identity-help,.mc-identity-style-copy small{font-size:11.5px}
+ .mc-identity-label>span,.mc-identity-focus-heading span{font-size:10.5px}
+ .mc-identity-focus{min-height:38px;font-size:11px}
+ .mc-identity-memory-note,.mc-identity-footnote{font-size:10.5px}
+ .mc-identity-continue{font-size:12px}
+}

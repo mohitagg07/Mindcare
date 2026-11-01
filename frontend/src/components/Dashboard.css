@@ -231,3 +231,14 @@
  .mcd-activity-row time{font-size:11.5px}
 }
 @media(prefers-reduced-motion:reduce){.mcd-intent-option{transition:none}}
+
+/* Home final copy scale. */
+.mcd-eyebrow{color:#4c654f;font-size:11.5px}
+.mcd-setup-nudge p,.mcd-intent-copy small,.mcd-start-footer p,.mcd-activity-copy small{color:#4e5e51;font-size:12px;line-height:1.5}
+.mcd-activity-row time{color:#4e5e51;font-size:11.5px}
+.mcd-partial-warning{font-size:12px}
+@media(max-width:760px){
+ .mcd-eyebrow{font-size:11px}
+ .mcd-setup-nudge p,.mcd-intent-copy small,.mcd-start-footer p,.mcd-activity-copy small{font-size:11.5px}
+ .mcd-activity-row time{font-size:11px}
+}

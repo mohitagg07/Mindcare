@@ -161,3 +161,9 @@
 .profile-memory-editor small { color: #4d5f52; font-size: 11.5px; }
 .profile-memory-action { color: #304b39; font-size: 11.5px; min-height: 40px; }
 .profile-memory-action-danger { color: #7d3933; }
+
+/* Saved memory list: consistent copy size and action labels. */
+.profile-memory-count{color:#31583e;font-size:11.5px}
+.profile-memory-editor small{color:#4d5f52;font-size:11.5px;line-height:1.5}
+.profile-memory-action{color:#304b39;font-size:11.5px;min-height:40px}
+.profile-memory-action-danger{color:#7d3933}
