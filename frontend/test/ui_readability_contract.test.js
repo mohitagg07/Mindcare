@@ -54,7 +54,7 @@ test('mobile-facing chrome avoids expensive backdrop blur', () => {
 test('expression estimate reuses shared animation and camera status has a single solid surface', () => {
   const emotion = read('../src/components/EmotionDetector.jsx')
   assert.equal(emotion.includes('<style>{'), false)
-  assert.ok(emotion.includes("fontSize:10.5, color:'var(--text-3)'"))
+  assert.ok(emotion.includes("fontSize:11.5, color:'var(--text-3)'"))
   assert.ok(emotion.includes("background:'rgba(255,255,255,.97)'"))
   assert.equal((emotion.match(/background:'rgba\(255,255,255/g) || []).length, 1)
 })
