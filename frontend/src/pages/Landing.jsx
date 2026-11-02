@@ -265,35 +265,14 @@ export default function Landing({ onGetStarted, onSignIn }) {
           <div className="mc-hero-photo" aria-hidden="true" />
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
-              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A little room to think</p>
               <h1 id="mc-hero-title">Give your thoughts a little <em>room.</em></h1>
-              <p className="mc-hero-lede">Talk it through. Check in with yourself. Find one small next step — at your own pace.</p>
+              <p className="mc-hero-lede">You don’t need to have it figured out before you begin. Just start with what’s been on your mind.</p>
               <div className="mc-hero-actions">
                 <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={17} /></button>
-                <a className="mc-text-link" href="#how-it-works">See how MindCare works <ArrowDownRight size={16} /></a>
-              </div>
-              <div className="mc-hero-trust-row" aria-label="What you can expect from MindCare">
-                <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><MessageCircle size={18} strokeWidth={1.7} /></span>
-                  <span><strong>A place to talk</strong><small>No perfect words needed.</small></span>
-                </div>
-                <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><ClipboardList size={18} strokeWidth={1.7} /></span>
-                  <span><strong>Gentle check-ins</strong><small>Reflection, not diagnosis.</small></span>
-                </div>
-                <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><LockKeyhole size={18} strokeWidth={1.7} /></span>
-                  <span><strong>Your choices stay yours</strong><small>Share only what feels right.</small></span>
-                </div>
+                <a className="mc-text-link" href="#how-it-works">How MindCare works <ArrowDownRight size={16} /></a>
               </div>
             </div>
-            <aside className="mc-hero-side-note">
-              <span className="mc-hero-side-rule" />
-              <p>Your pace.<br /><em>Your way.</em></p>
-              <span>Nothing to prove. Nowhere to rush.</span>
-            </aside>
           </div>
-          <div className="mc-hero-bottomline"><span>NO PERFECT WORDS REQUIRED</span><span className="mc-bottomline-rule" /><span>ONE THING AT A TIME</span></div>
         </section>
         <section className="mc-demo-section" aria-labelledby="mc-demo-title">
           <div className="mc-demo-inner">
