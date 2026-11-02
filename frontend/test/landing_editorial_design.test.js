@@ -46,7 +46,7 @@ test('hero type and layout are tuned for desktop, tablet, phone, and short viewp
 test('hero controls keep accessible focus and reduced-motion behavior', () => {
   const css = read('../src/pages/Landing.css')
   assert.ok(css.includes(':focus-visible'))
-  assert.ok(css.includes('.mc-landing .mc-hero .mc-button:hover'))
+  assert.ok(css.includes('.mc-landing .mc-hero .mc-button-dark:hover'))
   assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'))
   assert.ok(css.includes('transition: none !important'))
 })
