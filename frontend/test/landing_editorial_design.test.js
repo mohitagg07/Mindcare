@@ -32,7 +32,9 @@ test('hero removes redundant template decoration while preserving the original p
   assert.ok(!section.includes('mc-hero-side-note'))
   assert.ok(!section.includes('mc-hero-trust-row'))
   assert.ok(!section.includes('mc-hero-bottomline'))
-  assert.ok(css.includes('photos/28146959/pexels-photo-28146959.jpeg'))
+  assert.ok(jsx.includes('photos/4426935/pexels-photo-4426935.jpeg'))
+  assert.ok(jsx.includes('srcSet="https://images.pexels.com/photos/4426935'))
+  assert.ok(jsx.includes('fetchPriority="high"'))
 })
 
 test('hero type and layout are tuned for desktop, tablet, phone, and short viewports', () => {
