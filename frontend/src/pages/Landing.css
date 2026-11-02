@@ -1250,7 +1250,7 @@
 }
 .mc-landing .mc-hero .mc-button {
   display: inline-flex;
-  min-height: 56px;
+  min-height: 52px;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -1446,8 +1446,8 @@
     margin-top: 23px;
   }
   .mc-landing .mc-hero .mc-button {
-    min-height: 52px;
-    padding: 14px 21px;
+    min-height: 50px;
+    padding: 13px 21px;
     font-size: 15px;
   }
   .mc-landing .mc-hero .mc-text-link {
@@ -1464,7 +1464,7 @@
   .mc-landing .mc-hero h1 { font-size: 38px; line-height: 1.065; }
   .mc-landing .mc-hero-lede { margin-top: 15px; font-size: 15px; line-height: 1.58; }
   .mc-landing .mc-hero-actions { margin-top: 19px; gap: 8px; }
-  .mc-landing .mc-hero .mc-button { min-height: 50px; padding-inline: 19px; font-size: 14px; }
+  .mc-landing .mc-hero .mc-button { min-height: 48px; padding-inline: 18px; font-size: 14px; }
 }
 @media (max-width: 760px) and (max-height: 700px) {
   .mc-landing .mc-hero-inner { padding-top: 84px; padding-bottom: 22px; }
