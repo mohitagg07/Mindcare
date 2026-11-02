@@ -69,7 +69,7 @@ function Brand({ light = false }) {
   return (
     <a className={`mc-landing-brand${light ? ' is-light' : ''}`} href="#top" aria-label="MindCare home">
       <span className="mc-brand-mark"><img src="/brand/mindcare-mark.png" alt="" /></span>
-      <span className="mc-brand-name">mindcare<span>.</span></span>
+      <span className="mc-brand-name">MindCare<span>.</span></span>
     </a>
   )
 }
