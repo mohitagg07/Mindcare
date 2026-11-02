@@ -265,12 +265,13 @@ export default function Landing({ onGetStarted, onSignIn }) {
         <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
             <picture>
+              {/* Genuine Pexels editorial photograph by Timo A.; kept as a photo asset, never flattened with UI text. */}
               <source
                 media="(max-width: 760px)"
-                srcSet="https://images.pexels.com/photos/28146959/pexels-photo-28146959.jpeg?auto=compress&cs=tinysrgb&w=1400"
+                srcSet="https://images.pexels.com/photos/4426935/pexels-photo-4426935.jpeg?auto=compress&cs=tinysrgb&w=1400"
               />
               <img
-                src="https://images.pexels.com/photos/28146959/pexels-photo-28146959.jpeg?auto=compress&cs=tinysrgb&w=2560"
+                src="https://images.pexels.com/photos/4426935/pexels-photo-4426935.jpeg?auto=compress&cs=tinysrgb&w=2560"
                 alt=""
                 aria-hidden="true"
                 fetchPriority="high"
