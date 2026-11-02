@@ -23,7 +23,7 @@ export default function Sidebar({ currentPage, onNavigate, onClose, onPrefetch }
     <aside className="mc-sidebar mc-side-rail" aria-label="Main navigation">
       <div className="mc-side-brand">
         <div className="mc-side-mark"><img src="/brand/mindcare-mark.png" alt="" /></div>
-        <span className="mc-side-wordmark">mindcare<span>.</span></span>
+        <span className="mc-side-wordmark">MindCare<span>.</span></span>
         {onClose && <button className="mc-side-close" type="button" onClick={onClose} aria-label="Close menu"><X size={18} /></button>}
       </div>
       <nav className="mc-side-nav" aria-label="Your pages">
