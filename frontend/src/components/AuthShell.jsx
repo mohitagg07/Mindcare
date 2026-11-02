@@ -20,7 +20,7 @@ export default function AuthShell({ title, subtitle, children, footer = true }) 
           <div className="mc-auth-story-foot"><Sparkles size={14} /> Small steps count, even when they don't feel small.</div>
         </section>
         <section className="mc-auth-panel">
-          <div className="mc-auth-mobile-brand"><img className="mc-auth-mobile-mark" src="/brand/mindcare-mark.png" alt="" /><span>mindcare<span className="mc-auth-brand-dot">.</span></span></div>
+          <div className="mc-auth-mobile-brand"><img className="mc-auth-mobile-mark" src="/brand/mindcare-mark.png" alt="" /><span>MindCare<span className="mc-auth-brand-dot">.</span></span></div>
           <header className="mc-auth-panel-head"><h2>{title}</h2><p>{subtitle}</p></header>
           {children}
           {footer && <p className="mc-auth-professional-note">Need urgent help? In India, Tele-MANAS: <strong>14416</strong>. If you're in immediate danger, contact local emergency services.</p>}
