@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppProvider, useApp } from './context/AppContext'
 import AuthGate from './components/AuthGate'
-import Landing from './pages/Landing'
 import Sidebar from './components/Sidebar'
 import IdentityOnboarding from './components/IdentityOnboarding'
 import { getMyProfile } from './api/client'
@@ -17,6 +16,7 @@ const pageLoaders = {
   profile: () => import('./components/Profile'),
 }
 
+const Landing = lazy(() => import('./pages/Landing'))
 const Chat = lazy(pageLoaders.chat)
 const Assessment = lazy(pageLoaders.assessment)
 const EmotionDetector = lazy(pageLoaders.emotion)
@@ -40,11 +40,19 @@ const pageMeta = {
 
 function LoadingScreen() {
   return (
-    <div className="mc-loading-screen">
-      <div className="mc-loading-mark"><img src="/brand/mindcare-mark.png" alt="" /></div>
-      <div className="mc-loading-title">mindcare<span>.</span></div>
-      <p>Preparing your space…</p>
-      <span className="mc-loader" />
+    <div className="mc-loading-screen" role="status" aria-live="polite" aria-atomic="true">
+      <div className="mc-loading-atmosphere" aria-hidden="true">
+        <span className="mc-loading-orbit mc-loading-orbit-one" />
+        <span className="mc-loading-orbit mc-loading-orbit-two" />
+        <span className="mc-loading-glow mc-loading-glow-one" />
+        <span className="mc-loading-glow mc-loading-glow-two" />
+      </div>
+      <div className="mc-loading-content">
+        <div className="mc-loading-mark"><img src="/brand/mindcare-mark.png" alt="" /></div>
+        <div className="mc-loading-title">MindCare<span>.</span></div>
+        <p>Making a little room for you…</p>
+        <span className="mc-loading-progress" aria-hidden="true"><span /></span>
+      </div>
     </div>
   )
 }
@@ -64,10 +72,14 @@ function AppRouter() {
   if (!isAuthed && authNotice) return <AuthGate key={`auth-notice-${authNotice.type}`} defaultView="login" />
   if (!isAuthed && window.location.pathname.startsWith('/auth/callback')) return <AuthGate key="auth-callback-incomplete" defaultView="login" />
   if (!isAuthed && !showAuth) {
-    return <Landing
-      onGetStarted={() => { setAuthView('register'); setShowAuth(true) }}
-      onSignIn={() => { setAuthView('login'); setShowAuth(true) }}
-    />
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <Landing
+          onGetStarted={() => { setAuthView('register'); setShowAuth(true) }}
+          onSignIn={() => { setAuthView('login'); setShowAuth(true) }}
+        />
+      </Suspense>
+    )
   }
   if (!isAuthed) return <AuthGate defaultView={authView} />
   return <Workspace />
@@ -140,7 +152,7 @@ function AuthenticatedApp() {
       <main className="mc-identity-page">
         <div className="mc-identity-botanical" aria-hidden="true" />
         <header className="mc-identity-brandbar">
-          <div className="mc-identity-brand"><img src="/brand/mindcare-mark.png" alt="" /><span className="mc-identity-wordmark">mindcare<span>.</span><small>A CALMER YOU, EVERYDAY</small></span></div>
+          <div className="mc-identity-brand"><img src="/brand/mindcare-mark.png" alt="" /><span className="mc-identity-wordmark">MindCare<span>.</span><small>A CALMER YOU, EVERYDAY</small></span></div>
           <div className="mc-identity-private"><ShieldCheck size={15} /> Private by default</div>
         </header>
         <div className="mc-identity-load-error"><section>
