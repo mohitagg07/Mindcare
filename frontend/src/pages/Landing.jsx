@@ -265,13 +265,12 @@ export default function Landing({ onGetStarted, onSignIn }) {
         <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
             <picture>
-              {/* Genuine Pexels editorial photograph by Timo A.; kept as a photo asset, never flattened with UI text. */}
               <source
                 media="(max-width: 760px)"
-                srcSet="https://images.pexels.com/photos/4426930/pexels-photo-4426930.jpeg?auto=compress&cs=tinysrgb&w=1400"
+                srcSet="https://images.pexels.com/photos/3915672/pexels-photo-3915672.jpeg?auto=compress&cs=tinysrgb&w=1200"
               />
               <img
-                src="https://images.pexels.com/photos/4426930/pexels-photo-4426930.jpeg?auto=compress&cs=tinysrgb&w=2560"
+                src="https://images.pexels.com/photos/3915672/pexels-photo-3915672.jpeg?auto=compress&cs=tinysrgb&w=2200"
                 alt=""
                 aria-hidden="true"
                 fetchPriority="high"
@@ -281,15 +280,12 @@ export default function Landing({ onGetStarted, onSignIn }) {
           </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
-              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A little room to think</p>
+              <p className="mc-eyebrow">A little room to think</p>
               <h1 id="mc-hero-title">Give your thoughts a little <em>room.</em></h1>
-              <p className="mc-hero-lede">Talk it through. Check in with yourself. Find one small next step — at your own pace.</p>
+              <p className="mc-hero-lede">You don’t need the right words. Start with what’s on your mind.</p>
               <div className="mc-hero-actions">
-                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={18} /></button>
-                <a className="mc-text-link" href="#how-it-works">
-                  <span className="mc-hero-link-icon" aria-hidden="true"><ArrowDownRight size={15} /></span>
-                  <span>See how it works</span>
-                </a>
+                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={17} /></button>
+                <a className="mc-text-link" href="#how-it-works">How it works <ArrowUpRight size={16} aria-hidden="true" /></a>
               </div>
             </div>
           </div>
