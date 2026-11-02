@@ -111,7 +111,7 @@ export default function IdentityOnboarding({ profile, onComplete }) {
       <header className="mc-identity-brandbar">
         <div className="mc-identity-brand">
           <img src="/brand/mindcare-mark.png" alt="" />
-          <span className="mc-identity-wordmark">mindcare<span>.</span><small>A CALMER YOU, EVERYDAY</small></span>
+          <span className="mc-identity-wordmark">MindCare<span>.</span><small>A CALMER YOU, EVERYDAY</small></span>
         </div>
         <div className="mc-identity-private"><ShieldCheck size={15} /> Private by default</div>
       </header>
