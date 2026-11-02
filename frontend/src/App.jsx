@@ -41,16 +41,12 @@ const pageMeta = {
 function LoadingScreen() {
   return (
     <div className="mc-loading-screen" role="status" aria-live="polite" aria-atomic="true">
-      <div className="mc-loading-atmosphere" aria-hidden="true">
-        <span className="mc-loading-orbit mc-loading-orbit-one" />
-        <span className="mc-loading-orbit mc-loading-orbit-two" />
-        <span className="mc-loading-glow mc-loading-glow-one" />
-        <span className="mc-loading-glow mc-loading-glow-two" />
-      </div>
-      <div className="mc-loading-content">
-        <div className="mc-loading-mark"><img src="/brand/mindcare-mark.png" alt="" /></div>
-        <div className="mc-loading-title">MindCare<span>.</span></div>
-        <p>Making a little room for you…</p>
+      <div className="mc-loading-glass-card">
+        <div className="mc-loading-brand">
+          <span className="mc-loading-mark"><img src="/brand/mindcare-mark.png" alt="" /></span>
+          <span className="mc-loading-title">MindCare<span>.</span></span>
+        </div>
+        <p>Preparing your space</p>
         <span className="mc-loading-progress" aria-hidden="true"><span /></span>
       </div>
     </div>
