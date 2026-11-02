@@ -19,7 +19,7 @@ test('hero keeps the approved original headline, natural copy, and working start
   assert.ok(section.includes('Give your thoughts a little <em>room.</em>'))
   assert.ok(section.includes('Talk it through. Check in with yourself. Find one small next step'))
   assert.ok(section.includes('onClick={onGetStarted}'))
-  assert.ok(section.includes('How MindCare works'))
+  assert.ok(section.includes('See how it works'))
 })
 
 test('hero removes redundant template decoration while preserving the original photograph', () => {
@@ -40,7 +40,7 @@ test('hero type and layout are tuned for desktop, tablet, phone, and short viewp
   assert.ok(css.includes('@media (max-width: 1100px) and (min-width: 761px)'))
   assert.ok(css.includes('@media (max-width: 390px)'))
   assert.ok(css.includes('@media (max-height: 720px) and (min-width: 761px)'))
-  assert.ok(css.includes('@media (max-width: 760px) and (max-height: 560px)'))
+  assert.ok(css.includes('@media (max-width: 760px) and (max-height: 650px)'))
 })
 
 test('hero controls keep accessible focus and reduced-motion behavior', () => {
