@@ -251,9 +251,10 @@ export default function Landing({ onGetStarted, onSignIn }) {
             {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
           </button>
           <nav className={`mc-site-nav${mobileNavOpen ? ' is-open' : ''}`} aria-label="Main navigation">
-            <a href="#approach" onClick={closeMobileNav}>Ways to begin</a>
+            <a href="#top" aria-current="page" onClick={closeMobileNav}>Home</a>
             <a href="#how-it-works" onClick={closeMobileNav}>How it works</a>
-            <a href="#care-and-privacy" onClick={closeMobileNav}>Care & privacy</a>
+            <a href="#care-and-privacy" onClick={closeMobileNav}>Support</a>
+            <a href="#mc-faq-title" onClick={closeMobileNav}>Resources</a>
             <button type="button" className="mc-nav-signin" onClick={() => { closeMobileNav(); handleSignIn?.() }}>Log in</button>
             <button type="button" className="mc-button mc-button-dark mc-nav-cta" onClick={() => { closeMobileNav(); onGetStarted?.() }}>Get started <ArrowRight size={15} /></button>
           </nav>
@@ -262,15 +263,32 @@ export default function Landing({ onGetStarted, onSignIn }) {
 
       <main>
         <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
-          <div className="mc-hero-photo" aria-hidden="true" />
+          <div className="mc-hero-photo" aria-hidden="true">
+            <picture>
+              <source
+                media="(max-width: 760px)"
+                srcSet="https://images.pexels.com/photos/28146959/pexels-photo-28146959.jpeg?auto=compress&cs=tinysrgb&w=1400"
+              />
+              <img
+                src="https://images.pexels.com/photos/28146959/pexels-photo-28146959.jpeg?auto=compress&cs=tinysrgb&w=2560"
+                alt=""
+                aria-hidden="true"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
+          </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
               <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A little room to think</p>
               <h1 id="mc-hero-title">Give your thoughts a little <em>room.</em></h1>
               <p className="mc-hero-lede">Talk it through. Check in with yourself. Find one small next step — at your own pace.</p>
               <div className="mc-hero-actions">
-                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={17} /></button>
-                <a className="mc-text-link" href="#how-it-works">See how it works <ArrowDownRight size={16} /></a>
+                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={18} /></button>
+                <a className="mc-text-link" href="#how-it-works">
+                  <span className="mc-hero-link-icon" aria-hidden="true"><ArrowDownRight size={15} /></span>
+                  <span>See how it works</span>
+                </a>
               </div>
             </div>
           </div>
