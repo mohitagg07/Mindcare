@@ -628,7 +628,7 @@
   background-image:
     linear-gradient(90deg, rgba(13,29,23,.9) 0%, rgba(13,29,23,.79) 31%, rgba(13,29,23,.42) 57%, rgba(13,29,23,.1) 100%),
     linear-gradient(0deg, rgba(10,23,17,.68) 0%, rgba(10,23,17,.04) 43%, rgba(10,23,17,.22) 100%),
-    url("https://images.pexels.com/photos/28146959/pexels-photo-28146959.jpeg?auto=compress&cs=tinysrgb&w=2560");
+    url("https://images.pexels.com/photos/28146959/pexels-photo-28146959.jpeg?auto=compress&cs=tinysrgb&w=3840");
   background-size: cover, cover, cover;
   background-position: center, center, center 48%;
   background-repeat: no-repeat;
