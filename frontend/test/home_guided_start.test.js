@@ -47,7 +47,7 @@ test('Home keeps a restrained surface system rather than adding a decorative her
 })
 
 
-test('the frontend uses local system typography and keeps page routes lazy-loaded', () => {
+test('the frontend uses the approved editorial fonts and keeps page routes lazy-loaded', () => {
   const html = readFileSync(resolve(here, '../index.html'), 'utf8')
   const app = readFileSync(resolve(here, '../src/App.jsx'), 'utf8')
   const globalCss = readFileSync(resolve(here, '../src/index.css'), 'utf8')
@@ -62,7 +62,8 @@ test('the frontend uses local system typography and keeps page routes lazy-loade
     '../src/components/Metrics.css',
   ].map(path => readFileSync(resolve(here, path), 'utf8'))
   const emotion = readFileSync(resolve(here, '../src/components/EmotionDetector.jsx'), 'utf8')
-  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/)
+  assert.ok(html.includes('family=Inter'))
+  assert.ok(html.includes('family=Playfair+Display'))
   assert.match(globalCss, /--mc-font-ui:\s*-apple-system/)
   assert.match(globalCss, /--mc-font-display:\s*Georgia/)
   assert.doesNotMatch(globalCss, /Fraunces|DM Sans|Lora|Manrope/)
