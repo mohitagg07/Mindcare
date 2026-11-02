@@ -251,31 +251,60 @@ export default function Landing({ onGetStarted, onSignIn }) {
             {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
           </button>
           <nav className={`mc-site-nav${mobileNavOpen ? ' is-open' : ''}`} aria-label="Main navigation">
-            <a href="#approach" onClick={closeMobileNav}>Explore</a>
+            <a href="#approach" onClick={closeMobileNav}>Ways to begin</a>
             <a href="#how-it-works" onClick={closeMobileNav}>How it works</a>
             <a href="#care-and-privacy" onClick={closeMobileNav}>Care & privacy</a>
-            <button type="button" className="mc-nav-signin" onClick={() => { closeMobileNav(); handleSignIn?.() }}>Sign in</button>
+            <button type="button" className="mc-nav-signin" onClick={() => { closeMobileNav(); handleSignIn?.() }}>Log in</button>
             <button type="button" className="mc-button mc-button-dark mc-nav-cta" onClick={() => { closeMobileNav(); onGetStarted?.() }}>Get started <ArrowRight size={15} /></button>
           </nav>
         </div>
       </header>
 
       <main>
-        <section className="mc-hero" aria-labelledby="mc-hero-title">
+        <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
+          <div className="mc-hero-photo" aria-hidden="true" />
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
               <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A little room to think</p>
-              <h1 id="mc-hero-title">Start with what’s on your <em>mind.</em></h1>
-              <p className="mc-hero-lede">Talk it through. Reflect. Find a small next step — at your own pace.</p>
+              <h1 id="mc-hero-title">Give your thoughts a little <em>room.</em></h1>
+              <p className="mc-hero-lede">Talk it through. Check in with yourself. Find one small next step — at your own pace.</p>
               <div className="mc-hero-actions">
                 <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={17} /></button>
-                <a className="mc-text-link" href="#approach">Explore MindCare <ArrowDownRight size={16} /></a>
+                <a className="mc-text-link" href="#how-it-works">See how MindCare works <ArrowDownRight size={16} /></a>
               </div>
-              <div className="mc-hero-note"><span className="mc-note-lock"><LockKeyhole size={15} /></span><p><strong>Your pace. Your choice.</strong><br />Share only what feels comfortable.</p></div>
+              <div className="mc-hero-trust-row" aria-label="What you can expect from MindCare">
+                <div className="mc-hero-trust-item">
+                  <span className="mc-hero-trust-icon"><MessageCircle size={18} strokeWidth={1.7} /></span>
+                  <span><strong>A place to talk</strong><small>No perfect words needed.</small></span>
+                </div>
+                <div className="mc-hero-trust-item">
+                  <span className="mc-hero-trust-icon"><ClipboardList size={18} strokeWidth={1.7} /></span>
+                  <span><strong>Gentle check-ins</strong><small>Reflection, not diagnosis.</small></span>
+                </div>
+                <div className="mc-hero-trust-item">
+                  <span className="mc-hero-trust-icon"><LockKeyhole size={18} strokeWidth={1.7} /></span>
+                  <span><strong>Your choices stay yours</strong><small>Share only what feels right.</small></span>
+                </div>
+              </div>
+            </div>
+            <aside className="mc-hero-side-note">
+              <span className="mc-hero-side-rule" />
+              <p>Your pace.<br /><em>Your way.</em></p>
+              <span>Nothing to prove. Nowhere to rush.</span>
+            </aside>
+          </div>
+          <div className="mc-hero-bottomline"><span>NO PERFECT WORDS REQUIRED</span><span className="mc-bottomline-rule" /><span>ONE THING AT A TIME</span></div>
+        </section>
+        <section className="mc-demo-section" aria-labelledby="mc-demo-title">
+          <div className="mc-demo-inner">
+            <div className="mc-demo-copy">
+              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />Start wherever you are</p>
+              <h2 id="mc-demo-title">Not sure what to say? <em>That’s okay.</em></h2>
+              <p>Choose a starting point and see how a thoughtful conversation might begin. This is only an example — your words stay on this page.</p>
+              <div className="mc-demo-privacy"><LockKeyhole size={14} /> Sample only. Nothing is sent or saved.</div>
             </div>
             <ProductPreview />
           </div>
-          <div className="mc-hero-bottomline"><span>NO PERFECT WORDS REQUIRED</span><span className="mc-bottomline-rule" /><span>ONE THING AT A TIME</span></div>
         </section>
 
         <section className="mc-section mc-approach" id="approach" aria-labelledby="mc-approach-title">
