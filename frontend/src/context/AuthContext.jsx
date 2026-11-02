@@ -84,16 +84,28 @@ export function AuthProvider({ children }) {
         // Never leave access/refresh tokens in the address bar after capturing them.
         cleanCallbackUrl()
         try {
-          const response = await fetch(`${API}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${incomingAccessToken}` },
-          })
-          if (!response.ok) throw new Error('The authentication callback did not create a valid session.')
-          const currentUser = await response.json()
           setProfileStatus('loading')
-          const profileResult = await enrichWithProfile(incomingAccessToken, currentUser)
+          let profileResponse = null
+          try {
+            profileResponse = await fetch(`${API}/api/auth/profile`, {
+              headers: { Authorization: `Bearer ${incomingAccessToken}` },
+            })
+          } catch {
+            // Fall back to the lightweight auth check so a temporary profile outage is recoverable.
+          }
+
           if (!cancelled) {
-            setUser(profileResult.user)
-            setProfileStatus(profileResult.status)
+            if (profileResponse?.ok) {
+              setUser(await profileResponse.json())
+              setProfileStatus('ready')
+            } else {
+              const fallbackResponse = await fetch(`${API}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${incomingAccessToken}` },
+              })
+              if (!fallbackResponse.ok) throw new Error('The authentication callback did not create a valid session.')
+              setUser(await fallbackResponse.json())
+              setProfileStatus('error')
+            }
             setToken(incomingAccessToken)
             if (flowType === 'signup') {
               localStorage.removeItem('mc_pending_email')
@@ -130,23 +142,75 @@ export function AuthProvider({ children }) {
       let activeToken = stored
       let invalidSession = false
       try {
-        let response = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${activeToken}` } })
-        if (response.status === 401) {
+        setProfileStatus('loading')
+
+        // The profile endpoint already validates the session and returns the full user
+        // profile. Use it as the single happy-path request instead of calling /me and
+        // then immediately making a second authenticated request for the same user.
+        let profileResponse = null
+        try {
+          profileResponse = await fetch(`${API}/api/auth/profile`, {
+            headers: { Authorization: `Bearer ${activeToken}` },
+          })
+        } catch {
+          // Keep a fallback path for temporary profile service/network failures.
+        }
+
+        if (profileResponse?.status === 401) {
           const refreshed = await refreshAuthSession()
           if (refreshed) {
             activeToken = refreshed
-            response = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${activeToken}` } })
+            try {
+              profileResponse = await fetch(`${API}/api/auth/profile`, {
+                headers: { Authorization: `Bearer ${activeToken}` },
+              })
+            } catch {
+              profileResponse = null
+            }
           }
-          if (!refreshed || response.status === 401) invalidSession = true
+          if (!refreshed || profileResponse?.status === 401) invalidSession = true
         }
-        if (!response.ok) throw new Error('Session could not be restored')
-        const currentUser = await response.json()
-        setProfileStatus('loading')
-        const profileResult = await enrichWithProfile(activeToken, currentUser)
-        if (!cancelled) {
-          setUser(profileResult.user)
-          setProfileStatus(profileResult.status)
-          setToken(activeToken)
+
+        if (invalidSession) throw new Error('Session could not be restored')
+
+        if (profileResponse?.ok) {
+          const profile = await profileResponse.json()
+          if (!cancelled) {
+            setUser(profile)
+            setProfileStatus('ready')
+            setToken(activeToken)
+          }
+        } else {
+          // Preserve the existing recoverable profile-error screen. This lightweight
+          // auth check runs only when the profile endpoint itself is unavailable.
+          let fallbackResponse = null
+          try {
+            fallbackResponse = await fetch(`${API}/api/auth/me`, {
+              headers: { Authorization: `Bearer ${activeToken}` },
+            })
+          } catch {
+            // The outer handler retains the token for a later retry.
+          }
+
+          if (fallbackResponse?.status === 401) {
+            const refreshed = await refreshAuthSession()
+            if (refreshed) {
+              activeToken = refreshed
+              fallbackResponse = await fetch(`${API}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${activeToken}` },
+              })
+            }
+            if (!refreshed || fallbackResponse?.status === 401) invalidSession = true
+          }
+          if (invalidSession) throw new Error('Session could not be restored')
+          if (!fallbackResponse?.ok) throw new Error('Session could not be restored')
+
+          const baseUser = await fallbackResponse.json()
+          if (!cancelled) {
+            setUser(baseUser)
+            setProfileStatus('error')
+            setToken(activeToken)
+          }
         }
       } catch {
         if (invalidSession) {
