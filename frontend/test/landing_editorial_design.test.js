@@ -32,7 +32,7 @@ test('hero removes redundant template decoration while preserving the original p
   assert.ok(!section.includes('mc-hero-side-note'))
   assert.ok(!section.includes('mc-hero-trust-row'))
   assert.ok(!section.includes('mc-hero-bottomline'))
-  assert.ok(section.includes('photos/4426935/pexels-photo-4426935.jpeg'))
+  assert.ok(section.includes('photos/4426930/pexels-photo-4426930.jpeg'))
   assert.ok(section.includes('srcSet="https://images.pexels.com/photos/4426935'))
   assert.ok(section.includes('fetchPriority="high"'))
 })
