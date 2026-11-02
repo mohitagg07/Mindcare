@@ -42,7 +42,7 @@ test('hero type and layout are tuned for desktop, tablet, phone, and short viewp
   assert.ok(css.includes('@media (max-width: 1100px) and (min-width: 761px)'))
   assert.ok(css.includes('@media (max-width: 390px)'))
   assert.ok(css.includes('@media (max-height: 720px) and (min-width: 761px)'))
-  assert.ok(css.includes('@media (max-width: 760px) and (max-height: 650px)'))
+  assert.ok(css.includes('@media (max-width: 760px) and (max-height: 700px)'))
 })
 
 test('hero controls keep accessible focus and reduced-motion behavior', () => {
