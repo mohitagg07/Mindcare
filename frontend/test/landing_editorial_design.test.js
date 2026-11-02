@@ -17,7 +17,7 @@ test('hero keeps the approved original headline, natural copy, and working start
   const jsx = read('../src/pages/Landing.jsx')
   const section = hero()
   assert.ok(section.includes('Give your thoughts a little <em>room.</em>'))
-  assert.ok(section.includes('Talk it through. Check in with yourself. Find one small next step'))
+  assert.ok(section.includes('You don’t need the right words. Start with what’s on your mind.'))
   assert.ok(section.includes('onClick={onGetStarted}'))
   assert.ok(section.includes('See how it works'))
   assert.ok(section.includes('mc-hero-link-icon'))
@@ -32,8 +32,8 @@ test('hero removes redundant template decoration while preserving the original p
   assert.ok(!section.includes('mc-hero-side-note'))
   assert.ok(!section.includes('mc-hero-trust-row'))
   assert.ok(!section.includes('mc-hero-bottomline'))
-  assert.ok(section.includes('photos/4426930/pexels-photo-4426930.jpeg'))
-  assert.ok(section.includes('srcSet="https://images.pexels.com/photos/4426935'))
+  assert.ok(section.includes('photos/3915672/pexels-photo-3915672.jpeg'))
+  assert.ok(section.includes('srcSet="https://images.pexels.com/photos/3915672'))
   assert.ok(section.includes('fetchPriority="high"'))
 })
 
@@ -99,4 +99,25 @@ test('hero is full viewport on Android and uses no glass panels', () => {
   assert.ok(!approvedBlock.includes('backdrop-filter: blur'))
   assert.match(approvedBlock, /@media \(max-width: 760px\)/)
   assert.match(approvedBlock, /@media \(max-width: 390px\)/)
+})
+
+
+test('hero small text is dark, copy sits on ivory, and buttons use current proportions', () => {
+  const css = read('../src/pages/Landing.css')
+  const block = css.slice(css.indexOf('/* MindCare — natural editorial hero'))
+  assert.ok(block.includes('color: #17221B'))
+  assert.ok(block.includes('color: #344139'))
+  assert.ok(block.includes('background: var(--mc-hero-ivory)'))
+  assert.ok(block.includes('border-radius: 11px'))
+  assert.ok(block.includes('min-height: 50px'))
+})
+
+test('Android hero stacks the photograph and complete copy inside the dynamic viewport', () => {
+  const css = read('../src/pages/Landing.css')
+  const block = css.slice(css.indexOf('/* MindCare — natural editorial hero'))
+  assert.ok(block.includes('height: calc(100dvh - 62px)'))
+  assert.ok(block.includes('grid-template-rows: minmax(150px, 31%) minmax(0, 69%)'))
+  assert.ok(block.includes('@media (max-width: 390px)'))
+  assert.ok(block.includes('@media (max-width: 760px) and (max-height: 680px)'))
+  assert.ok(block.includes('env(safe-area-inset-bottom)'))
 })
