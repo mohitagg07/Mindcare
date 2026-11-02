@@ -20,6 +20,8 @@ test('hero keeps the approved original headline, natural copy, and working start
   assert.ok(section.includes('Talk it through. Check in with yourself. Find one small next step'))
   assert.ok(section.includes('onClick={onGetStarted}'))
   assert.ok(section.includes('See how it works'))
+  assert.ok(section.includes('mc-hero-link-icon'))
+  assert.ok(section.includes('fetchPriority="high"'))
 })
 
 test('hero removes redundant template decoration while preserving the original photograph', () => {
@@ -66,12 +68,33 @@ test('sample conversation, remaining sections, and legal notices remain intact',
 })
 
 
-test('hero occupies the opening viewport and uses restrained glassmorphic alignment', () => {
+test('hero uses the approved palette, typography, and exact responsive type scale', () => {
+  const css = read('../src/pages/Landing.css')
+  const html = read('../index.html')
+  assert.ok(css.includes('--mc-hero-forest: #0F2D24'))
+  assert.ok(css.includes('--mc-hero-accent: #25634A'))
+  assert.ok(css.includes('--mc-hero-sage: #A9C3A1'))
+  assert.ok(css.includes('--mc-hero-ivory: #F6F4EC'))
+  assert.ok(css.includes('"Playfair Display"'))
+  assert.ok(css.includes('"Inter"'))
+  assert.ok(css.includes('font-size: clamp(58px, 5.25vw, 72px)'))
+  assert.ok(css.includes('font-size: 40px'))
+  assert.ok(css.includes('font-size: 18px'))
+  assert.ok(css.includes('font-size: 16px'))
+  assert.ok(html.includes('family=Inter'))
+  assert.ok(html.includes('family=Playfair+Display'))
+})
+
+test('hero is full viewport on Android and uses no glass panels', () => {
   const css = read('../src/pages/Landing.css')
   assert.match(css, /\.mc-landing \.mc-hero \{[^}]*min-height: 100svh/s)
   assert.match(css, /\.mc-landing \.mc-hero-inner \{[^}]*min-height: 100svh/s)
-  assert.match(css, /\.mc-landing \.mc-hero-copy \{[^}]*backdrop-filter: blur\(22px\)/s)
-  assert.match(css, /\.mc-landing \.mc-header-inner \{[^}]*backdrop-filter: blur\(22px\)/s)
-  assert.match(css, /@media \(max-width: 760px\)/)
-  assert.match(css, /@media \(max-width: 390px\)/)
+  assert.ok(css.includes('min-height: 100dvh'))
+  assert.ok(css.includes('env(safe-area-inset-bottom)'))
+  const approvedBlock = css.slice(css.indexOf('/* MindCare approved hero design system'))
+  assert.ok(approvedBlock.includes('background: transparent'))
+  assert.ok(approvedBlock.includes('-webkit-backdrop-filter: none'))
+  assert.ok(!approvedBlock.includes('backdrop-filter: blur'))
+  assert.match(approvedBlock, /@media \(max-width: 760px\)/)
+  assert.match(approvedBlock, /@media \(max-width: 390px\)/)
 })
