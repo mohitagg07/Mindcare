@@ -265,11 +265,12 @@ export default function Landing({ onGetStarted, onSignIn }) {
           <div className="mc-hero-photo" aria-hidden="true" />
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
+              <p className="mc-eyebrow"><span className="mc-eyebrow-line" />A little room to think</p>
               <h1 id="mc-hero-title">Give your thoughts a little <em>room.</em></h1>
-              <p className="mc-hero-lede">You don’t need to have it figured out before you begin. Just start with what’s been on your mind.</p>
+              <p className="mc-hero-lede">Talk it through. Check in with yourself. Find one small next step — at your own pace.</p>
               <div className="mc-hero-actions">
                 <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={17} /></button>
-                <a className="mc-text-link" href="#how-it-works">How MindCare works <ArrowDownRight size={16} /></a>
+                <a className="mc-text-link" href="#how-it-works">See how it works <ArrowDownRight size={16} /></a>
               </div>
             </div>
           </div>
