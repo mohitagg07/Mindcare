@@ -64,3 +64,14 @@ test('sample conversation, remaining sections, and legal notices remain intact',
   assert.ok(jsx.includes("setLegalView('privacy')"))
   assert.ok(jsx.includes("setLegalView('terms')"))
 })
+
+
+test('hero occupies the opening viewport and uses restrained glassmorphic alignment', () => {
+  const css = read('../src/pages/Landing.css')
+  assert.match(css, /\.mc-landing \.mc-hero \{[^}]*min-height: 100svh/s)
+  assert.match(css, /\.mc-landing \.mc-hero-inner \{[^}]*min-height: 100svh/s)
+  assert.match(css, /\.mc-landing \.mc-hero-copy \{[^}]*backdrop-filter: blur\(22px\)/s)
+  assert.match(css, /\.mc-landing \.mc-header-inner \{[^}]*backdrop-filter: blur\(22px\)/s)
+  assert.match(css, /@media \(max-width: 760px\)/)
+  assert.match(css, /@media \(max-width: 390px\)/)
+})
