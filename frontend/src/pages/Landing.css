@@ -536,8 +536,9 @@
   * Free-to-use Pexels image, served through its image CDN at a 2560px width.
   */
 .mc-landing {
-  --serif: "DM Serif Display", Georgia, serif;
-  --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Local stacks keep the editorial serif/sans contrast without extra font requests. */
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --paper: #F5F2E9;
   --ink: #1B302A;
   --forest: #214F40;

@@ -35,8 +35,10 @@ test('landing page keeps the remaining sections and legal notices intact', () =>
 test('editorial fonts and responsive forest-photo hero are configured', () => {
   const html = read('../index.html')
   const css = read('../src/pages/Landing.css')
-  assert.ok(html.includes('DM+Sans'))
-  assert.ok(html.includes('DM+Serif+Display'))
+  assert.ok(!html.includes('fonts.googleapis.com'))
+  assert.ok(!html.includes('fonts.gstatic.com'))
+  assert.ok(css.includes('--serif: \'Iowan Old Style\''))
+  assert.ok(css.includes('--sans: -apple-system'))
   assert.ok(css.includes('mc-hero-photo'))
   assert.ok(css.includes('photos/28146959/pexels-photo-28146959.jpeg'))
   assert.ok(css.includes('@media(max-width:760px)'))
