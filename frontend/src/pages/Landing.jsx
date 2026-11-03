@@ -264,9 +264,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
       <main>
         <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
-            <img src="/mindcare-hero-1.avif" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
-            <img src="/mindcare-hero-2.avif" alt="" aria-hidden="true" decoding="async" />
-            <img src="/mindcare-hero-3.avif" alt="" aria-hidden="true" decoding="async" />
+            <img src="/mindcare-hero.avif" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">

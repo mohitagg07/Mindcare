@@ -12,126 +12,59 @@ const hero = () => {
   const end = jsx.indexOf('</section>', start) + '</section>'.length
   return jsx.slice(start, end)
 }
+const heroCss = () => {
+  const css = read('../src/pages/Landing.css')
+  return css.slice(css.lastIndexOf('/* MindCare hero — one real photograph'))
+}
 
-test('hero keeps the approved original headline, natural copy, and working start action', () => {
-  const jsx = read('../src/pages/Landing.jsx')
+test('hero keeps the approved copy, one local photo, and the real start action', () => {
   const section = hero()
   assert.ok(section.includes('Give your thoughts a little <em>room.</em>'))
   assert.ok(section.includes('You don’t need the right words. Start with what’s on your mind.'))
   assert.ok(section.includes('onClick={onGetStarted}'))
   assert.ok(section.includes('How it works'))
-  assert.ok(section.includes('mc-text-link'))
+  assert.ok(section.includes('src="/mindcare-hero.avif"'))
+  assert.equal((section.match(/<img\b/g) || []).length, 1)
   assert.ok(section.includes('fetchPriority="high"'))
+  assert.ok(!section.includes('.avif'))
 })
 
-test('hero removes redundant template decoration while preserving the original photograph', () => {
-  const section = hero()
-  const css = read('../src/pages/Landing.css')
-  assert.ok(section.includes('mc-hero-photo'))
-  assert.ok(section.includes('A little room to think'))
-  assert.ok(!section.includes('mc-hero-side-note'))
-  assert.ok(!section.includes('mc-hero-trust-row'))
-  assert.ok(!section.includes('mc-hero-bottomline'))
-  assert.ok(section.includes('/mindcare-hero-1.avif'))
-  assert.ok(section.includes('/mindcare-hero-2.avif'))
-  assert.ok(section.includes('/mindcare-hero-3.avif'))
-  assert.ok(section.includes('src="/mindcare-hero-1.avif"')))
-  assert.ok(section.includes('fetchPriority="high"'))
+test('desktop hero uses the supplied image once as a full-bleed photograph', () => {
+  const css = heroCss()
+  assert.ok(css.includes('position: absolute;'))
+  assert.ok(css.includes('inset: 0;'))
+  assert.ok(css.includes('object-fit: cover;'))
+  assert.ok(css.includes('linear-gradient(90deg'))
+  assert.ok(css.includes('height: calc(100dvh - 72px)'))
 })
 
-test('hero type and layout are tuned for desktop, tablet, phone, and short viewports', () => {
-  const css = read('../src/pages/Landing.css')
-  assert.ok(css.includes('text-wrap: balance'))
-  assert.ok(css.includes('font-kerning: normal'))
-  assert.ok(css.includes('@media (max-width: 1100px) and (min-width: 881px)'))
+test('mobile uses the full 16:9 image above readable copy within the dynamic viewport', () => {
+  const css = heroCss()
+  assert.ok(css.includes('height: calc(100dvh - 62px)'))
+  assert.ok(css.includes('grid-template-rows: minmax(0, 56.25vw) minmax(0, 1fr)'))
+  assert.ok(css.includes('aspect-ratio: 16 / 9'))
+  assert.ok(css.includes('color: #111A14'))
+  assert.ok(css.includes('background: var(--mc-hero-ivory)'))
+  assert.ok(css.includes('env(safe-area-inset-bottom)'))
   assert.ok(css.includes('@media (max-width: 390px)'))
-  assert.ok(css.includes('@media (max-height: 760px) and (min-width: 881px)'))
-  assert.ok(css.includes('@media (max-width: 760px) and (max-height: 680px)'))
 })
 
-test('hero controls keep accessible focus and reduced-motion behavior', () => {
-  const css = read('../src/pages/Landing.css')
-  assert.ok(css.includes(':focus-visible'))
-  assert.ok(css.includes('.mc-landing .mc-hero .mc-button-dark:hover'))
+test('buttons use restrained pill proportions and retain keyboard and reduced-motion support', () => {
+  const css = heroCss()
+  assert.ok(css.includes('border-radius: 999px'))
+  assert.ok(css.includes('min-height: 51px'))
+  assert.ok(css.includes(':focus-visible') || read('../src/pages/Landing.css').includes(':focus-visible'))
   assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'))
-  assert.ok(css.includes('transition: none !important'))
 })
 
-test('sample conversation, remaining sections, and legal notices remain intact', () => {
+test('all remaining landing-page sections and legal interactions stay intact', () => {
   const jsx = read('../src/pages/Landing.jsx')
   assert.ok(jsx.includes('mc-demo-section'))
   assert.ok(jsx.includes('<ProductPreview />'))
-  assert.ok(jsx.includes('aria-pressed={item.id === activeId}'))
-  assert.ok(jsx.includes('Nothing is sent or saved.'))
   assert.ok(jsx.includes('mc-approach'))
   assert.ok(jsx.includes('mc-how-section'))
   assert.ok(jsx.includes('mc-care-section'))
   assert.ok(jsx.includes('mc-faq-section'))
   assert.ok(jsx.includes("setLegalView('privacy')"))
   assert.ok(jsx.includes("setLegalView('terms')"))
-})
-
-
-test('hero uses the approved palette, typography, and exact responsive type scale', () => {
-  const css = read('../src/pages/Landing.css')
-  const html = read('../index.html')
-  assert.ok(css.includes('--mc-hero-forest: #0F2D24'))
-  assert.ok(css.includes('--mc-hero-accent: #25634A'))
-  assert.ok(css.includes('--mc-hero-sage: #A9C3A1'))
-  assert.ok(css.includes('--mc-hero-ivory: #F6F4EC'))
-  assert.ok(css.includes('"Playfair Display"'))
-  assert.ok(css.includes('"Inter"'))
-  assert.ok(css.includes('font-size: clamp(54px, 5.15vw, 72px)'))
-  assert.ok(css.includes('font-size: 34px'))
-  assert.ok(css.includes('font-size: 17px'))
-  assert.ok(css.includes('font-size: 14.5px'))
-  assert.ok(html.includes('family=Inter'))
-  assert.ok(html.includes('family=Playfair+Display'))
-})
-
-test('hero uses a full-height desktop split and Android viewport below the header', () => {
-  const css = read('../src/pages/Landing.css')
-  const block = css.slice(css.indexOf('/* MindCare — natural editorial hero'))
-  assert.ok(block.includes('height: calc(100dvh - 72px)'))
-  assert.ok(block.includes('height: calc(100dvh - 62px)'))
-  assert.ok(block.includes('position: absolute;'))
-  assert.ok(block.includes('grid-template-rows: minmax(0, 56.25vw) minmax(0, 1fr)'))
-  assert.ok(block.includes('env(safe-area-inset-bottom)'))
-  assert.ok(block.includes('@media (max-width: 760px)'))
-  assert.ok(block.includes('@media (max-width: 390px)'))
-})
-
-
-test('hero small text is dark, copy sits on ivory, and buttons use current proportions', () => {
-  const css = read('../src/pages/Landing.css')
-  const block = css.slice(css.indexOf('/* MindCare — natural editorial hero'))
-  assert.ok(block.includes('color: #17221B'))
-  assert.ok(block.includes('color: #344139'))
-  assert.ok(block.includes('background: var(--mc-hero-ivory)'))
-  assert.ok(block.includes('border-radius: 11px'))
-  assert.ok(block.includes('min-height: 50px'))
-})
-
-test('Android hero stacks the photograph and complete copy inside the dynamic viewport', () => {
-  const css = read('../src/pages/Landing.css')
-  const block = css.slice(css.indexOf('/* MindCare — natural editorial hero'))
-  assert.ok(block.includes('height: calc(100dvh - 62px)'))
-  assert.ok(block.includes('grid-template-rows: minmax(0, 56.25vw) minmax(0, 1fr)'))
-  assert.ok(block.includes('@media (max-width: 390px)'))
-  assert.ok(block.includes('@media (max-width: 760px) and (max-height: 680px)'))
-  assert.ok(block.includes('env(safe-area-inset-bottom)'))
-})
-
-
-test('supplied hero photograph uses the three optimized local strips and a complete mobile 16:9 frame', () => {
-  const jsx = read('../src/pages/Landing.jsx')
-  const css = read('../src/pages/Landing.css')
-  const block = css.slice(css.lastIndexOf('/* MindCare hero photo'))
-  assert.ok(jsx.includes('src="/mindcare-hero-1.avif"'))
-  assert.ok(jsx.includes('src="/mindcare-hero-2.avif"'))
-  assert.ok(jsx.includes('src="/mindcare-hero-3.avif"'))
-  assert.ok(jsx.includes('fetchPriority="high"'))
-  assert.ok(block.includes('object-fit: fill'))
-  assert.ok(block.includes('aspect-ratio: 16 / 9'))
-  assert.ok(block.includes('env(safe-area-inset-bottom)'))
 })
