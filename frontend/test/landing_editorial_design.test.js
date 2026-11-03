@@ -26,7 +26,9 @@ test('hero keeps the approved copy, one local photo, and the real start action',
   assert.ok(section.includes('src="/mindcare-hero.avif"'))
   assert.equal((section.match(/<img\b/g) || []).length, 1)
   assert.ok(section.includes('fetchPriority="high"'))
-  assert.ok(!section.includes('.avif'))
+  assert.ok(!section.includes('mindcare-hero-1.avif'))
+  assert.ok(!section.includes('mindcare-hero-2.avif'))
+  assert.ok(!section.includes('mindcare-hero-3.avif'))
 })
 
 test('desktop hero uses the supplied image once as a full-bleed photograph', () => {
