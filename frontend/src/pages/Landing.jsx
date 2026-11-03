@@ -15,6 +15,7 @@ import {
   Menu,
   MessageCircle,
   ScanFace,
+  SlidersHorizontal,
   Sprout,
   X,
 } from 'lucide-react'
@@ -285,25 +286,25 @@ export default function Landing({ onGetStarted, onSignIn }) {
                 <span className="mc-hero-title-line">Give your thoughts</span>
                 <span className="mc-hero-title-line">a little <em>room.</em></span>
               </h1>
-              <p className="mc-hero-lede">Talk it out, reflect and check on your mood at your own pace.</p>
+              <p className="mc-hero-lede">Talk things through, reflect, and check in with how you’re feeling — at your own pace.</p>
               <div className="mc-hero-actions">
                 <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>
                   Start a conversation <ArrowRight size={19} aria-hidden="true" />
                 </button>
                 <a className="mc-button mc-button-hero-outline" href="#approach">Explore MindCare</a>
               </div>
-              <div className="mc-hero-trust-row" aria-label="A safe space to talk, gentle check ins and private choices">
+              <div className="mc-hero-trust-row" aria-label="Room to talk at your own pace, gentle mood check-ins, and memory you control.">
                 <div className="mc-hero-trust-item">
                   <span className="mc-hero-trust-icon"><MessageCircle size={29} strokeWidth={1.6} /></span>
-                  <span className="mc-hero-trust-copy"><strong>A safe space</strong><small>to talk</small></span>
+                  <span className="mc-hero-trust-copy"><strong>Room to talk</strong><small>At your own pace</small></span>
                 </div>
                 <div className="mc-hero-trust-item">
                   <span className="mc-hero-trust-icon"><Sprout size={30} strokeWidth={1.55} /></span>
-                  <span className="mc-hero-trust-copy"><strong>Gentle</strong><small>check ins</small></span>
+                  <span className="mc-hero-trust-copy"><strong>Gentle check-ins</strong><small>Notice how you’re feeling</small></span>
                 </div>
                 <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><LockKeyhole size={28} strokeWidth={1.55} /></span>
-                  <span className="mc-hero-trust-copy"><strong>Your choices</strong><small>stay private</small></span>
+                  <span className="mc-hero-trust-icon"><SlidersHorizontal size={28} strokeWidth={1.55} /></span>
+                  <span className="mc-hero-trust-copy"><strong>Memory you control</strong><small>You choose what it remembers</small></span>
                 </div>
               </div>
             </div>
