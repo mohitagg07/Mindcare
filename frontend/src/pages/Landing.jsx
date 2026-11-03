@@ -264,19 +264,11 @@ export default function Landing({ onGetStarted, onSignIn }) {
       <main>
         <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
-            <picture>
-              <source
-                media="(max-width: 760px)"
-                srcSet="https://images.pexels.com/photos/3915672/pexels-photo-3915672.jpeg?auto=compress&cs=tinysrgb&w=1200"
-              />
-              <img
-                src="https://images.pexels.com/photos/3915672/pexels-photo-3915672.jpeg?auto=compress&cs=tinysrgb&w=2200"
-                alt=""
-                aria-hidden="true"
-                fetchPriority="high"
-                decoding="async"
-              />
-            </picture>
+            <div className="mc-hero-photo" aria-hidden="true">
+            <img src="/mindcare-hero-1.avif" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+            <img src="/mindcare-hero-2.avif" alt="" aria-hidden="true" decoding="async" />
+            <img src="/mindcare-hero-3.avif" alt="" aria-hidden="true" decoding="async" />
+          </div>
           </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
