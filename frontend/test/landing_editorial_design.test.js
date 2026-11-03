@@ -3,70 +3,35 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-
 const here = dirname(fileURLToPath(import.meta.url))
 const read = path => readFileSync(resolve(here, path), 'utf8')
 const hero = () => {
   const jsx = read('../src/pages/Landing.jsx')
-  const start = jsx.indexOf('<section className="mc-hero mc-hero-editorial"')
+  const start = jsx.indexOf('<section className="mc-hero mc-hero-reference"')
   const end = jsx.indexOf('</section>', start) + '</section>'.length
   return jsx.slice(start, end)
 }
-const heroCss = () => {
-  const css = read('../src/pages/Landing.css')
-  return css.slice(css.lastIndexOf('/* MindCare hero — one real photograph'))
-}
+const heroCss = () => { const css = read('../src/pages/Landing.css'); return css.slice(css.lastIndexOf('/* MindCare reference hero:')) }
 
-test('hero keeps the approved copy, one local photo, and the real start action', () => {
+test('hero keeps the approved copy, both CTAs and working conversation action', () => {
   const section = hero()
-  assert.ok(section.includes('Give your thoughts a little <em>room.</em>'))
-  assert.ok(section.includes('You don’t need the right words. Start with what’s on your mind.'))
-  assert.ok(section.includes('onClick={onGetStarted}'))
-  assert.ok(section.includes('How it works'))
-  assert.ok(section.includes('src="/mindcare-hero.avif"'))
-  assert.equal((section.match(/<img\b/g) || []).length, 1)
-  assert.ok(section.includes('fetchPriority="high"'))
-  assert.ok(!section.includes('mindcare-hero-1.avif'))
-  assert.ok(!section.includes('mindcare-hero-2.avif'))
-  assert.ok(!section.includes('mindcare-hero-3.avif'))
+  for (const text of ['A calmer space for your mind','Give your thoughts','a little <em>room.</em>','Talk it through. Reflect. Check in on your mood.','Find a small next step — at your own pace.','Start a conversation','href="#approach">Explore MindCare</a>','onClick={onGetStarted}']) assert.ok(section.includes(text))
 })
-
-test('desktop hero uses the supplied image once as a full-bleed photograph', () => {
+test('trust row and handwritten note are actual DOM content', () => {
+  const section = hero()
+  for (const text of ['A safe space','to talk','Gentle','check-ins','Your choices','stay yours','Your pace.','Your choice.']) assert.ok(section.includes(text))
+  assert.equal((section.match(/<img\b/g)||[]).length,1)
+})
+test('desktop hero has a full-bleed photo, editorial typography and paired pill buttons', () => {
   const css = heroCss()
-  assert.ok(css.includes('position: absolute;'))
-  assert.ok(css.includes('inset: 0;'))
-  assert.ok(css.includes('object-fit: cover;'))
-  assert.ok(css.includes('linear-gradient(90deg'))
-  assert.ok(css.includes('height: calc(100dvh - 72px)'))
+  for (const text of ['min-height:100dvh','linear-gradient(90deg','font-size:clamp(58px,6.05vw,91px)','border-radius:999px','mc-hero-side-note::after','Caveat']) assert.ok(css.includes(text))
 })
-
-test('mobile uses the full 16:9 image above readable copy within the dynamic viewport', () => {
+test('mobile hero remains a photo-backed full-height scene and uses compact responsive details', () => {
   const css = heroCss()
-  assert.ok(css.includes('height: calc(100dvh - 62px)'))
-  assert.ok(css.includes('grid-template-rows: minmax(0, 56.25vw) minmax(0, 1fr)'))
-  assert.ok(css.includes('aspect-ratio: 16 / 9'))
-  assert.ok(css.includes('color: #111A14'))
-  assert.ok(css.includes('background: var(--mc-hero-ivory)'))
-  assert.ok(css.includes('env(safe-area-inset-bottom)'))
-  assert.ok(css.includes('@media (max-width: 390px)'))
+  for (const text of ['@media (max-width:760px)','object-position:75% center','repeat(3,minmax(0,1fr))','env(safe-area-inset-top)','env(safe-area-inset-bottom)','@media (max-width:390px)','@media (prefers-reduced-motion:reduce)']) assert.ok(css.includes(text))
 })
-
-test('buttons use restrained pill proportions and retain keyboard and reduced-motion support', () => {
-  const css = heroCss()
-  assert.ok(css.includes('border-radius: 999px'))
-  assert.ok(css.includes('min-height: 51px'))
-  assert.ok(css.includes(':focus-visible') || read('../src/pages/Landing.css').includes(':focus-visible'))
-  assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'))
-})
-
-test('all remaining landing-page sections and legal interactions stay intact', () => {
+test('all previous landing sections, legal flows and mobile menu remain available', () => {
   const jsx = read('../src/pages/Landing.jsx')
-  assert.ok(jsx.includes('mc-demo-section'))
-  assert.ok(jsx.includes('<ProductPreview />'))
-  assert.ok(jsx.includes('mc-approach'))
-  assert.ok(jsx.includes('mc-how-section'))
-  assert.ok(jsx.includes('mc-care-section'))
-  assert.ok(jsx.includes('mc-faq-section'))
-  assert.ok(jsx.includes("setLegalView('privacy')"))
-  assert.ok(jsx.includes("setLegalView('terms')"))
+  for (const text of ['aria-label="Main navigation"','setMobileNavOpen','mc-demo-section','<ProductPreview />','mc-approach','mc-how-section','mc-care-section','mc-faq-section',"setLegalView('privacy')","setLegalView('terms')"]) assert.ok(jsx.includes(text))
 })
+test('Caveat is loaded for the handwritten note', () => { assert.ok(read('../index.html').includes('family=Caveat:wght@500;600')) })

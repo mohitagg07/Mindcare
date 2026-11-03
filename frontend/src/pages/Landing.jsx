@@ -15,6 +15,7 @@ import {
   Menu,
   MessageCircle,
   ScanFace,
+  Sprout,
   X,
 } from 'lucide-react'
 import './Landing.css'
@@ -256,26 +257,43 @@ export default function Landing({ onGetStarted, onSignIn }) {
             <a href="#care-and-privacy" onClick={closeMobileNav}>Support</a>
             <a href="#mc-faq-title" onClick={closeMobileNav}>Resources</a>
             <button type="button" className="mc-nav-signin" onClick={() => { closeMobileNav(); handleSignIn?.() }}>Log in</button>
-            <button type="button" className="mc-button mc-button-dark mc-nav-cta" onClick={() => { closeMobileNav(); onGetStarted?.() }}>Get started <ArrowRight size={15} /></button>
+            <button type="button" className="mc-button mc-button-dark mc-nav-cta" onClick={() => { closeMobileNav(); onGetStarted?.() }}>Get Started <ArrowRight size={15} /></button>
           </nav>
         </div>
       </header>
 
       <main>
-        <section className="mc-hero mc-hero-editorial" aria-labelledby="mc-hero-title">
+        <section className="mc-hero mc-hero-reference" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
-            <img src="/mindcare-hero.avif" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+            <img src="/mindcare-hero.avif" width="1672" height="941" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
-              <p className="mc-eyebrow">A little room to think</p>
-              <h1 id="mc-hero-title">Give your thoughts a little <em>room.</em></h1>
-              <p className="mc-hero-lede">You don’t need the right words. Start with what’s on your mind.</p>
+              <p className="mc-eyebrow"><span className="mc-eyebrow-line" aria-hidden="true" />A calmer space for your mind</p>
+              <h1 id="mc-hero-title"><span className="mc-hero-title-line">Give your thoughts</span>{' '}<span className="mc-hero-title-line">a little <em>room.</em></span></h1>
+              <p className="mc-hero-lede">Talk it through. Reflect. Check in on your mood. Find a small next step — at your own pace.</p>
               <div className="mc-hero-actions">
-                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={17} /></button>
-                <a className="mc-text-link" href="#how-it-works">How it works <ArrowUpRight size={16} aria-hidden="true" /></a>
+                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={19} aria-hidden="true" /></button>
+                <a className="mc-button mc-button-hero-outline" href="#approach">Explore MindCare</a>
+              </div>
+              <div className="mc-hero-trust-row" aria-label="What you can expect from MindCare">
+                <div className="mc-hero-trust-item">
+                  <span className="mc-hero-trust-icon"><MessageCircle size={25} strokeWidth={1.55} /></span>
+                  <span className="mc-hero-trust-copy"><strong>A safe space</strong><small>to talk</small></span>
+                </div>
+                <div className="mc-hero-trust-item">
+                  <span className="mc-hero-trust-icon"><Sprout size={27} strokeWidth={1.5} /></span>
+                  <span className="mc-hero-trust-copy"><strong>Gentle</strong><small>check-ins</small></span>
+                </div>
+                <div className="mc-hero-trust-item">
+                  <span className="mc-hero-trust-icon"><LockKeyhole size={25} strokeWidth={1.5} /></span>
+                  <span className="mc-hero-trust-copy"><strong>Your choices</strong><small>stay yours</small></span>
+                </div>
               </div>
             </div>
+            <aside className="mc-hero-side-note" aria-label="Your pace. Your choice.">
+              <p>Your pace.<br /><em>Your choice.</em></p>
+            </aside>
           </div>
         </section>
         <section className="mc-demo-section" aria-labelledby="mc-demo-title">
