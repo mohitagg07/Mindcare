@@ -88,3 +88,23 @@ test('legacy product sections, navigation, legal flows and the mobile toggle rem
     "setLegalView('terms')",
   ]) assert.ok(jsx.includes(value), `existing landing functionality missing: ${value}`)
 })
+
+test('legacy split-layout background cannot cover the full-bleed hero photo', () => {
+  const css = heroCss()
+  const inner = css.match(/\.mc-landing \.mc-hero\.mc-hero-reference \.mc-hero-inner \{[\s\S]*?\n\}/)?.[0] || ''
+  assert.ok(inner.includes('background: transparent'))
+  assert.ok(inner.includes('grid-column: auto'))
+  assert.ok(inner.includes('grid-row: auto'))
+  assert.ok(inner.includes('box-shadow: none'))
+  assert.ok(css.includes('inset: 0'))
+  assert.ok(css.includes('object-fit: cover'))
+})
+
+test('hero copy and trust row stay high contrast over the photograph', () => {
+  const css = heroCss()
+  assert.ok(css.includes('color: #fffdf6'))
+  assert.ok(css.includes('color: rgba(255, 253, 246, .9)'))
+  assert.ok(css.includes('border-color: rgba(255, 252, 244, .78)'))
+  assert.ok(css.includes('background: rgba(10, 25, 18, .18)'))
+  assert.ok(css.includes('rgba(9, 24, 17, .94)'))
+})

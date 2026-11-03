@@ -197,8 +197,14 @@
   min-height: 100svh;
   align-items: center;
   justify-content: flex-start;
+  grid-column: auto;
+  grid-row: auto;
   margin-inline: auto;
   padding: 112px 0 44px;
+  /* Override the legacy split-hero ivory panel. The photo must remain visible
+     behind this content container at every viewport width. */
+  background: transparent;
+  box-shadow: none;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy {
   width: min(100%, 790px);
