@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
+
 const here = dirname(fileURLToPath(import.meta.url))
 const read = path => readFileSync(resolve(here, path), 'utf8')
 const hero = () => {
@@ -11,27 +12,79 @@ const hero = () => {
   const end = jsx.indexOf('</section>', start) + '</section>'.length
   return jsx.slice(start, end)
 }
-const heroCss = () => { const css = read('../src/pages/Landing.css'); return css.slice(css.lastIndexOf('/* MindCare reference hero:')) }
+const heroCss = () => read('../src/pages/LandingHero.css')
 
-test('hero keeps the approved copy, both CTAs and working conversation action', () => {
+test('hero uses the approved headline, supporting copy and functional calls to action', () => {
   const section = hero()
-  for (const text of ['A calmer space for your mind','Give your thoughts','a little <em>room.</em>','Talk it through. Reflect. Check in on your mood.','Find a small next step — at your own pace.','Start a conversation','href="#approach">Explore MindCare</a>','onClick={onGetStarted}']) assert.ok(section.includes(text))
+  for (const value of [
+    'A calmer space for your mind',
+    'Give your thoughts',
+    'a little <em>room.</em>',
+    'Talk it through. Reflect. Check in on your mood.',
+    'Find a small next step — at your own pace.',
+    'onClick={onGetStarted}',
+    'Start a conversation',
+    'href="#approach">Explore MindCare</a>',
+  ]) assert.ok(section.includes(value), `missing hero content: ${value}`)
 })
-test('trust row and handwritten note are actual DOM content', () => {
+
+test('hero image is a remote Pexels landscape rather than the old framed AVIF', () => {
   const section = hero()
-  for (const text of ['A safe space','to talk','Gentle','check-ins','Your choices','stay yours','Your pace.','Your choice.']) assert.ok(section.includes(text))
-  assert.equal((section.match(/<img\b/g)||[]).length,1)
+  assert.ok(section.includes('images.pexels.com/photos/19291526/pexels-photo-19291526.jpeg'))
+  assert.ok(!section.includes('/mindcare-hero.avif'))
+  assert.equal((section.match(/<img\b/g) || []).length, 1)
+  assert.ok(!section.includes('mc-hero-side-note'), 'clipped handwritten note has been removed')
 })
-test('desktop hero has a full-bleed photo, editorial typography and paired pill buttons', () => {
+
+test('desktop hero photo fills the viewport and leaves a dark, readable text area', () => {
   const css = heroCss()
-  for (const text of ['min-height:100dvh','linear-gradient(90deg','font-size:clamp(58px,6.05vw,91px)','border-radius:999px','mc-hero-side-note::after','Caveat']) assert.ok(css.includes(text))
+  for (const value of [
+    'min-height: 100svh',
+    'position: absolute',
+    'inset: 0',
+    'object-fit: cover',
+    'scaleX(-1)',
+    'linear-gradient(90deg',
+    'rgba(9, 24, 17',
+    'font-size: clamp(56px, 5.8vw, 84px)',
+    'background: #087a53',
+  ]) assert.ok(css.includes(value), `missing desktop hero style: ${value}`)
 })
-test('mobile hero remains a photo-backed full-height scene and uses compact responsive details', () => {
+
+test('navigation uses white-on-dark contrast, with a usable mobile menu', () => {
   const css = heroCss()
-  for (const text of ['@media (max-width:760px)','object-position:75% center','repeat(3,minmax(0,1fr))','env(safe-area-inset-top)','env(safe-area-inset-bottom)','@media (max-width:390px)','@media (prefers-reduced-motion:reduce)']) assert.ok(css.includes(text))
+  for (const value of [
+    'position: absolute',
+    'color: rgba(255, 252, 244, .96)',
+    '@media (max-width: 940px)',
+    '.mc-site-nav.is-open',
+    '.mc-mobile-menu-toggle',
+  ]) assert.ok(css.includes(value), `missing navigation style: ${value}`)
 })
-test('all previous landing sections, legal flows and mobile menu remain available', () => {
+
+test('trust row stays in the hero layout and fits smaller screens', () => {
+  const css = heroCss()
+  for (const value of [
+    '.mc-hero-trust-row',
+    'grid-template-columns: repeat(3, minmax(0, 1fr))',
+    '@media (max-width: 600px)',
+    'font-size: 10px',
+    'max-height: 700px',
+  ]) assert.ok(css.includes(value), `missing responsive trust style: ${value}`)
+})
+
+test('legacy product sections, navigation, legal flows and the mobile toggle remain intact', () => {
   const jsx = read('../src/pages/Landing.jsx')
-  for (const text of ['aria-label="Main navigation"','setMobileNavOpen','mc-demo-section','<ProductPreview />','mc-approach','mc-how-section','mc-care-section','mc-faq-section',"setLegalView('privacy')","setLegalView('terms')"]) assert.ok(jsx.includes(text))
+  for (const value of [
+    'aria-label="Main navigation"',
+    'setMobileNavOpen',
+    'mc-demo-section',
+    '<ProductPreview />',
+    'mc-approach',
+    'mc-how-section',
+    'mc-care-section',
+    'mc-faq-section',
+    "setLegalView('privacy')",
+    "setLegalView('terms')",
+  ]) assert.ok(jsx.includes(value), `existing landing functionality missing: ${value}`)
 })
-test('Caveat is loaded for the handwritten note', () => { assert.ok(read('../index.html').includes('family=Caveat:wght@500;600')) })

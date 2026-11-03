@@ -1,0 +1,534 @@
+/* MindCare hero — one photo, one typography system, no stacked overrides. */
+.mc-landing {
+  --mc-hero-ink: #12261d;
+  --mc-hero-white: #fffdf6;
+  --mc-hero-muted: rgba(255, 253, 246, .88);
+  --mc-hero-sage: #dbe7c8;
+  --mc-hero-green: #087a53;
+}
+
+/* Full-bleed image layer. The photo is mirrored so the subject sits on the right. */
+.mc-landing .mc-hero.mc-hero-reference {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 0 clamp(24px, 6.4vw, 100px);
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--mc-hero-white);
+  background: #10261c;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-photo {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #10261c;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center 48%;
+  transform: scaleX(-1) scale(1.025);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-photo::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(90deg,
+      rgba(9, 24, 17, .94) 0%,
+      rgba(9, 24, 17, .87) 29%,
+      rgba(9, 24, 17, .68) 51%,
+      rgba(9, 24, 17, .34) 76%,
+      rgba(9, 24, 17, .18) 100%),
+    linear-gradient(0deg,
+      rgba(6, 17, 11, .62) 0%,
+      rgba(6, 17, 11, .08) 48%,
+      rgba(6, 17, 11, .34) 100%);
+}
+
+/* Header is intentionally transparent over the photograph. */
+.mc-landing .mc-site-header {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  left: 0;
+  min-height: 88px;
+  padding: 0 clamp(24px, 5.2vw, 78px);
+  border: 0;
+  background: transparent;
+}
+.mc-landing .mc-header-inner {
+  display: flex;
+  width: min(1380px, 100%);
+  min-height: 88px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-inline: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.mc-landing .mc-landing-brand {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+.mc-landing .mc-brand-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .17);
+}
+.mc-landing .mc-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mc-landing .mc-brand-name {
+  color: var(--mc-hero-white);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.055em;
+}
+.mc-landing .mc-brand-name span { color: var(--mc-hero-sage); }
+.mc-landing .mc-site-nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.7vw, 26px);
+}
+.mc-landing .mc-site-nav > a {
+  padding: 10px 12px;
+  border-radius: 999px;
+  color: rgba(255, 252, 244, .96);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .18s ease, background-color .18s ease;
+}
+.mc-landing .mc-site-nav > a[aria-current="page"] {
+  padding-inline: 18px;
+  color: #fff;
+  background: rgba(214, 229, 194, .18);
+}
+.mc-landing .mc-site-nav > a:hover { color: #e8f0d9; }
+.mc-landing .mc-nav-signin {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 21px;
+  border: 1px solid rgba(255, 252, 244, .78);
+  border-radius: 999px;
+  color: var(--mc-hero-white);
+  background: rgba(11, 28, 20, .16);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+.mc-landing .mc-nav-signin:hover {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+}
+.mc-landing .mc-nav-cta {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 23px;
+  border: 1px solid #087a53;
+  border-radius: 999px;
+  color: #fff;
+  background: #087a53;
+  box-shadow: 0 8px 22px rgba(2, 19, 12, .24);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+}
+.mc-landing .mc-nav-cta:hover {
+  border-color: #0a9063;
+  background: #0a9063;
+  transform: translateY(-1px);
+}
+.mc-landing .mc-mobile-menu-toggle { display: none; }
+
+/* Main hero content: headline, short support copy, two actions and trust row. */
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(1380px, 100%);
+  min-height: 100vh;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: flex-start;
+  margin-inline: auto;
+  padding: 112px 0 44px;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-copy {
+  width: min(100%, 790px);
+  max-width: 790px;
+  padding: 0;
+  animation: mc-enter-up .58s .04s both cubic-bezier(.2, .7, .2, 1);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0 0 21px;
+  color: #dbe7c8;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-eyebrow-line {
+  display: inline-block;
+  width: 36px;
+  height: 1px;
+  flex: 0 0 36px;
+  background: rgba(219, 231, 200, .9);
+}
+.mc-landing .mc-hero.mc-hero-reference h1 {
+  max-width: 770px;
+  margin: 0;
+  color: #fffdf6;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(56px, 5.8vw, 84px);
+  font-weight: 500;
+  line-height: 1.01;
+  letter-spacing: -.055em;
+  text-wrap: balance;
+}
+.mc-landing .mc-hero.mc-hero-reference h1 em {
+  color: #bed49b;
+  font-weight: 500;
+  font-style: italic;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-lede {
+  max-width: 610px;
+  margin: 19px 0 0;
+  color: rgba(255, 253, 246, .9);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: clamp(16px, 1.25vw, 18px);
+  font-weight: 400;
+  line-height: 1.58;
+  letter-spacing: -.012em;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-button {
+  display: inline-flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 14px 23px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-button svg { flex: 0 0 auto; }
+.mc-landing .mc-hero.mc-hero-reference .mc-button:hover { transform: translateY(-2px); }
+.mc-landing .mc-hero.mc-hero-reference .mc-button-dark {
+  border-color: #087a53;
+  color: #fff;
+  background: #087a53;
+  box-shadow: 0 8px 22px rgba(0, 20, 12, .2);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-button-dark:hover {
+  border-color: #0a9063;
+  background: #0a9063;
+  box-shadow: 0 11px 27px rgba(0, 20, 12, .26);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline {
+  min-width: 204px;
+  border-color: rgba(255, 252, 244, .78);
+  color: #fffdf6;
+  background: rgba(10, 25, 18, .18);
+  box-shadow: none;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline:hover {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(255, 255, 255, .1);
+  box-shadow: none;
+}
+
+/* Compact reassurance row: visible without scrolling on desktop. */
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row {
+  display: grid;
+  width: min(100%, 730px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 38px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(255, 252, 244, .28);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item {
+  display: flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 17px;
+  border-right: 1px solid rgba(255, 252, 244, .24);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:first-child { padding-left: 0; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:last-child { padding-right: 0; border-right: 0; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #dce7ca;
+  background: rgba(255, 255, 255, .08);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg { width: 18px; height: 18px; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong {
+  color: #fffdf6;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.22;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small {
+  color: rgba(255, 253, 246, .76);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-side-note { display: none; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-bottomline { display: none; }
+
+@media (max-width: 1180px) and (min-width: 941px) {
+  .mc-landing .mc-header-inner { gap: 17px; }
+  .mc-landing .mc-site-nav { gap: 8px; }
+  .mc-landing .mc-site-nav > a { padding-inline: 9px; font-size: 13px; }
+  .mc-landing .mc-brand-name { font-size: 28px; }
+  .mc-landing .mc-hero.mc-hero-reference { padding-inline: 5vw; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(54px, 5.8vw, 68px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item { gap: 8px; padding-inline: 11px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong,
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small { font-size: 10.5px; }
+}
+@media (max-width: 940px) {
+  .mc-landing .mc-site-header { min-height: 72px; padding: max(8px, env(safe-area-inset-top)) 20px 0; }
+  .mc-landing .mc-header-inner { min-height: 58px; gap: 12px; }
+  .mc-landing .mc-brand-mark { width: 40px; height: 40px; flex-basis: 40px; }
+  .mc-landing .mc-brand-name { font-size: 26px; }
+  .mc-landing .mc-mobile-menu-toggle {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border: 1px solid rgba(255, 252, 244, .48);
+    border-radius: 50%;
+    color: #fffdf6;
+    background: rgba(9, 24, 17, .24);
+    cursor: pointer;
+  }
+  .mc-landing .mc-site-nav {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 20px;
+    left: 20px;
+    display: none;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px;
+    border: 1px solid rgba(255, 252, 244, .17);
+    border-radius: 16px;
+    background: rgba(13, 34, 25, .97);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .25);
+  }
+  .mc-landing .mc-site-nav.is-open { display: flex; }
+  .mc-landing .mc-site-nav > a,
+  .mc-landing .mc-nav-signin {
+    width: 100%;
+    min-height: 42px;
+    justify-content: flex-start;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 10px;
+    color: #fffdf6;
+    background: transparent;
+    font-size: 14px;
+    text-align: left;
+  }
+  .mc-landing .mc-site-nav > a[aria-current="page"] { background: rgba(214, 229, 194, .18); }
+  .mc-landing .mc-site-nav .mc-nav-cta {
+    width: 100%;
+    justify-content: center;
+    margin-top: 5px;
+    border-radius: 999px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference {
+    min-height: max(690px, 100svh);
+    padding-inline: 24px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner {
+    min-height: max(690px, 100svh);
+    padding-top: 102px;
+    padding-bottom: 34px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy { max-width: 690px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(48px, 7vw, 66px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { font-size: 16px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 30px; }
+}
+@media (max-width: 600px) {
+  .mc-landing .mc-hero.mc-hero-reference { padding-inline: 19px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo img {
+    object-position: 32% center;
+    transform: scaleX(-1) scale(1.16);
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo::after {
+    background:
+      linear-gradient(90deg, rgba(8, 23, 16, .9) 0%, rgba(8, 23, 16, .76) 65%, rgba(8, 23, 16, .55) 100%),
+      linear-gradient(0deg, rgba(6, 17, 11, .62) 0%, rgba(6, 17, 11, .1) 55%, rgba(6, 17, 11, .4) 100%);
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner {
+    min-height: max(690px, 100svh);
+    padding-top: 94px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow {
+    gap: 10px;
+    margin-bottom: 17px;
+    font-size: 9.5px;
+    letter-spacing: .14em;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow-line { width: 24px; flex-basis: 24px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 {
+    max-width: 520px;
+    font-size: clamp(42px, 10.2vw, 58px);
+    line-height: 1.02;
+    letter-spacing: -.05em;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede {
+    max-width: 470px;
+    margin-top: 14px;
+    font-size: 14.5px;
+    line-height: 1.55;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 21px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-button {
+    width: min(100%, 330px);
+    min-height: 49px;
+    padding: 12px 18px;
+    font-size: 13px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline { min-width: 0; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row {
+    width: 100%;
+    max-width: 470px;
+    margin-top: 26px;
+    padding-top: 15px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item {
+    align-items: flex-start;
+    gap: 5px;
+    padding-inline: 7px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon {
+    width: 21px;
+    height: 24px;
+    flex-basis: 21px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg { width: 18px; height: 18px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong,
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small {
+    font-size: 9.5px;
+    line-height: 1.22;
+  }
+}
+@media (max-width: 390px) {
+  .mc-landing .mc-hero.mc-hero-reference { padding-inline: 16px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(40px, 10.4vw, 44px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { font-size: 14px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item { gap: 3px; padding-inline: 5px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong,
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small { font-size: 8.9px; }
+}
+@media (max-height: 700px) and (min-width: 601px) {
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner { padding-top: 100px; padding-bottom: 26px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow { margin-bottom: 15px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(52px, 5.1vw, 72px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { margin-top: 14px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions { margin-top: 22px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 25px; padding-top: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy,
+  .mc-landing .mc-hero.mc-hero-reference .mc-button,
+  .mc-landing .mc-hero.mc-hero-reference .mc-button svg {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

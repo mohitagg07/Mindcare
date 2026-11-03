@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import './Landing.css'
+import './LandingHero.css'
 
 const features = [
   {
@@ -265,7 +266,7 @@ export default function Landing({ onGetStarted, onSignIn }) {
       <main>
         <section className="mc-hero mc-hero-reference" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
-            <img src="/mindcare-hero.avif" width="1672" height="941" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+            <img src="https://images.pexels.com/photos/19291526/pexels-photo-19291526.jpeg?cs=srgb&amp;dl=pexels-vitalyagorbachev-19291526.jpg&amp;fm=jpg" width="5319" height="2700" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
@@ -291,9 +292,6 @@ export default function Landing({ onGetStarted, onSignIn }) {
                 </div>
               </div>
             </div>
-            <aside className="mc-hero-side-note" aria-label="Your pace. Your choice.">
-              <p>Your pace.<br /><em>Your choice.</em></p>
-            </aside>
           </div>
         </section>
         <section className="mc-demo-section" aria-labelledby="mc-demo-title">
