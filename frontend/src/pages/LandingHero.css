@@ -573,3 +573,92 @@
     transform: none !important;
   }
 }
+
+/* Stage 1 refinement: keep the existing art direction, improve legibility and product clarity. */
+.mc-landing .mc-site-header::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: 124px;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 18, 12, .42) 0%,
+    rgba(5, 18, 12, .22) 58%,
+    rgba(5, 18, 12, 0) 100%
+  );
+}
+.mc-landing .mc-header-inner {
+  position: relative;
+  z-index: 1;
+}
+.mc-landing .mc-site-nav > a[aria-current="page"] {
+  background: rgba(201, 230, 107, .11);
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-lede {
+  max-width: 760px;
+}
+.mc-landing .mc-site-nav > a:focus-visible,
+.mc-landing .mc-nav-signin:focus-visible,
+.mc-landing .mc-nav-cta:focus-visible,
+.mc-landing .mc-mobile-menu-toggle:focus-visible,
+.mc-landing .mc-hero.mc-hero-reference .mc-button:focus-visible {
+  outline: 2px solid #d9ef9a;
+  outline-offset: 4px;
+}
+.mc-landing .mc-hero.mc-hero-reference .mc-button:active,
+.mc-landing .mc-nav-cta:active {
+  transform: translateY(0) scale(.99);
+}
+
+@media (max-width: 600px) {
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin-top: 27px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(224, 235, 190, .3);
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item {
+    min-height: 43px;
+    align-items: center;
+    gap: 11px;
+    padding: 8px 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(224, 235, 190, .18);
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:last-child {
+    border-bottom: 0;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon {
+    width: 26px;
+    height: 28px;
+    flex-basis: 26px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-copy {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 5px 10px;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong {
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small {
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-landing .mc-hero.mc-hero-reference .mc-button:active,
+  .mc-landing .mc-nav-cta:active {
+    transform: none;
+  }
+}
