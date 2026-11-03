@@ -266,29 +266,44 @@ export default function Landing({ onGetStarted, onSignIn }) {
       <main>
         <section className="mc-hero mc-hero-reference" aria-labelledby="mc-hero-title">
           <div className="mc-hero-photo" aria-hidden="true">
-            <img src="https://images.pexels.com/photos/19291526/pexels-photo-19291526.jpeg?cs=srgb&amp;dl=pexels-vitalyagorbachev-19291526.jpg&amp;fm=jpg" width="5319" height="2700" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+            <img
+              src="https://images.pexels.com/photos/39972487/pexels-photo-39972487.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=2560"
+              srcSet="https://images.pexels.com/photos/39972487/pexels-photo-39972487.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1280 1280w, https://images.pexels.com/photos/39972487/pexels-photo-39972487.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1920 1920w, https://images.pexels.com/photos/39972487/pexels-photo-39972487.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=2560 2560w"
+              sizes="100vw"
+              width="6000"
+              height="4000"
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+            />
           </div>
           <div className="mc-hero-inner">
             <div className="mc-hero-copy">
               <p className="mc-eyebrow"><span className="mc-eyebrow-line" aria-hidden="true" />A calmer space for your mind</p>
-              <h1 id="mc-hero-title"><span className="mc-hero-title-line">Give your thoughts</span>{' '}<span className="mc-hero-title-line">a little <em>room.</em></span></h1>
-              <p className="mc-hero-lede">Talk it through. Reflect. Check in on your mood. Find a small next step — at your own pace.</p>
+              <h1 id="mc-hero-title">
+                <span className="mc-hero-title-line">Give your thoughts</span>
+                <span className="mc-hero-title-line">a little <em>room.</em></span>
+              </h1>
+              <p className="mc-hero-lede">Talk it out, reflect and check on your mood at your own pace.</p>
               <div className="mc-hero-actions">
-                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>Start a conversation <ArrowRight size={19} aria-hidden="true" /></button>
+                <button type="button" className="mc-button mc-button-dark" onClick={onGetStarted}>
+                  Start a conversation <ArrowRight size={19} aria-hidden="true" />
+                </button>
                 <a className="mc-button mc-button-hero-outline" href="#approach">Explore MindCare</a>
               </div>
-              <div className="mc-hero-trust-row" aria-label="What you can expect from MindCare">
+              <div className="mc-hero-trust-row" aria-label="A safe space to talk, gentle check ins and private choices">
                 <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><MessageCircle size={25} strokeWidth={1.55} /></span>
+                  <span className="mc-hero-trust-icon"><MessageCircle size={29} strokeWidth={1.6} /></span>
                   <span className="mc-hero-trust-copy"><strong>A safe space</strong><small>to talk</small></span>
                 </div>
                 <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><Sprout size={27} strokeWidth={1.5} /></span>
-                  <span className="mc-hero-trust-copy"><strong>Gentle</strong><small>check-ins</small></span>
+                  <span className="mc-hero-trust-icon"><Sprout size={30} strokeWidth={1.55} /></span>
+                  <span className="mc-hero-trust-copy"><strong>Gentle</strong><small>check ins</small></span>
                 </div>
                 <div className="mc-hero-trust-item">
-                  <span className="mc-hero-trust-icon"><LockKeyhole size={25} strokeWidth={1.5} /></span>
-                  <span className="mc-hero-trust-copy"><strong>Your choices</strong><small>stay yours</small></span>
+                  <span className="mc-hero-trust-icon"><LockKeyhole size={28} strokeWidth={1.55} /></span>
+                  <span className="mc-hero-trust-copy"><strong>Your choices</strong><small>stay private</small></span>
                 </div>
               </div>
             </div>

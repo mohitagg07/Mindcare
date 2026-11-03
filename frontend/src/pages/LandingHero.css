@@ -1,24 +1,26 @@
-/* MindCare hero — one photo, one typography system, no stacked overrides. */
+/* MindCare hero: warm, private, photographic and deliberately simple. */
 .mc-landing {
-  --mc-hero-ink: #12261d;
+  --mc-hero-forest: #0b2117;
+  --mc-hero-green: #078a50;
+  --mc-hero-green-hover: #0a9a5c;
+  --mc-hero-lime: #c9e66b;
   --mc-hero-white: #fffdf6;
-  --mc-hero-muted: rgba(255, 253, 246, .88);
-  --mc-hero-sage: #dbe7c8;
-  --mc-hero-green: #087a53;
+  --mc-hero-muted: rgba(255, 253, 246, .9);
 }
 
-/* Full-bleed image layer. The photo is mirrored so the subject sits on the right. */
+/* Full-bleed background. The room is the subject, never a person's face. */
 .mc-landing .mc-hero.mc-hero-reference {
   position: relative;
   display: block;
   width: 100%;
   min-height: 100vh;
   min-height: 100svh;
-  padding: 0 clamp(24px, 6.4vw, 100px);
+  min-height: 100dvh;
+  padding: 0 clamp(24px, 6.2vw, 100px);
   overflow: hidden;
   isolation: isolate;
   color: var(--mc-hero-white);
-  background: #10261c;
+  background: var(--mc-hero-forest);
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo {
   position: absolute;
@@ -28,7 +30,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #10261c;
+  background: var(--mc-hero-forest);
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo img {
   display: block;
@@ -36,8 +38,8 @@
   height: 100%;
   max-width: none;
   object-fit: cover;
-  object-position: center 48%;
-  transform: scaleX(-1) scale(1.025);
+  object-position: 58% 52%;
+  transform: none;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo::after {
   position: absolute;
@@ -47,33 +49,33 @@
   content: "";
   background:
     linear-gradient(90deg,
-      rgba(9, 24, 17, .94) 0%,
-      rgba(9, 24, 17, .87) 29%,
-      rgba(9, 24, 17, .68) 51%,
-      rgba(9, 24, 17, .34) 76%,
-      rgba(9, 24, 17, .18) 100%),
+      rgba(6, 22, 14, .94) 0%,
+      rgba(6, 22, 14, .88) 29%,
+      rgba(6, 22, 14, .69) 51%,
+      rgba(6, 22, 14, .3) 78%,
+      rgba(6, 22, 14, .18) 100%),
     linear-gradient(0deg,
-      rgba(6, 17, 11, .62) 0%,
-      rgba(6, 17, 11, .08) 48%,
-      rgba(6, 17, 11, .34) 100%);
+      rgba(5, 18, 11, .58) 0%,
+      rgba(5, 18, 11, .05) 48%,
+      rgba(5, 18, 11, .27) 100%);
 }
 
-/* Header is intentionally transparent over the photograph. */
+/* Transparent header sits directly over the room photograph. */
 .mc-landing .mc-site-header {
   position: absolute;
-  z-index: 5;
+  z-index: 10;
   top: 0;
   right: 0;
   left: 0;
-  min-height: 88px;
-  padding: 0 clamp(24px, 5.2vw, 78px);
+  min-height: 92px;
+  padding: 0 clamp(22px, 5vw, 78px);
   border: 0;
   background: transparent;
 }
 .mc-landing .mc-header-inner {
   display: flex;
-  width: min(1380px, 100%);
-  min-height: 88px;
+  width: min(1420px, 100%);
+  min-height: 92px;
   align-items: center;
   justify-content: space-between;
   gap: 28px;
@@ -83,6 +85,7 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  backdrop-filter: none;
 }
 .mc-landing .mc-landing-brand {
   display: inline-flex;
@@ -93,15 +96,15 @@
 }
 .mc-landing .mc-brand-mark {
   display: grid;
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .72);
+  border: 1px solid rgba(255, 255, 255, .76);
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 5px 18px rgba(0, 0, 0, .17);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .18);
 }
 .mc-landing .mc-brand-mark img {
   display: block;
@@ -112,21 +115,21 @@
 .mc-landing .mc-brand-name {
   color: var(--mc-hero-white);
   font-family: "Playfair Display", Georgia, serif;
-  font-size: 30px;
+  font-size: clamp(28px, 2.25vw, 34px);
   font-weight: 500;
   line-height: 1;
   letter-spacing: -.055em;
 }
-.mc-landing .mc-brand-name span { color: var(--mc-hero-sage); }
+.mc-landing .mc-brand-name span { color: var(--mc-hero-lime); }
 .mc-landing .mc-site-nav {
   display: flex;
   align-items: center;
-  gap: clamp(12px, 1.7vw, 26px);
+  gap: clamp(12px, 1.7vw, 25px);
 }
 .mc-landing .mc-site-nav > a {
-  padding: 10px 12px;
+  padding: 11px 13px;
   border-radius: 999px;
-  color: rgba(255, 252, 244, .96);
+  color: rgba(255, 253, 246, .96);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 550;
@@ -136,23 +139,23 @@
   transition: color .18s ease, background-color .18s ease;
 }
 .mc-landing .mc-site-nav > a[aria-current="page"] {
-  padding-inline: 18px;
+  padding-inline: 19px;
   color: #fff;
-  background: rgba(214, 229, 194, .18);
+  background: rgba(201, 230, 107, .17);
 }
-.mc-landing .mc-site-nav > a:hover { color: #e8f0d9; }
+.mc-landing .mc-site-nav > a:hover { color: #d9ef9a; }
 .mc-landing .mc-nav-signin {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
-  padding: 10px 21px;
-  border: 1px solid rgba(255, 252, 244, .78);
+  padding: 11px 23px;
+  border: 1.4px solid rgba(255, 253, 246, .84);
   border-radius: 999px;
   color: var(--mc-hero-white);
-  background: rgba(11, 28, 20, .16);
+  background: rgba(7, 24, 15, .14);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color .18s ease, border-color .18s ease;
@@ -160,20 +163,20 @@
 .mc-landing .mc-nav-signin:hover {
   border-color: #fff;
   color: #fff;
-  background: rgba(255, 255, 255, .12);
+  background: rgba(255, 255, 255, .1);
 }
 .mc-landing .mc-nav-cta {
   display: inline-flex;
-  min-height: 46px;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  padding: 12px 23px;
-  border: 1px solid #087a53;
+  gap: 10px;
+  padding: 12px 25px;
+  border: 1px solid var(--mc-hero-green);
   border-radius: 999px;
   color: #fff;
-  background: #087a53;
-  box-shadow: 0 8px 22px rgba(2, 19, 12, .24);
+  background: var(--mc-hero-green);
+  box-shadow: 0 7px 20px rgba(1, 20, 11, .2);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 700;
@@ -181,125 +184,130 @@
   transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
 }
 .mc-landing .mc-nav-cta:hover {
-  border-color: #0a9063;
-  background: #0a9063;
+  border-color: var(--mc-hero-green-hover);
+  background: var(--mc-hero-green-hover);
   transform: translateY(-1px);
 }
 .mc-landing .mc-mobile-menu-toggle { display: none; }
 
-/* Main hero content: headline, short support copy, two actions and trust row. */
+/* Copy stays on the dark side of the photograph. */
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner {
   position: relative;
   z-index: 2;
   display: flex;
-  width: min(1380px, 100%);
+  width: min(1420px, 100%);
   min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
   align-items: center;
   justify-content: flex-start;
-  grid-column: auto;
-  grid-row: auto;
   margin-inline: auto;
-  padding: 112px 0 44px;
-  /* Override the legacy split-hero ivory panel. The photo must remain visible
-     behind this content container at every viewport width. */
+  padding: 128px 0 58px;
   background: transparent;
   box-shadow: none;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy {
-  width: min(100%, 790px);
-  max-width: 790px;
+  width: min(100%, 850px);
+  max-width: 850px;
   padding: 0;
-  animation: mc-enter-up .58s .04s both cubic-bezier(.2, .7, .2, 1);
+  animation: mc-enter-up .62s .04s both cubic-bezier(.2, .7, .2, 1);
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow {
   display: flex;
   align-items: center;
-  gap: 13px;
-  margin: 0 0 21px;
-  color: #dbe7c8;
+  gap: 15px;
+  margin: 0 0 24px;
+  color: #d8e7ad;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   line-height: 1.4;
-  letter-spacing: .17em;
+  letter-spacing: .18em;
   text-transform: uppercase;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow-line {
   display: inline-block;
-  width: 36px;
+  width: 43px;
   height: 1px;
-  flex: 0 0 36px;
-  background: rgba(219, 231, 200, .9);
+  flex: 0 0 43px;
+  background: rgba(216, 231, 173, .88);
 }
 .mc-landing .mc-hero.mc-hero-reference h1 {
-  max-width: 770px;
+  max-width: 850px;
   margin: 0;
-  color: #fffdf6;
+  color: var(--mc-hero-white);
   font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(56px, 5.8vw, 84px);
+  font-size: clamp(60px, 6vw, 91px);
   font-weight: 500;
-  line-height: 1.01;
-  letter-spacing: -.055em;
+  line-height: .99;
+  letter-spacing: -.056em;
+  font-kerning: normal;
   text-wrap: balance;
 }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-title-line { display: block; }
 .mc-landing .mc-hero.mc-hero-reference h1 em {
-  color: #bed49b;
+  color: #bde77c;
   font-weight: 500;
   font-style: italic;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede {
-  max-width: 610px;
-  margin: 19px 0 0;
-  color: rgba(255, 253, 246, .9);
+  max-width: 665px;
+  margin: 25px 0 0;
+  color: var(--mc-hero-muted);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: clamp(16px, 1.25vw, 18px);
+  font-size: clamp(17px, 1.32vw, 19px);
   font-weight: 400;
-  line-height: 1.58;
+  line-height: 1.55;
   letter-spacing: -.012em;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  margin-top: 28px;
+  gap: 19px;
+  margin-top: 35px;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-button {
   display: inline-flex;
-  min-height: 54px;
+  min-height: 59px;
   align-items: center;
   justify-content: center;
-  gap: 11px;
-  padding: 14px 23px;
-  border: 1px solid transparent;
+  gap: 13px;
+  padding: 16px 31px;
+  border: 1.5px solid transparent;
   border-radius: 999px;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 650;
   line-height: 1.1;
+  letter-spacing: -.012em;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
 }
-.mc-landing .mc-hero.mc-hero-reference .mc-button svg { flex: 0 0 auto; }
+.mc-landing .mc-hero.mc-hero-reference .mc-button svg {
+  flex: 0 0 auto;
+  transition: transform .2s ease;
+}
 .mc-landing .mc-hero.mc-hero-reference .mc-button:hover { transform: translateY(-2px); }
+.mc-landing .mc-hero.mc-hero-reference .mc-button:hover svg { transform: translateX(3px); }
 .mc-landing .mc-hero.mc-hero-reference .mc-button-dark {
-  border-color: #087a53;
+  min-width: 355px;
+  border-color: #65c67b;
   color: #fff;
-  background: #087a53;
-  box-shadow: 0 8px 22px rgba(0, 20, 12, .2);
+  background: linear-gradient(135deg, #22a85f 0%, #07834e 100%);
+  box-shadow: 0 8px 24px rgba(0, 22, 12, .22);
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-button-dark:hover {
-  border-color: #0a9063;
-  background: #0a9063;
-  box-shadow: 0 11px 27px rgba(0, 20, 12, .26);
+  border-color: #8cdb8b;
+  background: linear-gradient(135deg, #2ab66c 0%, #09945a 100%);
+  box-shadow: 0 12px 29px rgba(0, 22, 12, .28);
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline {
-  min-width: 204px;
-  border-color: rgba(255, 252, 244, .78);
-  color: #fffdf6;
-  background: rgba(10, 25, 18, .18);
+  min-width: 280px;
+  border-color: rgba(255, 253, 246, .9);
+  color: var(--mc-hero-white);
+  background: rgba(8, 24, 15, .16);
   box-shadow: none;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline:hover {
@@ -309,59 +317,62 @@
   box-shadow: none;
 }
 
-/* Compact reassurance row: visible without scrolling on desktop. */
+/* Three simple reassurance points, separated with fine vertical rules. */
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row {
   display: grid;
-  width: min(100%, 730px);
+  width: min(100%, 820px);
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
-  margin-top: 38px;
-  padding-top: 17px;
-  border-top: 1px solid rgba(255, 252, 244, .28);
+  margin-top: 50px;
+  padding: 0;
+  border: 0;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item {
   display: flex;
   min-width: 0;
-  min-height: 38px;
+  min-height: 52px;
   align-items: center;
-  gap: 10px;
-  padding: 0 17px;
-  border-right: 1px solid rgba(255, 252, 244, .24);
+  gap: 14px;
+  padding: 0 27px;
+  border-right: 1px solid rgba(224, 235, 190, .42);
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:first-child { padding-left: 0; }
-.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:last-child { padding-right: 0; border-right: 0; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon {
   display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
+  width: 34px;
+  height: 36px;
+  flex: 0 0 34px;
   place-items: center;
   border: 0;
-  border-radius: 50%;
-  color: #dce7ca;
-  background: rgba(255, 255, 255, .08);
+  border-radius: 0;
+  color: var(--mc-hero-lime);
+  background: transparent;
 }
-.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg { width: 18px; height: 18px; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg { width: 29px; height: 29px; }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-copy {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong {
   color: #fffdf6;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.22;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small {
-  color: rgba(255, 253, 246, .76);
+  color: rgba(255, 253, 246, .85);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 11px;
-  line-height: 1.25;
+  font-size: 13px;
+  line-height: 1.2;
 }
-.mc-landing .mc-hero.mc-hero-reference .mc-hero-side-note { display: none; }
+.mc-landing .mc-hero.mc-hero-reference .mc-hero-side-note,
 .mc-landing .mc-hero.mc-hero-reference .mc-hero-bottomline { display: none; }
 
 @media (max-width: 1180px) and (min-width: 941px) {
@@ -370,26 +381,27 @@
   .mc-landing .mc-site-nav > a { padding-inline: 9px; font-size: 13px; }
   .mc-landing .mc-brand-name { font-size: 28px; }
   .mc-landing .mc-hero.mc-hero-reference { padding-inline: 5vw; }
-  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(54px, 5.8vw, 68px); }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item { gap: 8px; padding-inline: 11px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong,
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small { font-size: 10.5px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(55px, 5.5vw, 74px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item { gap: 10px; padding-inline: 16px; }
 }
 @media (max-width: 940px) {
-  .mc-landing .mc-site-header { min-height: 72px; padding: max(8px, env(safe-area-inset-top)) 20px 0; }
-  .mc-landing .mc-header-inner { min-height: 58px; gap: 12px; }
-  .mc-landing .mc-brand-mark { width: 40px; height: 40px; flex-basis: 40px; }
-  .mc-landing .mc-brand-name { font-size: 26px; }
+  .mc-landing .mc-site-header {
+    min-height: 72px;
+    padding: max(9px, env(safe-area-inset-top)) 20px 0;
+  }
+  .mc-landing .mc-header-inner { min-height: 60px; gap: 12px; }
+  .mc-landing .mc-brand-mark { width: 41px; height: 41px; flex-basis: 41px; }
+  .mc-landing .mc-brand-name { font-size: 27px; }
   .mc-landing .mc-mobile-menu-toggle {
     display: grid;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
     place-items: center;
-    border: 1px solid rgba(255, 252, 244, .48);
+    border: 1px solid rgba(255, 253, 246, .52);
     border-radius: 50%;
     color: #fffdf6;
-    background: rgba(9, 24, 17, .24);
+    background: rgba(8, 24, 15, .25);
     cursor: pointer;
   }
   .mc-landing .mc-site-nav {
@@ -400,28 +412,28 @@
     display: none;
     align-items: stretch;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     padding: 12px;
-    border: 1px solid rgba(255, 252, 244, .17);
-    border-radius: 16px;
-    background: rgba(13, 34, 25, .97);
-    box-shadow: 0 18px 46px rgba(0, 0, 0, .25);
+    border: 1px solid rgba(255, 253, 246, .16);
+    border-radius: 20px;
+    background: rgba(9, 29, 19, .97);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .28);
   }
   .mc-landing .mc-site-nav.is-open { display: flex; }
   .mc-landing .mc-site-nav > a,
   .mc-landing .mc-nav-signin {
     width: 100%;
-    min-height: 42px;
+    min-height: 43px;
     justify-content: flex-start;
-    padding: 11px 12px;
+    padding: 11px 13px;
     border: 0;
-    border-radius: 10px;
+    border-radius: 12px;
     color: #fffdf6;
     background: transparent;
     font-size: 14px;
     text-align: left;
   }
-  .mc-landing .mc-site-nav > a[aria-current="page"] { background: rgba(214, 229, 194, .18); }
+  .mc-landing .mc-site-nav > a[aria-current="page"] { background: rgba(201, 230, 107, .15); }
   .mc-landing .mc-site-nav .mc-nav-cta {
     width: 100%;
     justify-content: center;
@@ -429,105 +441,128 @@
     border-radius: 999px;
   }
   .mc-landing .mc-hero.mc-hero-reference {
-    min-height: max(690px, 100svh);
+    min-height: max(700px, 100svh);
     padding-inline: 24px;
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner {
-    min-height: max(690px, 100svh);
+    min-height: max(700px, 100svh);
     padding-top: 102px;
     padding-bottom: 34px;
   }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy { max-width: 690px; }
-  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(48px, 7vw, 66px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy { max-width: 700px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(50px, 7vw, 70px); }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { font-size: 16px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 30px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-button-dark { min-width: 300px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline { min-width: 245px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 36px; }
 }
 @media (max-width: 600px) {
-  .mc-landing .mc-hero.mc-hero-reference { padding-inline: 19px; }
+  .mc-landing .mc-site-header { padding-inline: 17px; }
+  .mc-landing .mc-hero.mc-hero-reference {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding-inline: 19px;
+  }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo img {
-    object-position: 32% center;
-    transform: scaleX(-1) scale(1.16);
+    object-position: 64% center;
+    transform: none;
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-photo::after {
     background:
-      linear-gradient(90deg, rgba(8, 23, 16, .9) 0%, rgba(8, 23, 16, .76) 65%, rgba(8, 23, 16, .55) 100%),
-      linear-gradient(0deg, rgba(6, 17, 11, .62) 0%, rgba(6, 17, 11, .1) 55%, rgba(6, 17, 11, .4) 100%);
+      linear-gradient(90deg,
+        rgba(6, 22, 14, .91) 0%,
+        rgba(6, 22, 14, .82) 58%,
+        rgba(6, 22, 14, .62) 100%),
+      linear-gradient(0deg,
+        rgba(5, 18, 11, .72) 0%,
+        rgba(5, 18, 11, .12) 55%,
+        rgba(5, 18, 11, .42) 100%);
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner {
-    min-height: max(690px, 100svh);
-    padding-top: 94px;
-    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding-top: 96px;
+    padding-bottom: max(27px, env(safe-area-inset-bottom));
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow {
     gap: 10px;
-    margin-bottom: 17px;
+    margin-bottom: 18px;
     font-size: 9.5px;
     letter-spacing: .14em;
   }
-  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow-line { width: 24px; flex-basis: 24px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow-line { width: 25px; flex-basis: 25px; }
   .mc-landing .mc-hero.mc-hero-reference h1 {
-    max-width: 520px;
-    font-size: clamp(42px, 10.2vw, 58px);
-    line-height: 1.02;
+    max-width: 440px;
+    font-size: clamp(40px, 10.5vw, 48px);
+    line-height: 1.03;
     letter-spacing: -.05em;
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede {
-    max-width: 470px;
-    margin-top: 14px;
+    max-width: 440px;
+    margin-top: 16px;
     font-size: 14.5px;
     line-height: 1.55;
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions {
     align-items: flex-start;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 21px;
+    gap: 11px;
+    margin-top: 23px;
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-button {
-    width: min(100%, 330px);
-    min-height: 49px;
-    padding: 12px 18px;
-    font-size: 13px;
+    width: min(100%, 340px);
+    min-height: 53px;
+    padding: 14px 21px;
+    font-size: 14px;
   }
+  .mc-landing .mc-hero.mc-hero-reference .mc-button-dark,
   .mc-landing .mc-hero.mc-hero-reference .mc-button-hero-outline { min-width: 0; }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row {
     width: 100%;
     max-width: 470px;
-    margin-top: 26px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 31px;
     padding-top: 15px;
+    border-top: 1px solid rgba(224, 235, 190, .3);
   }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item {
+    min-height: 48px;
     align-items: flex-start;
     gap: 5px;
-    padding-inline: 7px;
+    padding: 0 8px;
+    border-right: 1px solid rgba(224, 235, 190, .24);
   }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:first-child { padding-left: 0; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item:last-child { padding-right: 0; border-right: 0; }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon {
-    width: 21px;
+    width: 22px;
     height: 24px;
-    flex-basis: 21px;
+    flex-basis: 22px;
   }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg { width: 18px; height: 18px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong,
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small {
-    font-size: 9.5px;
-    line-height: 1.22;
-  }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-icon svg { width: 20px; height: 20px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-copy { gap: 2px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong { font-size: 10px; line-height: 1.2; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small { font-size: 9.5px; line-height: 1.2; }
 }
 @media (max-width: 390px) {
   .mc-landing .mc-hero.mc-hero-reference { padding-inline: 16px; }
-  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(40px, 10.4vw, 44px); }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { font-size: 14px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(38px, 10.5vw, 42px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { font-size: 13.8px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions { margin-top: 19px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 25px; }
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item { gap: 3px; padding-inline: 5px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong,
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small { font-size: 8.9px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item strong { font-size: 9.4px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-item small { font-size: 9px; }
 }
 @media (max-height: 700px) and (min-width: 601px) {
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner { padding-top: 100px; padding-bottom: 26px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow { margin-bottom: 15px; }
-  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(52px, 5.1vw, 72px); }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { margin-top: 14px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions { margin-top: 22px; }
-  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 25px; padding-top: 12px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-inner { padding-top: 104px; padding-bottom: 26px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-eyebrow { margin-bottom: 16px; }
+  .mc-landing .mc-hero.mc-hero-reference h1 { font-size: clamp(54px, 5.2vw, 76px); }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-lede { margin-top: 17px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-actions { margin-top: 25px; }
+  .mc-landing .mc-hero.mc-hero-reference .mc-hero-trust-row { margin-top: 34px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mc-landing .mc-hero.mc-hero-reference .mc-hero-copy,
